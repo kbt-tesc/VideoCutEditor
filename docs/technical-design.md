@@ -105,6 +105,8 @@ Use a small overhead allowance for display. Treat the value as an estimate, not 
 
 Target size mode should invert this calculation to suggest a video bitrate after reserving expected audio bitrate and overhead.
 
+The initial UI displays a read-only predicted output size for bitrate-based re-encode settings when media metadata, selected range duration, and a valid video bitrate are available. The calculation includes selected video bitrate, detected audio bitrate when present, and a small container overhead allowance.
+
 ## Fade Policy
 
 Fade controls apply only to the clip edges:

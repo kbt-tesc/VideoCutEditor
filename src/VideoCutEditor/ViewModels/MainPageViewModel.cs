@@ -114,6 +114,9 @@ public partial class MainPageViewModel : ObservableObject
     [ObservableProperty]
     public partial string VideoBitrateText { get; set; } = "2500";
 
+    [ObservableProperty]
+    public partial string PredictedOutputSizeText { get; set; } = "Estimated size unavailable";
+
     public double TimelineMaximum => Math.Max(DurationSeconds, 0.001);
 
     public string PositionText => FormatTime(TimeSpan.FromSeconds(PositionSeconds));
@@ -454,11 +457,13 @@ public partial class MainPageViewModel : ObservableObject
     partial void OnRangeStartSecondsChanged(double value)
     {
         OnPropertyChanged(nameof(RangeStartDisplayText));
+        UpdatePredictedOutputSizeText();
     }
 
     partial void OnRangeEndSecondsChanged(double value)
     {
         OnPropertyChanged(nameof(RangeEndDisplayText));
+        UpdatePredictedOutputSizeText();
     }
 
     partial void OnRangeStartTextChanged(string value)
@@ -501,6 +506,11 @@ public partial class MainPageViewModel : ObservableObject
     partial void OnPlaybackRateChanged(double value)
     {
         OnPropertyChanged(nameof(PlaybackRateText));
+    }
+
+    partial void OnVideoBitrateTextChanged(string value)
+    {
+        UpdatePredictedOutputSizeText();
     }
 
     partial void OnIsExportingChanged(bool value)
@@ -572,6 +582,46 @@ public partial class MainPageViewModel : ObservableObject
         return int.TryParse(VideoBitrateText, out int bitrateKbps) && bitrateKbps > 0
             ? bitrateKbps
             : null;
+    }
+
+    private void UpdatePredictedOutputSizeText()
+    {
+        int? videoBitrateKbps = GetVideoBitrateKbps();
+        if (CurrentMediaInfo is null || videoBitrateKbps is null)
+        {
+            PredictedOutputSizeText = "Estimated size unavailable";
+            return;
+        }
+
+        var range = new ClipRange(
+            TimeSpan.FromSeconds(RangeStartSeconds),
+            TimeSpan.FromSeconds(RangeEndSeconds));
+
+        if (!range.IsValid)
+        {
+            PredictedOutputSizeText = "Estimated size unavailable";
+            return;
+        }
+
+        long? audioBitrate = CurrentMediaInfo.Streams
+            .FirstOrDefault(stream => stream.CodecType == "audio")
+            ?.Bitrate;
+        long bytes = PredictedOutputSizeCalculator.EstimateBytes(
+            videoBitrateKbps.Value,
+            audioBitrate,
+            range.Duration);
+        PredictedOutputSizeText = $"Estimated size: {FormatBytes(bytes)}";
+    }
+
+    private static string FormatBytes(long bytes)
+    {
+        const double kiloByte = 1024.0;
+        const double megaByte = kiloByte * 1024.0;
+        const double gigaByte = megaByte * 1024.0;
+
+        return bytes >= gigaByte
+            ? $"{bytes / gigaByte:0.##} GB"
+            : $"{bytes / megaByte:0.#} MB";
     }
 
     private static async Task<string?> PickExecutableAsync(string commitButtonText)
@@ -688,6 +738,7 @@ public partial class MainPageViewModel : ObservableObject
 
             CurrentMediaInfo = info;
             ApplyMediaInfo(info);
+            UpdatePredictedOutputSizeText();
             MediaSummaryText = CreateMediaSummary(info);
             StatusMessage = "Video selected";
             AppLogger.Info($"ffprobe metadata loaded: {MediaSummaryText.Replace(Environment.NewLine, " | ")}");

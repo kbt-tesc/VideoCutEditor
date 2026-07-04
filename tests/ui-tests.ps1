@@ -76,6 +76,7 @@ $expectedElements = @(
     "CodecFamilyComboBox",
     "EncoderKindComboBox",
     "VideoBitrateTextBox",
+    "PredictedOutputSizeTextBox",
     "MediaInfoTextBox",
     "SaveSettingsButton",
     "CancelExportButton",
@@ -106,6 +107,10 @@ Test-UI "Encoder defaults to Auto" {
 
 Test-UI "Video bitrate defaults to 2500" {
     winapp ui wait-for "VideoBitrateTextBox" -a $AppPid --value "2500" -t 3000 -q
+}
+
+Test-UI "Predicted output size starts unavailable" {
+    winapp ui wait-for "PredictedOutputSizeTextBox" -a $AppPid --value "Estimated size unavailable" -t 3000 -q
 }
 
 Test-UI "Cancel is disabled when idle" {

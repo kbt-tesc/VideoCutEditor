@@ -356,6 +356,12 @@
                             InputScope="Number"
                             Text="{x:Bind ViewModel.VideoBitrateText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
 
+                        <TextBox
+                            AutomationProperties.AutomationId="PredictedOutputSizeTextBox"
+                            Header="Predicted output size"
+                            IsReadOnly="True"
+                            Text="{x:Bind ViewModel.PredictedOutputSizeText, Mode=OneWay}" />
+
                         <Grid ColumnSpacing="8">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
