@@ -38,6 +38,7 @@ Only one keep range is supported per export.
 - Show ffmpeg progress, current status, log output, and a cancel button during export.
 - The first export implementation supports Fast copy with progress/log display and cancellation.
 - Re-encode mode supports codec family, encoder preference, and bitrate-based export controls. Fade controls are added in a later slice.
+- When media metadata is available, Re-encode mode suggests an initial video bitrate from the source bitrate or resolution. The value remains editable and saved user settings take precedence.
 
 The first screen should be the usable editor, not a landing page or marketing screen.
 

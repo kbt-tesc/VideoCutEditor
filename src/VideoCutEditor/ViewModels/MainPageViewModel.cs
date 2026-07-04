@@ -1,3 +1,4 @@
+using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using VideoCutEditor.Core.Models;
@@ -16,10 +17,13 @@ public partial class MainPageViewModel : ObservableObject
     private readonly IFfmpegRunner ffmpegRunner;
     private readonly IMediaProbeService mediaProbeService;
     private readonly IFfmpegCapabilityService ffmpegCapabilityService;
+    private readonly BitrateSuggestionService bitrateSuggestionService;
     private CancellationTokenSource? mediaProbeCancellation;
     private CancellationTokenSource? exportCancellation;
     private FfmpegCapabilities currentCapabilities = new(new HashSet<string>(StringComparer.OrdinalIgnoreCase));
     private bool isUpdatingRangeText;
+    private bool isUpdatingSuggestedBitrate;
+    private bool hasManualVideoBitrateOverride;
 
     [ObservableProperty]
     public partial string? SelectedSourcePath { get; set; }
@@ -150,7 +154,8 @@ public partial class MainPageViewModel : ObservableObject
         IFfmpegToolPathService toolPathService,
         IFfmpegRunner? ffmpegRunner = null,
         IMediaProbeService? mediaProbeService = null,
-        IFfmpegCapabilityService? ffmpegCapabilityService = null)
+        IFfmpegCapabilityService? ffmpegCapabilityService = null,
+        BitrateSuggestionService? bitrateSuggestionService = null)
     {
         this.settingsService = settingsService;
         this.outputPathService = outputPathService;
@@ -158,6 +163,7 @@ public partial class MainPageViewModel : ObservableObject
         this.ffmpegRunner = ffmpegRunner ?? new FfmpegRunner();
         this.mediaProbeService = mediaProbeService ?? new MediaProbeService();
         this.ffmpegCapabilityService = ffmpegCapabilityService ?? new FfmpegCapabilityService();
+        this.bitrateSuggestionService = bitrateSuggestionService ?? new BitrateSuggestionService();
     }
 
     public async Task InitializeAsync()
@@ -508,8 +514,18 @@ public partial class MainPageViewModel : ObservableObject
         OnPropertyChanged(nameof(PlaybackRateText));
     }
 
+    partial void OnSelectedCodecFamilyIndexChanged(int value)
+    {
+        ApplySuggestedVideoBitrate(force: !hasManualVideoBitrateOverride);
+    }
+
     partial void OnVideoBitrateTextChanged(string value)
     {
+        if (!isUpdatingSuggestedBitrate)
+        {
+            hasManualVideoBitrateOverride = true;
+        }
+
         UpdatePredictedOutputSizeText();
     }
 
@@ -574,14 +590,42 @@ public partial class MainPageViewModel : ObservableObject
             EncoderKind.Software => 2,
             _ => 0,
         };
-        VideoBitrateText = settings.LastVideoBitrateKbps.GetValueOrDefault(2500).ToString();
+
+        int initialBitrateKbps = settings.LastVideoBitrateKbps.GetValueOrDefault(2500);
+        SetVideoBitrateTextFromSuggestion(initialBitrateKbps);
+        hasManualVideoBitrateOverride = settings.LastVideoBitrateKbps.HasValue;
     }
 
     private int? GetVideoBitrateKbps()
     {
-        return int.TryParse(VideoBitrateText, out int bitrateKbps) && bitrateKbps > 0
+        return int.TryParse(VideoBitrateText, NumberStyles.Integer, CultureInfo.InvariantCulture, out int bitrateKbps)
+            && bitrateKbps > 0
             ? bitrateKbps
             : null;
+    }
+
+    private void ApplySuggestedVideoBitrate(bool force)
+    {
+        if (!force || CurrentMediaInfo is null)
+        {
+            return;
+        }
+
+        int suggestedBitrateKbps = bitrateSuggestionService.SuggestVideoBitrateKbps(CurrentMediaInfo, CurrentCodecFamily);
+        SetVideoBitrateTextFromSuggestion(suggestedBitrateKbps);
+    }
+
+    private void SetVideoBitrateTextFromSuggestion(int bitrateKbps)
+    {
+        isUpdatingSuggestedBitrate = true;
+        try
+        {
+            VideoBitrateText = bitrateKbps.ToString(CultureInfo.InvariantCulture);
+        }
+        finally
+        {
+            isUpdatingSuggestedBitrate = false;
+        }
     }
 
     private void UpdatePredictedOutputSizeText()
@@ -738,6 +782,7 @@ public partial class MainPageViewModel : ObservableObject
 
             CurrentMediaInfo = info;
             ApplyMediaInfo(info);
+            ApplySuggestedVideoBitrate(force: !hasManualVideoBitrateOverride);
             UpdatePredictedOutputSizeText();
             MediaSummaryText = CreateMediaSummary(info);
             StatusMessage = "Video selected";

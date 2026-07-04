@@ -6,7 +6,7 @@ This document is the handoff ledger for future Codex sessions. Read it after `AG
 
 ## Current State
 
-VideoCutEditor has a working WinUI 3/.NET 10 editor shell with a single-range video extraction workflow. The app can detect externally installed `ffmpeg` and `ffprobe`, probe media metadata, preview videos through Windows media playback when possible, set start/end markers, and export either Fast copy or bitrate-based Re-encode through generated ffmpeg plans.
+VideoCutEditor has a working WinUI 3/.NET 10 editor shell with a single-range video extraction workflow. The app can detect externally installed `ffmpeg` and `ffprobe`, probe media metadata, preview videos through Windows media playback when possible, set start/end markers, suggest re-encode bitrates from metadata, and export either Fast copy or bitrate-based Re-encode through generated ffmpeg plans.
 
 The project is being developed in small TDD slices. Keep using behavior-focused tests first, then implement the smallest production change, verify, and commit each slice.
 
@@ -27,9 +27,12 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
   - Fixed right-pane spacing so input controls do not overlap the vertical scrollbar.
 - `d1aa517 feat: show predicted output size`
   - Added predicted output size calculation for bitrate-based Re-encode and exposed the read-only UI field.
-- `feat: add waveform generation service`
+- `fbcb7ca feat: add waveform generation service`
   - Extracted waveform command construction, cache path generation, and ffmpeg execution into tested core services.
   - Wired the WinUI timeline waveform image slot to the generated PNG cache.
+- `feat: suggest re-encode bitrate from media metadata`
+  - Added a tested core bitrate suggestion service using video stream bitrate, container bitrate, and resolution fallback defaults.
+  - Wired suggestions into media load and codec-family changes while preserving saved or manually edited bitrate values.
 
 ## Implemented Capabilities
 
@@ -50,6 +53,7 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 - Export progress parsing, log display, cancellation, temporary output path, and final promotion after success.
 - Output filename collision avoidance.
 - Settings persistence for tool paths, output directory, export mode, codec, encoder, bitrate mode, and video bitrate.
+- Re-encode video bitrate suggestions from source bitrate or resolution with codec-specific multipliers.
 - Predicted output size display for bitrate-based Re-encode when enough information is available.
 - Scripted WinUI UI smoke tests with screenshots.
 
@@ -58,7 +62,7 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 Most recent successful checks:
 
 - `dotnet test VideoCutEditor.slnx`
-  - 35 tests passed.
+  - 49 tests passed.
 - `dotnet build src/VideoCutEditor/VideoCutEditor.csproj -p:Platform=x64`
   - Build succeeded.
 - `powershell -ExecutionPolicy Bypass -File tests\ui-tests.ps1 -AppPid <pid>`
@@ -71,7 +75,6 @@ When resuming in a new session, rerun the relevant subset before making assumpti
 - Waveform generation is implemented in code, but should still be manually verified with real videos that have audio streams.
 - Fade controls and fade-triggered re-encode are not implemented.
 - Target size mode, quality mode, and advanced ffmpeg arguments are not implemented.
-- Bitrate suggestion from source bitrate/resolution is not implemented; the UI currently defaults to 2500 kbps.
 - Real media export should still be manually verified for Fast copy and Re-encode on local sample files.
 - NVEnc behavior should be manually verified on hardware and ffmpeg builds that expose NVEnc.
 - Preview-unavailable fallback behavior needs more manual and/or UI coverage.
@@ -80,22 +83,17 @@ When resuming in a new session, rerun the relevant subset before making assumpti
 
 ## Recommended Next Slices
 
-1. Implement bitrate suggestions from media metadata.
-   - Use source video bitrate when available for H.264.
-   - Use 70% for H.265 and 55% for AV1.
-   - Fall back to a resolution-based default when bitrate is unknown.
-   - Update UI when codec or media metadata changes.
-2. Implement fade controls.
+1. Implement fade controls.
    - Add UI controls for video/audio fade-in and fade-out at clip edges.
    - Force re-encode when fade filters are enabled.
    - Add ffmpeg argument tests for video/audio filters and audio AAC policy.
-3. Add target size mode.
+2. Add target size mode.
    - Invert the predicted-size calculation to derive video bitrate.
    - Add settings persistence and UI tests.
-4. Strengthen end-to-end verification.
+3. Strengthen end-to-end verification.
    - Add scripted picker workflow coverage where reliable.
    - Add manual verification notes for real preview/export/NVEnc/package runs.
-5. Packaging and release preparation.
+4. Packaging and release preparation.
    - Use the repo-local `winui-packaging` skill.
    - Verify unpackaged/self-contained/single-file assumptions against the current Windows App SDK behavior.
 

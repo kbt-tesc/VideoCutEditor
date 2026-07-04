@@ -97,6 +97,19 @@ Initial bitrate suggestions:
 - H.265: about 70% of source video bitrate.
 - AV1: about 55% of source video bitrate.
 
+`BitrateSuggestionService` owns this logic in core code. It uses the primary video stream bitrate first, then the container bitrate, then a resolution fallback. Resolution fallback uses H.264-equivalent defaults before applying codec multipliers:
+
+| Resolution floor | H.264 base |
+| --- | ---: |
+| 3840x2160 | 12000 kbps |
+| 2560x1440 | 8000 kbps |
+| 1920x1080 | 5000 kbps |
+| 1280x720 | 2500 kbps |
+| Lower known resolution | 1200 kbps |
+| Sparse metadata | 2500 kbps |
+
+The WinUI view model applies suggestions when media metadata is loaded or the codec family changes, until the user manually edits or saves a bitrate. A saved bitrate is treated as an explicit user preference and is not overwritten by metadata suggestions.
+
 Predicted size:
 
 `estimated bytes = ((video bitrate + audio bitrate) * selected duration seconds / 8) + container overhead`
