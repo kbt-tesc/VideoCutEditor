@@ -310,7 +310,7 @@
                 </Grid.RowDefinitions>
 
                 <ScrollViewer>
-                    <StackPanel Spacing="16">
+                    <StackPanel Margin="0,0,24,0" Spacing="16">
                         <TextBlock Text="Export" Style="{StaticResource SubtitleTextBlockStyle}" />
 
                         <ComboBox
