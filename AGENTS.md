@@ -3,7 +3,7 @@
 ## Repository Rules
 
 - This repository builds VideoCutEditor, a lightweight Windows desktop app for extracting one desired range from a video.
-- Before implementation work, read `docs/product-spec.md`, `docs/technical-design.md`, `docs/codex-workflow.md`, and `docs/implementation-kickoff.md`.
+- Before implementation work, read `docs/product-spec.md`, `docs/technical-design.md`, `docs/codex-workflow.md`, `docs/implementation-kickoff.md`, and `docs/implementation-status.md`.
 - For WinUI-specific setup, implementation, design, packaging, testing, or review work, use the repo-local Microsoft WinUI skills under `.agents/skills/winui-*` when relevant.
 - Keep durable product behavior in `docs/product-spec.md`; keep architecture and ffmpeg command policy in `docs/technical-design.md`; keep Codex process guidance in `docs/codex-workflow.md`.
 - If implementation changes product behavior, export behavior, architecture, or validation expectations, update the matching document in the same change.

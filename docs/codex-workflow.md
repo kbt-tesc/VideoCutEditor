@@ -2,8 +2,9 @@
 
 ## Working Model
 
-- Start by reading `AGENTS.md`, this file, `docs/product-spec.md`, and `docs/technical-design.md`.
+- Start by reading `AGENTS.md`, this file, `docs/product-spec.md`, `docs/technical-design.md`, `docs/implementation-kickoff.md`, and `docs/implementation-status.md`.
 - Before implementing a feature, check whether it changes product behavior or export semantics. If it does, update the relevant doc in the same change.
+- Before choosing the next slice after a fresh session or context compression, read `docs/implementation-status.md` and update it when a slice is completed or when remaining work changes.
 - Prefer small, verifiable changes over broad rewrites.
 - Keep product behavior, technical design, and Codex workflow guidance in separate files.
 

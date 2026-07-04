@@ -14,8 +14,9 @@ Use this document to start the implementation in a fresh Codex session.
    - `winui-packaging`
    - `winui-ui-testing`
    - `winui-code-review`
-4. Read the product and technical docs before editing code.
+4. Read the product, technical, workflow, and implementation status docs before editing code.
 5. Use `winui-setup` first to verify or install prerequisites.
+6. Check `docs/implementation-status.md` for completed slices, current verification baseline, and recommended next work.
 
 ## Recommended First Implementation Slice
 
@@ -30,6 +31,8 @@ Implement the smallest useful skeleton before export logic:
 Do not implement full export in the first slice unless the scaffold and tests are already stable.
 
 ## Suggested Follow-up Slices
+
+For the current live status, use `docs/implementation-status.md`. This historical list is kept as the original kickoff guidance.
 
 - Media probing and metadata display.
 - Preview loading and start/end marker state.
