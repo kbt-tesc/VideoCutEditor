@@ -5,6 +5,8 @@
 - Start by reading `AGENTS.md`, this file, `docs/product-spec.md`, `docs/technical-design.md`, `docs/implementation-kickoff.md`, and `docs/implementation-status.md`.
 - Before implementing a feature, check whether it changes product behavior or export semantics. If it does, update the relevant doc in the same change.
 - Before choosing the next slice after a fresh session or context compression, read `docs/implementation-status.md` and update it when a slice is completed or when remaining work changes.
+- Documentation updates are mandatory after every completed implementation slice. Do not commit implementation work without updating the matching docs and `docs/implementation-status.md`.
+- When work reveals a bug, missing requirement, validation gap, technical debt item, or additional follow-up, document it immediately in the appropriate source of truth instead of leaving it only in chat context.
 - Prefer small, verifiable changes over broad rewrites.
 - Keep product behavior, technical design, and Codex workflow guidance in separate files.
 
@@ -24,6 +26,7 @@ For small fixes that already fit the docs, implement directly and keep changes s
 
 - Follow WinUI 3 and C# conventions.
 - Prefer t-wada style test-driven development for new behavior: write or update a failing behavior-focused test first, make the smallest production change to pass it, then refactor while keeping tests green. If a behavior cannot be tested at the current layer, extract a smaller testable core unit or explicitly defer it to the WinUI UI testing slice.
+- Treat docs as part of the implementation. When code, tests, manual verification, or user feedback changes the known state of the project, update docs in the same slice.
 - Use the repo-local Microsoft WinUI skills when they match the task:
   - `winui-setup` for environment and project setup.
   - `winui-dev-workflow` for build/run workflow.
@@ -65,6 +68,8 @@ Use manual tests for environment-dependent behavior:
 - unavailable preview fallback
 - NVEnc encoder detection on compatible hardware
 - packaged EXE startup
+
+Record manual test results, skipped checks, and newly discovered validation needs in `docs/implementation-status.md`.
 
 ## Handling Uncertainty
 

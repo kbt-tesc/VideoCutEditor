@@ -7,6 +7,8 @@
 - For WinUI-specific setup, implementation, design, packaging, testing, or review work, use the repo-local Microsoft WinUI skills under `.agents/skills/winui-*` when relevant.
 - Keep durable product behavior in `docs/product-spec.md`; keep architecture and ffmpeg command policy in `docs/technical-design.md`; keep Codex process guidance in `docs/codex-workflow.md`.
 - If implementation changes product behavior, export behavior, architecture, or validation expectations, update the matching document in the same change.
+- After every completed implementation slice, always update the relevant documentation before committing. At minimum, update `docs/implementation-status.md` with completed work, changed verification baseline, remaining work, and newly discovered risks or follow-ups.
+- Whenever a problem, missing requirement, validation gap, technical debt item, or new necessary follow-up is discovered, always record it immediately in the appropriate document: product behavior in `docs/product-spec.md`, architecture/export policy in `docs/technical-design.md`, process guidance in `docs/codex-workflow.md`, and progress or backlog state in `docs/implementation-status.md`.
 
 ## Product Constraints
 

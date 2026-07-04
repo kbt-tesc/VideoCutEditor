@@ -109,5 +109,5 @@ When resuming in a new session, rerun the relevant subset before making assumpti
 6. Write or update a failing test first where practical.
 7. Implement narrowly.
 8. Run relevant tests/build/UI checks.
-9. Update product/design/workflow/status docs when behavior, architecture, validation, or progress changes.
+9. Always update product/design/workflow/status docs before committing. Record completed work, changed verification baseline, remaining tasks, discovered bugs, validation gaps, technical debt, and required follow-ups.
 10. Commit the completed slice with a focused message.
