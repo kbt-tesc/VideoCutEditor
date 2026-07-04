@@ -27,6 +27,9 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
   - Fixed right-pane spacing so input controls do not overlap the vertical scrollbar.
 - `d1aa517 feat: show predicted output size`
   - Added predicted output size calculation for bitrate-based Re-encode and exposed the read-only UI field.
+- `feat: add waveform generation service`
+  - Extracted waveform command construction, cache path generation, and ffmpeg execution into tested core services.
+  - Wired the WinUI timeline waveform image slot to the generated PNG cache.
 
 ## Implemented Capabilities
 
@@ -36,6 +39,7 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 - Drag and drop video opening, with confirmation when replacing an already opened video.
 - Preview area using `MediaPlayerElement`.
 - Custom timeline shell with playhead, selected range fill, start/end markers, zoom, horizontal scrolling, and waveform image slot.
+- Waveform PNG generation through ffmpeg `showwavespic` into a temporary cache path.
 - Start/end controls through `[` and `]` buttons plus keyboard shortcuts.
 - Left/right arrow frame stepping using ffprobe frame rate when available, otherwise 30 fps.
 - Slow playback rates through the speed selector.
@@ -54,17 +58,17 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 Most recent successful checks:
 
 - `dotnet test VideoCutEditor.slnx`
-  - 30 tests passed.
+  - 35 tests passed.
 - `dotnet build src/VideoCutEditor/VideoCutEditor.csproj -p:Platform=x64`
   - Build succeeded.
 - `powershell -ExecutionPolicy Bypass -File tests\ui-tests.ps1 -AppPid <pid>`
-  - 41 UI tests passed.
+  - 42 UI tests passed.
 
 When resuming in a new session, rerun the relevant subset before making assumptions if files have changed.
 
 ## Known Gaps
 
-- Waveform generation is not yet implemented; the timeline has an image slot but no ffmpeg `showwavespic` pipeline.
+- Waveform generation is implemented in code, but should still be manually verified with real videos that have audio streams.
 - Fade controls and fade-triggered re-encode are not implemented.
 - Target size mode, quality mode, and advanced ffmpeg arguments are not implemented.
 - Bitrate suggestion from source bitrate/resolution is not implemented; the UI currently defaults to 2500 kbps.
@@ -76,27 +80,22 @@ When resuming in a new session, rerun the relevant subset before making assumpti
 
 ## Recommended Next Slices
 
-1. Implement waveform generation.
-   - Add a core service that plans/runs `ffmpeg` with `showwavespic`.
-   - Cache waveform PNGs under a safe temp/app cache path.
-   - Bind the generated image to the existing timeline waveform slot.
-   - Add tests for command construction and failure handling.
-2. Implement bitrate suggestions from media metadata.
+1. Implement bitrate suggestions from media metadata.
    - Use source video bitrate when available for H.264.
    - Use 70% for H.265 and 55% for AV1.
    - Fall back to a resolution-based default when bitrate is unknown.
    - Update UI when codec or media metadata changes.
-3. Implement fade controls.
+2. Implement fade controls.
    - Add UI controls for video/audio fade-in and fade-out at clip edges.
    - Force re-encode when fade filters are enabled.
    - Add ffmpeg argument tests for video/audio filters and audio AAC policy.
-4. Add target size mode.
+3. Add target size mode.
    - Invert the predicted-size calculation to derive video bitrate.
    - Add settings persistence and UI tests.
-5. Strengthen end-to-end verification.
+4. Strengthen end-to-end verification.
    - Add scripted picker workflow coverage where reliable.
    - Add manual verification notes for real preview/export/NVEnc/package runs.
-6. Packaging and release preparation.
+5. Packaging and release preparation.
    - Use the repo-local `winui-packaging` skill.
    - Verify unpackaged/self-contained/single-file assumptions against the current Windows App SDK behavior.
 

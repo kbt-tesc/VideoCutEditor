@@ -60,6 +60,7 @@ $expectedElements = @(
     "MarkEndButton",
     "TimelineScrollViewer",
     "TimelineZoomSlider",
+    "WaveformImage",
     "PlaybackRateComboBox",
     "RangeStartTextBox",
     "RangeEndTextBox",

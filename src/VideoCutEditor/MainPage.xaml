@@ -196,6 +196,7 @@
                                         Fill="{ThemeResource DividerStrokeColorDefaultBrush}" />
                                     <Image
                                         x:Name="WaveformImage"
+                                        AutomationProperties.AutomationId="WaveformImage"
                                         Width="{x:Bind ViewModel.TimelineContentWidth, Mode=OneWay}"
                                         Height="88"
                                         Canvas.Top="40"

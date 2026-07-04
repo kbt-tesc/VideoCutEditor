@@ -2,8 +2,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media.Imaging;
 using System.ComponentModel;
-using System.Diagnostics;
-using System.Security.Cryptography;
+using VideoCutEditor.Core.Services;
 using VideoCutEditor.ViewModels;
 using Windows.ApplicationModel.DataTransfer;
 using Windows.Media.Playback;
@@ -34,6 +33,8 @@ public sealed partial class MainPage : Page
     };
 
     private readonly Microsoft.UI.Dispatching.DispatcherQueueTimer playbackTimer;
+    private readonly WaveformPlanner waveformPlanner = new();
+    private readonly IWaveformGenerator waveformGenerator = new WaveformGenerator();
     private CancellationTokenSource? waveformCancellation;
 
     public MainPageViewModel ViewModel { get; } = new();
@@ -468,51 +469,18 @@ public sealed partial class MainPage : Page
 
         try
         {
-            string outputPath = CreateWaveformPath(sourcePath);
-            Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
-
-            var process = new Process
-            {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = ViewModel.FfmpegPath,
-                    UseShellExecute = false,
-                    RedirectStandardError = true,
-                    RedirectStandardOutput = true,
-                    CreateNoWindow = true,
-                },
-            };
-
-            string[] arguments =
-            [
-                "-hide_banner",
-                "-loglevel",
-                "error",
-                "-y",
-                "-i",
-                sourcePath,
-                "-filter_complex",
-                "aformat=channel_layouts=mono,showwavespic=s=2400x160:colors=#4cc2ff",
-                "-frames:v",
-                "1",
-                outputPath,
-            ];
-
-            foreach (string argument in arguments)
-            {
-                process.StartInfo.ArgumentList.Add(argument);
-            }
-
+            string outputPath = WaveformCachePathService.CreateCachePath(sourcePath);
+            WaveformPlan plan = waveformPlanner.CreatePlan(ViewModel.FfmpegPath, sourcePath, outputPath, 2400, 160);
             AppLogger.Info($"Waveform generation starting: {sourcePath}");
-            process.Start();
-            await process.WaitForExitAsync(cancellationToken);
+            WaveformResult result = await waveformGenerator.GenerateAsync(plan, cancellationToken);
 
-            if (process.ExitCode != 0 || !File.Exists(outputPath))
+            if (!result.Succeeded)
             {
-                AppLogger.Info($"Waveform generation skipped. ExitCode={process.ExitCode}");
+                AppLogger.Info($"Waveform generation skipped: {result.ErrorMessage}");
                 return;
             }
 
+            cancellationToken.ThrowIfCancellationRequested();
             WaveformImage.Source = new BitmapImage(new Uri(outputPath));
             AppLogger.Info($"Waveform generated: {outputPath}");
         }
@@ -523,13 +491,6 @@ public sealed partial class MainPage : Page
         {
             AppLogger.Error("Waveform generation failed", exception);
         }
-    }
-
-    private static string CreateWaveformPath(string sourcePath)
-    {
-        byte[] hash = SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(sourcePath));
-        string name = Convert.ToHexString(hash)[..16].ToLowerInvariant();
-        return Path.Combine(Path.GetTempPath(), "VideoCutEditor", "waveforms", $"{name}.png");
     }
 
     private static double PickTickInterval(double desiredSeconds)
