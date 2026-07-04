@@ -73,6 +73,9 @@ $expectedElements = @(
     "PlannedOutputTextBox",
     "ExportLogTextBox",
     "EncoderSummaryTextBox",
+    "CodecFamilyComboBox",
+    "EncoderKindComboBox",
+    "VideoBitrateTextBox",
     "MediaInfoTextBox",
     "SaveSettingsButton",
     "CancelExportButton",
@@ -87,6 +90,22 @@ foreach ($element in $expectedElements) {
 
 Test-UI "Export mode defaults to Fast copy" {
     winapp ui wait-for "ExportModeComboBox" -a $AppPid --value "Fast copy" -t 3000 -q
+}
+
+Test-UI "Export mode can be changed" {
+    winapp ui wait-for "ExportModeComboBox" -a $AppPid -p IsEnabled --value "True" -t 3000 -q
+}
+
+Test-UI "Codec defaults to H.264" {
+    winapp ui wait-for "CodecFamilyComboBox" -a $AppPid --value "H.264" -t 3000 -q
+}
+
+Test-UI "Encoder defaults to Auto" {
+    winapp ui wait-for "EncoderKindComboBox" -a $AppPid --value "Auto" -t 3000 -q
+}
+
+Test-UI "Video bitrate defaults to 2500" {
+    winapp ui wait-for "VideoBitrateTextBox" -a $AppPid --value "2500" -t 3000 -q
 }
 
 Test-UI "Cancel is disabled when idle" {

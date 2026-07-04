@@ -13,12 +13,12 @@ public partial class MainPageViewModel : ObservableObject
     private readonly ISettingsService settingsService;
     private readonly OutputPathService outputPathService;
     private readonly IFfmpegToolPathService toolPathService;
-    private readonly IExportPlanner exportPlanner;
     private readonly IFfmpegRunner ffmpegRunner;
     private readonly IMediaProbeService mediaProbeService;
     private readonly IFfmpegCapabilityService ffmpegCapabilityService;
     private CancellationTokenSource? mediaProbeCancellation;
     private CancellationTokenSource? exportCancellation;
+    private FfmpegCapabilities currentCapabilities = new(new HashSet<string>(StringComparer.OrdinalIgnoreCase));
     private bool isUpdatingRangeText;
 
     [ObservableProperty]
@@ -102,6 +102,18 @@ public partial class MainPageViewModel : ObservableObject
     [ObservableProperty]
     public partial bool HasExportLog { get; set; }
 
+    [ObservableProperty]
+    public partial int SelectedExportModeIndex { get; set; }
+
+    [ObservableProperty]
+    public partial int SelectedCodecFamilyIndex { get; set; }
+
+    [ObservableProperty]
+    public partial int SelectedEncoderKindIndex { get; set; }
+
+    [ObservableProperty]
+    public partial string VideoBitrateText { get; set; } = "2500";
+
     public double TimelineMaximum => Math.Max(DurationSeconds, 0.001);
 
     public string PositionText => FormatTime(TimeSpan.FromSeconds(PositionSeconds));
@@ -123,7 +135,6 @@ public partial class MainPageViewModel : ObservableObject
             new JsonSettingsService(),
             new OutputPathService(),
             new FfmpegToolPathService(),
-            new FastCopyExportPlanner(),
             new FfmpegRunner(),
             new MediaProbeService(),
             new FfmpegCapabilityService())
@@ -134,7 +145,6 @@ public partial class MainPageViewModel : ObservableObject
         ISettingsService settingsService,
         OutputPathService outputPathService,
         IFfmpegToolPathService toolPathService,
-        IExportPlanner? exportPlanner = null,
         IFfmpegRunner? ffmpegRunner = null,
         IMediaProbeService? mediaProbeService = null,
         IFfmpegCapabilityService? ffmpegCapabilityService = null)
@@ -142,7 +152,6 @@ public partial class MainPageViewModel : ObservableObject
         this.settingsService = settingsService;
         this.outputPathService = outputPathService;
         this.toolPathService = toolPathService;
-        this.exportPlanner = exportPlanner ?? new FastCopyExportPlanner();
         this.ffmpegRunner = ffmpegRunner ?? new FfmpegRunner();
         this.mediaProbeService = mediaProbeService ?? new MediaProbeService();
         this.ffmpegCapabilityService = ffmpegCapabilityService ?? new FfmpegCapabilityService();
@@ -157,6 +166,7 @@ public partial class MainPageViewModel : ObservableObject
         FfmpegPath = paths.FfmpegPath;
         FfprobePath = paths.FfprobePath;
         OutputDirectory = settings.OutputDirectory;
+        ApplyExportSettings(settings);
         StatusMessage = CreateToolDetectionStatus(paths);
         await DetectEncoderCapabilitiesAsync();
         AppLogger.Info($"Tool paths resolved. ffmpeg={FfmpegPath ?? "(null)"}, ffprobe={FfprobePath ?? "(null)"}");
@@ -273,14 +283,7 @@ public partial class MainPageViewModel : ObservableObject
     [RelayCommand]
     private async Task SaveSettingsAsync()
     {
-        var settings = new AppSettings
-        {
-            FfmpegPath = FfmpegPath,
-            FfprobePath = FfprobePath,
-            OutputDirectory = OutputDirectory,
-        };
-
-        await settingsService.SaveAsync(settings);
+        await settingsService.SaveAsync(CreateCurrentSettings());
         StatusMessage = "Settings saved";
     }
 
@@ -322,6 +325,12 @@ public partial class MainPageViewModel : ObservableObject
             return;
         }
 
+        if (CurrentExportMode == ExportMode.Reencode && GetVideoBitrateKbps() is null)
+        {
+            StatusMessage = "Set a valid video bitrate";
+            return;
+        }
+
         UpdatePlannedOutputPath();
         if (string.IsNullOrWhiteSpace(PlannedOutputPath))
         {
@@ -339,17 +348,12 @@ public partial class MainPageViewModel : ObservableObject
 
         try
         {
-            var settings = new AppSettings
-            {
-                FfmpegPath = FfmpegPath,
-                FfprobePath = FfprobePath,
-                OutputDirectory = OutputDirectory,
-            };
-
+            AppSettings settings = CreateCurrentSettings();
             await settingsService.SaveAsync(settings);
 
             var request = new ExportRequest(SelectedSourcePath, PlannedOutputPath, range, settings);
-            ExportPlan plan = exportPlanner.CreatePlan(request);
+            IExportPlanner planner = new ExportPlannerFactory(currentCapabilities).CreatePlanner(settings.LastExportMode);
+            ExportPlan plan = planner.CreatePlan(request);
             var progress = new Progress<ExportProgress>(exportProgress =>
             {
                 AppendExportLog(exportProgress.Status);
@@ -513,6 +517,61 @@ public partial class MainPageViewModel : ObservableObject
         }
 
         PlannedOutputPath = outputPathService.CreateAvailableCutPath(SelectedSourcePath, OutputDirectory);
+    }
+
+    private ExportMode CurrentExportMode => SelectedExportModeIndex == 1
+        ? ExportMode.Reencode
+        : ExportMode.FastCopy;
+
+    private CodecFamily CurrentCodecFamily => SelectedCodecFamilyIndex switch
+    {
+        1 => CodecFamily.H265,
+        2 => CodecFamily.Av1,
+        _ => CodecFamily.H264,
+    };
+
+    private EncoderKind CurrentEncoderKind => SelectedEncoderKindIndex switch
+    {
+        1 => EncoderKind.Nvenc,
+        2 => EncoderKind.Software,
+        _ => EncoderKind.Auto,
+    };
+
+    private AppSettings CreateCurrentSettings() => new()
+    {
+        FfmpegPath = FfmpegPath,
+        FfprobePath = FfprobePath,
+        OutputDirectory = OutputDirectory,
+        LastExportMode = CurrentExportMode,
+        LastCodecFamily = CurrentCodecFamily,
+        LastEncoderKind = CurrentEncoderKind,
+        LastBitrateMode = BitrateMode.Bitrate,
+        LastVideoBitrateKbps = GetVideoBitrateKbps(),
+    };
+
+    private void ApplyExportSettings(AppSettings settings)
+    {
+        SelectedExportModeIndex = settings.LastExportMode == ExportMode.Reencode ? 1 : 0;
+        SelectedCodecFamilyIndex = settings.LastCodecFamily switch
+        {
+            CodecFamily.H265 => 1,
+            CodecFamily.Av1 => 2,
+            _ => 0,
+        };
+        SelectedEncoderKindIndex = settings.LastEncoderKind switch
+        {
+            EncoderKind.Nvenc => 1,
+            EncoderKind.Software => 2,
+            _ => 0,
+        };
+        VideoBitrateText = settings.LastVideoBitrateKbps.GetValueOrDefault(2500).ToString();
+    }
+
+    private int? GetVideoBitrateKbps()
+    {
+        return int.TryParse(VideoBitrateText, out int bitrateKbps) && bitrateKbps > 0
+            ? bitrateKbps
+            : null;
     }
 
     private static async Task<string?> PickExecutableAsync(string commitButtonText)
@@ -713,6 +772,7 @@ public partial class MainPageViewModel : ObservableObject
     {
         if (string.IsNullOrWhiteSpace(FfmpegPath) || !File.Exists(FfmpegPath))
         {
+            currentCapabilities = new FfmpegCapabilities(new HashSet<string>(StringComparer.OrdinalIgnoreCase));
             EncoderSummaryText = "Encoder capabilities unavailable: ffmpeg is missing";
             return;
         }
@@ -720,11 +780,13 @@ public partial class MainPageViewModel : ObservableObject
         try
         {
             FfmpegCapabilities capabilities = await ffmpegCapabilityService.DetectAsync(FfmpegPath);
+            currentCapabilities = capabilities;
             EncoderSummaryText = CreateEncoderSummary(capabilities);
             AppLogger.Info($"Encoder capabilities loaded: {EncoderSummaryText.Replace(Environment.NewLine, " | ")}");
         }
         catch (Exception exception)
         {
+            currentCapabilities = new FfmpegCapabilities(new HashSet<string>(StringComparer.OrdinalIgnoreCase));
             EncoderSummaryText = $"Encoder capabilities unavailable: {exception.Message}";
             AppLogger.Error("Encoder capability detection failed", exception);
         }

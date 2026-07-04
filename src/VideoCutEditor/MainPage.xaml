@@ -316,11 +316,45 @@
                         <ComboBox
                             AutomationProperties.AutomationId="ExportModeComboBox"
                             Header="Mode"
-                            IsEnabled="False"
-                            SelectedIndex="0">
+                            HorizontalAlignment="Stretch"
+                            SelectedIndex="{x:Bind ViewModel.SelectedExportModeIndex, Mode=TwoWay}">
                             <ComboBoxItem Content="Fast copy" />
                             <ComboBoxItem Content="Re-encode" />
                         </ComboBox>
+
+                        <Grid ColumnSpacing="8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <ComboBox
+                                AutomationProperties.AutomationId="CodecFamilyComboBox"
+                                Header="Codec"
+                                HorizontalAlignment="Stretch"
+                                SelectedIndex="{x:Bind ViewModel.SelectedCodecFamilyIndex, Mode=TwoWay}">
+                                <ComboBoxItem Content="H.264" />
+                                <ComboBoxItem Content="H.265" />
+                                <ComboBoxItem Content="AV1" />
+                            </ComboBox>
+
+                            <ComboBox
+                                Grid.Column="1"
+                                AutomationProperties.AutomationId="EncoderKindComboBox"
+                                Header="Encoder"
+                                HorizontalAlignment="Stretch"
+                                SelectedIndex="{x:Bind ViewModel.SelectedEncoderKindIndex, Mode=TwoWay}">
+                                <ComboBoxItem Content="Auto" />
+                                <ComboBoxItem Content="NVEnc" />
+                                <ComboBoxItem Content="Software" />
+                            </ComboBox>
+                        </Grid>
+
+                        <TextBox
+                            AutomationProperties.AutomationId="VideoBitrateTextBox"
+                            Header="Video bitrate (kbps)"
+                            InputScope="Number"
+                            Text="{x:Bind ViewModel.VideoBitrateText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
 
                         <Grid ColumnSpacing="8">
                             <Grid.ColumnDefinitions>

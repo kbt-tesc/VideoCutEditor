@@ -76,7 +76,7 @@ Encoder preference:
 
 The initial capability detector runs `ffmpeg -hide_banner -encoders`, parses encoder names, reports NVEnc availability by codec family, and chooses an automatic video encoder by preferring NVEnc before supported software encoders (`libx264`, `libx265`, `libsvtav1`, `libaom-av1`).
 
-The initial re-encode planner builds command arguments for bitrate-based video re-encode. It selects the user-requested codec family and encoder preference from settings, uses the detected capability list to choose the concrete encoder, maps all streams, defaults non-video streams to copy with `-c copy`, overrides video with `-c:v <encoder> -b:v <kbps>k`, preserves metadata, and writes through a temporary output path before promotion. The UI surface for choosing and running re-encode mode is a later slice.
+The initial re-encode planner builds command arguments for bitrate-based video re-encode. It selects the user-requested codec family and encoder preference from settings, uses the detected capability list to choose the concrete encoder, maps all streams, defaults non-video streams to copy with `-c copy`, overrides video with `-c:v <encoder> -b:v <kbps>k`, preserves metadata, and writes through a temporary output path before promotion. The WinUI shell exposes Fast copy/Re-encode mode, codec family, encoder preference, and video bitrate controls. The view model stores the last-used choices and routes export planning through `ExportPlannerFactory` so Fast copy remains the default while Re-encode uses the detected capability list.
 
 Expose a simple settings surface:
 
