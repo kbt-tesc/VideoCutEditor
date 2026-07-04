@@ -1,0 +1,93 @@
+# VideoCutEditor Product Spec
+
+## Purpose
+
+VideoCutEditor is a lightweight Windows desktop tool for extracting one desired segment from a video. It is for users who want a fast "keep this part" workflow without opening a full nonlinear editor.
+
+## Target User
+
+- Windows users who already have ffmpeg available or can provide an ffmpeg build.
+- Users who usually want fast lossless-ish container-level cutting, but sometimes need controlled re-encoding, fades, or hardware encoding.
+- Users who prefer a small local app over a full editing suite.
+
+## Main Workflow
+
+1. Open a video file.
+2. Preview it when Windows can play the format.
+3. Set a start point and end point with the timeline controls or direct time inputs.
+4. Confirm the output mode and optional fade/encode settings.
+5. Export the selected range to the configured output folder.
+
+Only one keep range is supported per export.
+
+## UI Behavior
+
+- Show a video preview using Windows standard media playback.
+- Show a custom editor-style timeline below the preview with the current playhead position, start/end markers, timeline zoom controls, and an audio waveform when ffmpeg can generate one.
+- At timeline zoom `1.0x`, the timeline content fills the available parent width. Higher zoom levels expand the content horizontally inside the parent and allow horizontal scrolling.
+- Provide direct time inputs for start and end.
+- Allow setting the start marker from the current playhead with `[` and the end marker with `]`, using both on-screen buttons and keyboard shortcuts.
+- Support left/right arrow frame stepping while preview is focused. When ffprobe reports a valid video frame rate, use that frame rate; otherwise fall back to 30 fps.
+- Support slow preview playback rates.
+- Show export mode controls:
+  - Fast copy
+  - Re-encode
+  - Fade controls
+  - Codec and encoder controls
+  - Bitrate, target size, or quality controls
+- Show ffmpeg progress, current status, log output, and a cancel button during export.
+- The first export implementation supports Fast copy with progress/log display and cancellation; re-encode and fade controls are added in later slices.
+
+The first screen should be the usable editor, not a landing page or marketing screen.
+
+## Preview Behavior
+
+- If Windows can preview the input, enable normal seeking and marker placement from playback.
+- If preview is unavailable, show a warning and allow editing to continue through ffprobe metadata and manual time inputs.
+- Do not reject a file only because Windows preview cannot play it if ffmpeg can still process it.
+
+## Output Behavior
+
+- The output folder is configured in settings before export.
+- The output filename is generated from the source filename with a cut suffix.
+- If the generated filename already exists, append a numeric suffix such as `_cut_2` instead of overwriting.
+- The default output container follows the input extension.
+- Stream-copy cuts may not be frame-accurate because they depend on keyframes. The UI should make that tradeoff clear.
+
+## Settings
+
+Persist these settings in the user's AppData folder:
+
+- `ffmpegPath`
+- `ffprobePath`
+- `outputDirectory`
+- Last-used export mode
+- Last-used codec, encoder, bitrate mode, and related encode settings
+
+The app should try configured paths first, then PATH discovery as a fallback.
+
+## Error States
+
+Show clear recoverable errors for:
+
+- Missing ffmpeg path
+- Missing ffprobe path
+- Invalid output directory
+- ffprobe metadata read failure
+- Unsupported or unavailable encoder
+- Export process failure
+- Export cancellation
+- Start/end range errors
+
+Errors should not delete source files or overwrite existing output files.
+
+## Out Of Scope
+
+- Multi-range cutting
+- Merging clips
+- Multi-track editing
+- Timeline effects beyond clip-edge fade-in and fade-out
+- Subtitle editing
+- Audio waveform editing
+- Cloud upload or online processing
+- Bundling ffmpeg in the first implementation

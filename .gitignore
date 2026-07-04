@@ -1,0 +1,43 @@
+# Build outputs
+bin/
+obj/
+out/
+artifacts/
+publish/
+
+# Visual Studio and .NET user state
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Test and coverage outputs
+TestResults/
+coverage/
+tests/ui-results/
+*.trx
+*.coverage
+*.coveragexml
+
+# Windows packaging outputs
+AppPackages/
+BundleArtifacts/
+Generated Files/
+
+# Local app/runtime state
+logs/
+*.log
+*.tmp
+*.temp
+
+# Local media scratch files
+samples/
+scratch/
+exports/
+
+# Keep repo guidance and skills tracked
+!.agents/
+!.agents/**
+!docs/
+!docs/**

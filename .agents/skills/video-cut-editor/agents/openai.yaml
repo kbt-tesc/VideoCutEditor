@@ -1,0 +1,6 @@
+interface:
+  display_name: "VideoCutEditor"
+  short_description: "Build and maintain the VideoCutEditor WinUI/ffmpeg workflow."
+  default_prompt: "Use this skill when working on VideoCutEditor design, implementation, ffmpeg export, NVEnc support, testing, or packaging."
+policy:
+  allow_implicit_invocation: true

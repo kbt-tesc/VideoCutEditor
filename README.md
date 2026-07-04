@@ -1,0 +1,28 @@
+# VideoCutEditor
+
+VideoCutEditor is a lightweight Windows desktop app for extracting one selected range from a video. The app uses WinUI 3, C#, .NET 10, and external ffmpeg/ffprobe paths.
+
+Implementation has started with a small WinUI app skeleton, a testable core library, and an xUnit test project.
+
+## Start Here
+
+- `AGENTS.md` contains always-on repository instructions for Codex.
+- `docs/product-spec.md` is the product behavior source of truth.
+- `docs/technical-design.md` is the architecture and ffmpeg export source of truth.
+- `docs/codex-workflow.md` describes how Codex should work in this repo.
+- `docs/implementation-kickoff.md` is the handoff checklist for the implementation session.
+
+The repo-local skills in `.agents/skills` include the VideoCutEditor workflow skill and Microsoft WinUI skills from `microsoft/win-dev-skills`.
+
+## Current Projects
+
+- `src/VideoCutEditor` - WinUI 3 desktop app shell.
+- `src/VideoCutEditor.Core` - testable settings, models, and service contracts.
+- `tests/VideoCutEditor.Tests` - xUnit coverage for deterministic core behavior.
+
+## Verify
+
+```powershell
+dotnet test VideoCutEditor.slnx
+dotnet build src/VideoCutEditor/VideoCutEditor.csproj -p:Platform=x64
+```
