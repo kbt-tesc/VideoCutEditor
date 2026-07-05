@@ -396,7 +396,7 @@ public partial class MainPageViewModel : ObservableObject
             };
             await settingsService.SaveAsync(settings);
 
-            var request = new ExportRequest(SelectedSourcePath, PlannedOutputPath, range, settings);
+            var request = new ExportRequest(SelectedSourcePath, PlannedOutputPath, range, settings, CurrentMediaInfo);
             IExportPlanner planner = new ExportPlannerFactory(currentCapabilities).CreatePlanner(GetEffectiveExportMode(settings));
             ExportPlan plan = planner.CreatePlan(request);
             var progress = new Progress<ExportProgress>(exportProgress =>

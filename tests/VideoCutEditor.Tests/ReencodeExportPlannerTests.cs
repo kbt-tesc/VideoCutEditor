@@ -236,6 +236,67 @@ public sealed class ReencodeExportPlannerTests
     }
 
     [Fact]
+    public void CreatePlan_omits_audio_fade_filters_when_media_has_no_audio_stream()
+    {
+        string outputDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(outputDirectory);
+
+        try
+        {
+            var capabilities = new FfmpegCapabilities(new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "libx264",
+            });
+            var planner = new ReencodeExportPlanner(capabilities);
+            string outputPath = Path.Combine(outputDirectory, "clip_cut.mp4");
+            var request = new ExportRequest(
+                @"C:\video\source.mp4",
+                outputPath,
+                new ClipRange(TimeSpan.Zero, TimeSpan.FromSeconds(10)),
+                new AppSettings
+                {
+                    FfmpegPath = @"C:\tools\ffmpeg.exe",
+                    LastExportMode = ExportMode.Reencode,
+                    LastCodecFamily = CodecFamily.H264,
+                    LastEncoderKind = EncoderKind.Software,
+                    LastVideoBitrateKbps = 2500,
+                    Fade = new FadeSettings
+                    {
+                        AudioFadeIn = true,
+                        AudioFadeOut = true,
+                        DurationSeconds = 2,
+                    },
+                },
+                new MediaInfo(
+                    @"C:\video\source.mp4",
+                    TimeSpan.FromSeconds(10),
+                    "mov,mp4,m4a,3gp,3g2,mj2",
+                    2_500_000,
+                    [
+                        new MediaStreamInfo(
+                            0,
+                            "video",
+                            "h264",
+                            2_500_000,
+                            Width: 1920,
+                            Height: 1080,
+                            FrameRate: 30),
+                    ]));
+
+            ExportPlan plan = planner.CreatePlan(request);
+
+            Assert.DoesNotContain("-af", plan.Arguments);
+            Assert.DoesNotContain("afade=t=in:st=0:d=2,afade=t=out:st=8:d=2", plan.Arguments);
+            Assert.DoesNotContain("-c:a", plan.Arguments);
+            Assert.DoesNotContain("aac", plan.Arguments);
+        }
+        finally
+        {
+            Directory.Delete(outputDirectory, recursive: true);
+        }
+    }
+
+    [Fact]
     public void CreatePlan_truncates_fade_duration_to_two_decimal_places()
     {
         string outputDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));

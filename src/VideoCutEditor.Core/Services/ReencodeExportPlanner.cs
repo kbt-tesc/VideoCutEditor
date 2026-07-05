@@ -56,7 +56,11 @@ public sealed class ReencodeExportPlanner : IExportPlanner
             $"{videoBitrateKbps}k",
         };
 
-        AddFadeArguments(arguments, request.Settings.Fade, request.Range.Duration);
+        AddFadeArguments(
+            arguments,
+            request.Settings.Fade,
+            request.Range.Duration,
+            MediaHasAudioStream(request.MediaInfo));
 
         arguments.AddRange(
         [
@@ -75,7 +79,11 @@ public sealed class ReencodeExportPlanner : IExportPlanner
             arguments);
     }
 
-    private static void AddFadeArguments(List<string> arguments, FadeSettings fade, TimeSpan clipDuration)
+    private static void AddFadeArguments(
+        List<string> arguments,
+        FadeSettings fade,
+        TimeSpan clipDuration,
+        bool mediaHasAudioStream)
     {
         if (!fade.HasAnyFade || clipDuration <= TimeSpan.Zero)
         {
@@ -94,7 +102,8 @@ public sealed class ReencodeExportPlanner : IExportPlanner
             arguments.Add(videoFilter);
         }
 
-        if (BuildFadeFilter("afade", fade.AudioFadeIn, fade.AudioFadeOut, durationSeconds, clipDuration) is { Length: > 0 } audioFilter)
+        if (mediaHasAudioStream
+            && BuildFadeFilter("afade", fade.AudioFadeIn, fade.AudioFadeOut, durationSeconds, clipDuration) is { Length: > 0 } audioFilter)
         {
             arguments.Add("-af");
             arguments.Add(audioFilter);
@@ -102,6 +111,10 @@ public sealed class ReencodeExportPlanner : IExportPlanner
             arguments.Add("aac");
         }
     }
+
+    private static bool MediaHasAudioStream(MediaInfo? mediaInfo) =>
+        mediaInfo is null
+        || mediaInfo.Streams.Any(stream => string.Equals(stream.CodecType, "audio", StringComparison.OrdinalIgnoreCase));
 
     private static string? BuildFadeFilter(
         string filterName,

@@ -39,6 +39,7 @@ Only one keep range is supported per export.
 - The first export implementation supports Fast copy with progress/log display and cancellation.
 - Re-encode mode supports codec family, encoder preference, bitrate-based export controls, target-size export controls, and clip-edge fade controls.
 - Fade duration is adjusted in 0.25 second steps and is truncated to two decimal places.
+- Audio fade controls affect existing audio streams only. They do not synthesize or add audio to inputs that have no audio stream.
 - When media metadata is available, Re-encode mode suggests an initial video bitrate from the source bitrate or resolution. The value remains editable and saved user settings take precedence.
 
 The first screen should be the usable editor, not a landing page or marketing screen.

@@ -43,8 +43,12 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
   - Added target-size rate control with MB persistence.
   - Added tested bitrate derivation from target size, duration, detected audio bitrate, and container overhead.
   - Wired target-size mode to pass the derived bitrate into the existing Re-encode planner.
-- `test: cover re-encode fade export integration`
+- `ad06fe6 test: cover re-encode fade export integration`
   - Added an ffmpeg-backed integration test that generates a temporary audio/video source, runs Re-encode with video and audio fades through `FfmpegRunner`, probes the output, and verifies temporary output cleanup.
+- `fix: skip audio fade filters without audio`
+  - Added metadata-aware Re-encode planning so audio fade filters and AAC audio re-encode are emitted only when media metadata shows an audio stream.
+  - Passed probed media metadata from the WinUI export flow into the export planner.
+  - Added planner and ffmpeg-backed integration coverage for video-only inputs with audio fade controls enabled.
 
 ## Implemented Capabilities
 
@@ -63,6 +67,7 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 - Re-encode export planning and execution for bitrate-based video encoding.
 - Target-size mode that derives Re-encode video bitrate from desired output size.
 - Clip-edge video/audio fade controls that force Re-encode and generate ffmpeg filters.
+- Audio fade planning skips audio filters for probed video-only inputs instead of adding synthetic audio.
 - Fade duration input with 0.25 second steps and two-decimal truncation.
 - NVEnc/software encoder capability detection from `ffmpeg -encoders`.
 - Export progress parsing, log display, cancellation, temporary output path, and final promotion after success.
@@ -77,7 +82,7 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 Most recent successful checks:
 
 - `dotnet test VideoCutEditor.slnx`
-  - 56 tests passed.
+  - 58 tests passed.
 - `dotnet build src/VideoCutEditor/VideoCutEditor.csproj -p:Platform=x64`
   - Build succeeded.
 - `powershell -ExecutionPolicy Bypass -File tests\ui-tests.ps1 -AppPid <pid>`
@@ -89,7 +94,7 @@ When resuming in a new session, rerun the relevant subset before making assumpti
 
 - Waveform generation is implemented in code, but should still be manually verified with real videos that have audio streams.
 - Fade controls and fade-triggered Re-encode are covered by generated audio/video integration tests, but should still be manually verified on representative real media.
-- Audio fade behavior for inputs without audio streams needs explicit coverage; the current planner emits `-af`/`-c:a aac` when audio fades are enabled.
+- Audio fade behavior for generated video-only inputs is covered; still verify representative real video-only media manually.
 - Quality mode and advanced ffmpeg arguments are not implemented.
 - Real media export should still be manually verified for Fast copy and Re-encode on local sample files.
 - NVEnc behavior should be manually verified on hardware and ffmpeg builds that expose NVEnc.

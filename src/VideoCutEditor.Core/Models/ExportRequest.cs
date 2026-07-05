@@ -4,4 +4,5 @@ public sealed record ExportRequest(
     string SourcePath,
     string OutputPath,
     ClipRange Range,
-    AppSettings Settings);
+    AppSettings Settings,
+    MediaInfo? MediaInfo = null);

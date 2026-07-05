@@ -136,7 +136,8 @@ The implemented planner keeps the selected clip range first, then applies fade f
 Audio policy:
 
 - If no audio processing is needed, preserve audio with stream copy where practical.
-- If audio fade is enabled, re-encode audio to AAC.
+- If audio fade is enabled and media metadata confirms an audio stream exists, re-encode audio to AAC.
+- If media metadata confirms there is no audio stream, omit audio fade filters and do not add an audio stream. If metadata is unavailable, keep the previous conservative behavior and assume audio may exist.
 - Preserve channel layout and sample rate where practical.
 
 ## Stream And Metadata Preservation
