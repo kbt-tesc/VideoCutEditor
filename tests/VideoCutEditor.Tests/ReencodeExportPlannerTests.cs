@@ -144,4 +144,94 @@ public sealed class ReencodeExportPlannerTests
             Directory.Delete(outputDirectory, recursive: true);
         }
     }
+
+    [Fact]
+    public void CreatePlan_adds_video_fade_filters_at_clip_edges()
+    {
+        string outputDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(outputDirectory);
+
+        try
+        {
+            var capabilities = new FfmpegCapabilities(new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "libx264",
+            });
+            var planner = new ReencodeExportPlanner(capabilities);
+            string outputPath = Path.Combine(outputDirectory, "clip_cut.mp4");
+            var request = new ExportRequest(
+                @"C:\video\source.mp4",
+                outputPath,
+                new ClipRange(TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(15)),
+                new AppSettings
+                {
+                    FfmpegPath = @"C:\tools\ffmpeg.exe",
+                    LastExportMode = ExportMode.Reencode,
+                    LastCodecFamily = CodecFamily.H264,
+                    LastEncoderKind = EncoderKind.Software,
+                    LastVideoBitrateKbps = 2500,
+                    Fade = new FadeSettings
+                    {
+                        VideoFadeIn = true,
+                        VideoFadeOut = true,
+                        DurationSeconds = 1.5,
+                    },
+                });
+
+            ExportPlan plan = planner.CreatePlan(request);
+
+            Assert.Contains("-vf", plan.Arguments);
+            Assert.Contains("fade=t=in:st=0:d=1.5,fade=t=out:st=8.5:d=1.5", plan.Arguments);
+        }
+        finally
+        {
+            Directory.Delete(outputDirectory, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void CreatePlan_adds_audio_fade_filters_and_aac_reencode()
+    {
+        string outputDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(outputDirectory);
+
+        try
+        {
+            var capabilities = new FfmpegCapabilities(new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "libx264",
+            });
+            var planner = new ReencodeExportPlanner(capabilities);
+            string outputPath = Path.Combine(outputDirectory, "clip_cut.mp4");
+            var request = new ExportRequest(
+                @"C:\video\source.mp4",
+                outputPath,
+                new ClipRange(TimeSpan.Zero, TimeSpan.FromSeconds(10)),
+                new AppSettings
+                {
+                    FfmpegPath = @"C:\tools\ffmpeg.exe",
+                    LastExportMode = ExportMode.Reencode,
+                    LastCodecFamily = CodecFamily.H264,
+                    LastEncoderKind = EncoderKind.Software,
+                    LastVideoBitrateKbps = 2500,
+                    Fade = new FadeSettings
+                    {
+                        AudioFadeIn = true,
+                        AudioFadeOut = true,
+                        DurationSeconds = 2,
+                    },
+                });
+
+            ExportPlan plan = planner.CreatePlan(request);
+
+            Assert.Contains("-af", plan.Arguments);
+            Assert.Contains("afade=t=in:st=0:d=2,afade=t=out:st=8:d=2", plan.Arguments);
+            Assert.Contains("-c:a", plan.Arguments);
+            Assert.Contains("aac", plan.Arguments);
+        }
+        finally
+        {
+            Directory.Delete(outputDirectory, recursive: true);
+        }
+    }
 }

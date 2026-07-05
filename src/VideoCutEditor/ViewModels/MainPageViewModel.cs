@@ -121,6 +121,21 @@ public partial class MainPageViewModel : ObservableObject
     [ObservableProperty]
     public partial string PredictedOutputSizeText { get; set; } = "Estimated size unavailable";
 
+    [ObservableProperty]
+    public partial bool VideoFadeInEnabled { get; set; }
+
+    [ObservableProperty]
+    public partial bool VideoFadeOutEnabled { get; set; }
+
+    [ObservableProperty]
+    public partial bool AudioFadeInEnabled { get; set; }
+
+    [ObservableProperty]
+    public partial bool AudioFadeOutEnabled { get; set; }
+
+    [ObservableProperty]
+    public partial double FadeDurationSeconds { get; set; } = 1;
+
     public double TimelineMaximum => Math.Max(DurationSeconds, 0.001);
 
     public string PositionText => FormatTime(TimeSpan.FromSeconds(PositionSeconds));
@@ -136,6 +151,10 @@ public partial class MainPageViewModel : ObservableObject
     public string PlaybackRateText => $"{PlaybackRate:0.##}x";
 
     public double TimelineContentWidth => Math.Max(TimelineViewportWidth, 1) * TimelineZoom;
+
+    public string ExportNoticeText => HasAnyFadeEnabled
+        ? "Fades force Re-encode because filters are enabled."
+        : "Fast copy preserves streams where practical, but cuts can align to nearby keyframes.";
 
     public MainPageViewModel()
         : this(
@@ -334,7 +353,7 @@ public partial class MainPageViewModel : ObservableObject
             return;
         }
 
-        if (CurrentExportMode == ExportMode.Reencode && GetVideoBitrateKbps() is null)
+        if (GetEffectiveExportMode(CreateCurrentSettings()) == ExportMode.Reencode && GetVideoBitrateKbps() is null)
         {
             StatusMessage = "Set a valid video bitrate";
             return;
@@ -361,7 +380,7 @@ public partial class MainPageViewModel : ObservableObject
             await settingsService.SaveAsync(settings);
 
             var request = new ExportRequest(SelectedSourcePath, PlannedOutputPath, range, settings);
-            IExportPlanner planner = new ExportPlannerFactory(currentCapabilities).CreatePlanner(settings.LastExportMode);
+            IExportPlanner planner = new ExportPlannerFactory(currentCapabilities).CreatePlanner(GetEffectiveExportMode(settings));
             ExportPlan plan = planner.CreatePlan(request);
             var progress = new Progress<ExportProgress>(exportProgress =>
             {
@@ -519,6 +538,26 @@ public partial class MainPageViewModel : ObservableObject
         ApplySuggestedVideoBitrate(force: !hasManualVideoBitrateOverride);
     }
 
+    partial void OnVideoFadeInEnabledChanged(bool value)
+    {
+        OnPropertyChanged(nameof(ExportNoticeText));
+    }
+
+    partial void OnVideoFadeOutEnabledChanged(bool value)
+    {
+        OnPropertyChanged(nameof(ExportNoticeText));
+    }
+
+    partial void OnAudioFadeInEnabledChanged(bool value)
+    {
+        OnPropertyChanged(nameof(ExportNoticeText));
+    }
+
+    partial void OnAudioFadeOutEnabledChanged(bool value)
+    {
+        OnPropertyChanged(nameof(ExportNoticeText));
+    }
+
     partial void OnVideoBitrateTextChanged(string value)
     {
         if (!isUpdatingSuggestedBitrate)
@@ -563,6 +602,12 @@ public partial class MainPageViewModel : ObservableObject
         _ => EncoderKind.Auto,
     };
 
+    private bool HasAnyFadeEnabled =>
+        VideoFadeInEnabled
+        || VideoFadeOutEnabled
+        || AudioFadeInEnabled
+        || AudioFadeOutEnabled;
+
     private AppSettings CreateCurrentSettings() => new()
     {
         FfmpegPath = FfmpegPath,
@@ -573,7 +618,18 @@ public partial class MainPageViewModel : ObservableObject
         LastEncoderKind = CurrentEncoderKind,
         LastBitrateMode = BitrateMode.Bitrate,
         LastVideoBitrateKbps = GetVideoBitrateKbps(),
+        Fade = new FadeSettings
+        {
+            VideoFadeIn = VideoFadeInEnabled,
+            VideoFadeOut = VideoFadeOutEnabled,
+            AudioFadeIn = AudioFadeInEnabled,
+            AudioFadeOut = AudioFadeOutEnabled,
+            DurationSeconds = GetFadeDurationSeconds(),
+        },
     };
+
+    private static ExportMode GetEffectiveExportMode(AppSettings settings) =>
+        settings.Fade.HasAnyFade ? ExportMode.Reencode : settings.LastExportMode;
 
     private void ApplyExportSettings(AppSettings settings)
     {
@@ -594,6 +650,11 @@ public partial class MainPageViewModel : ObservableObject
         int initialBitrateKbps = settings.LastVideoBitrateKbps.GetValueOrDefault(2500);
         SetVideoBitrateTextFromSuggestion(initialBitrateKbps);
         hasManualVideoBitrateOverride = settings.LastVideoBitrateKbps.HasValue;
+        VideoFadeInEnabled = settings.Fade.VideoFadeIn;
+        VideoFadeOutEnabled = settings.Fade.VideoFadeOut;
+        AudioFadeInEnabled = settings.Fade.AudioFadeIn;
+        AudioFadeOutEnabled = settings.Fade.AudioFadeOut;
+        FadeDurationSeconds = settings.Fade.DurationSeconds > 0 ? settings.Fade.DurationSeconds : 1;
     }
 
     private int? GetVideoBitrateKbps()
@@ -626,6 +687,13 @@ public partial class MainPageViewModel : ObservableObject
         {
             isUpdatingSuggestedBitrate = false;
         }
+    }
+
+    private double GetFadeDurationSeconds()
+    {
+        return double.IsFinite(FadeDurationSeconds) && FadeDurationSeconds > 0
+            ? FadeDurationSeconds
+            : 1;
     }
 
     private void UpdatePredictedOutputSizeText()

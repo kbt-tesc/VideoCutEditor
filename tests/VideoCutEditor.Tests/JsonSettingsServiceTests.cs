@@ -33,12 +33,33 @@ public sealed class JsonSettingsServiceTests
             LastEncoderKind = EncoderKind.Nvenc,
             LastBitrateMode = BitrateMode.TargetSize,
             LastVideoBitrateKbps = 4500,
+            Fade = new FadeSettings
+            {
+                VideoFadeIn = true,
+                VideoFadeOut = true,
+                AudioFadeIn = true,
+                AudioFadeOut = true,
+                DurationSeconds = 1.25,
+            },
         };
 
         await service.SaveAsync(expected);
         AppSettings actual = await service.LoadAsync();
 
         Assert.Equal(expected, actual);
+    }
+
+    [Fact]
+    public async Task LoadAsync_treats_null_fade_settings_as_defaults()
+    {
+        string directory = CreateTempDirectory();
+        var service = new JsonSettingsService(directory);
+        Directory.CreateDirectory(directory);
+        await File.WriteAllTextAsync(service.SettingsFilePath, """{"fade":null}""");
+
+        AppSettings settings = await service.LoadAsync();
+
+        Assert.Equal(new FadeSettings(), settings.Fade);
     }
 
     private static string CreateTempDirectory()

@@ -363,6 +363,52 @@
                             IsReadOnly="True"
                             Text="{x:Bind ViewModel.PredictedOutputSizeText, Mode=OneWay}" />
 
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="Fades" Style="{StaticResource BodyStrongTextBlockStyle}" />
+
+                            <Grid ColumnSpacing="8" RowSpacing="4">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <CheckBox
+                                    AutomationProperties.AutomationId="VideoFadeInCheckBox"
+                                    Content="Video in"
+                                    IsChecked="{x:Bind ViewModel.VideoFadeInEnabled, Mode=TwoWay}" />
+                                <CheckBox
+                                    Grid.Column="1"
+                                    AutomationProperties.AutomationId="VideoFadeOutCheckBox"
+                                    Content="Video out"
+                                    IsChecked="{x:Bind ViewModel.VideoFadeOutEnabled, Mode=TwoWay}" />
+                                <CheckBox
+                                    Grid.Row="1"
+                                    AutomationProperties.AutomationId="AudioFadeInCheckBox"
+                                    Content="Audio in"
+                                    IsChecked="{x:Bind ViewModel.AudioFadeInEnabled, Mode=TwoWay}" />
+                                <CheckBox
+                                    Grid.Row="1"
+                                    Grid.Column="1"
+                                    AutomationProperties.AutomationId="AudioFadeOutCheckBox"
+                                    Content="Audio out"
+                                    IsChecked="{x:Bind ViewModel.AudioFadeOutEnabled, Mode=TwoWay}" />
+                            </Grid>
+
+                            <NumberBox
+                                AutomationProperties.AutomationId="FadeDurationNumberBox"
+                                Header="Fade duration (seconds)"
+                                LargeChange="1"
+                                Maximum="30"
+                                Minimum="0.1"
+                                SmallChange="0.25"
+                                SpinButtonPlacementMode="Compact"
+                                Value="{x:Bind ViewModel.FadeDurationSeconds, Mode=TwoWay}" />
+                        </StackPanel>
+
                         <Grid ColumnSpacing="8">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
@@ -520,7 +566,7 @@
             Grid.Row="2"
             IsOpen="True"
             IsClosable="False"
-            Message="Fast copy preserves streams where practical, but cuts can align to nearby keyframes."
+            Message="{x:Bind ViewModel.ExportNoticeText, Mode=OneWay}"
             Severity="Informational" />
     </Grid>
 </Page>

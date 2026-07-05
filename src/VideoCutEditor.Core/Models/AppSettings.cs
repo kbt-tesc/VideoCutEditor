@@ -17,4 +17,6 @@ public sealed record AppSettings
     public BitrateMode LastBitrateMode { get; init; } = BitrateMode.Bitrate;
 
     public int? LastVideoBitrateKbps { get; init; }
+
+    public FadeSettings Fade { get; init; } = new();
 }

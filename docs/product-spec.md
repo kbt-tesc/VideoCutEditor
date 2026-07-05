@@ -37,7 +37,7 @@ Only one keep range is supported per export.
   - Bitrate, target size, or quality controls
 - Show ffmpeg progress, current status, log output, and a cancel button during export.
 - The first export implementation supports Fast copy with progress/log display and cancellation.
-- Re-encode mode supports codec family, encoder preference, and bitrate-based export controls. Fade controls are added in a later slice.
+- Re-encode mode supports codec family, encoder preference, bitrate-based export controls, and clip-edge fade controls.
 - When media metadata is available, Re-encode mode suggests an initial video bitrate from the source bitrate or resolution. The value remains editable and saved user settings take precedence.
 
 The first screen should be the usable editor, not a landing page or marketing screen.
@@ -55,6 +55,7 @@ The first screen should be the usable editor, not a landing page or marketing sc
 - If the generated filename already exists, append a numeric suffix such as `_cut_2` instead of overwriting.
 - The default output container follows the input extension.
 - Stream-copy cuts may not be frame-accurate because they depend on keyframes. The UI should make that tradeoff clear.
+- Enabling any fade forces the export through Re-encode even when the visible export mode is Fast copy, because ffmpeg filters require decoding and encoding.
 
 ## Settings
 

@@ -78,6 +78,11 @@ $expectedElements = @(
     "EncoderKindComboBox",
     "VideoBitrateTextBox",
     "PredictedOutputSizeTextBox",
+    "VideoFadeInCheckBox",
+    "VideoFadeOutCheckBox",
+    "AudioFadeInCheckBox",
+    "AudioFadeOutCheckBox",
+    "FadeDurationNumberBox",
     "MediaInfoTextBox",
     "SaveSettingsButton",
     "CancelExportButton",
@@ -112,6 +117,22 @@ Test-UI "Video bitrate defaults to 2500" {
 
 Test-UI "Predicted output size starts unavailable" {
     winapp ui wait-for "PredictedOutputSizeTextBox" -a $AppPid --value "Estimated size unavailable" -t 3000 -q
+}
+
+Test-UI "Video fade in defaults off" {
+    winapp ui wait-for "VideoFadeInCheckBox" -a $AppPid --value "Off" -t 3000 -q
+}
+
+Test-UI "Video fade out defaults off" {
+    winapp ui wait-for "VideoFadeOutCheckBox" -a $AppPid --value "Off" -t 3000 -q
+}
+
+Test-UI "Audio fade in defaults off" {
+    winapp ui wait-for "AudioFadeInCheckBox" -a $AppPid --value "Off" -t 3000 -q
+}
+
+Test-UI "Audio fade out defaults off" {
+    winapp ui wait-for "AudioFadeOutCheckBox" -a $AppPid --value "Off" -t 3000 -q
 }
 
 Test-UI "Cancel is disabled when idle" {

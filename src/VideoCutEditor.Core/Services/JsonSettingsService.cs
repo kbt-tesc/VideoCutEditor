@@ -36,7 +36,14 @@ public sealed class JsonSettingsService : ISettingsService
             SerializerOptions,
             cancellationToken);
 
-        return settings ?? new AppSettings();
+        if (settings is null)
+        {
+            return new AppSettings();
+        }
+
+        return settings.Fade is null
+            ? settings with { Fade = new FadeSettings() }
+            : settings;
     }
 
     public async ValueTask SaveAsync(AppSettings settings, CancellationToken cancellationToken = default)
