@@ -39,10 +39,12 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 - `7b0eeb4 fix: normalize fade duration precision`
   - Set fade duration input changes to 0.25 second steps.
   - Truncated fade duration values to two decimal places before settings/export use.
-- `feat: add target size mode`
+- `8836e1d feat: add target size mode`
   - Added target-size rate control with MB persistence.
   - Added tested bitrate derivation from target size, duration, detected audio bitrate, and container overhead.
   - Wired target-size mode to pass the derived bitrate into the existing Re-encode planner.
+- `test: cover re-encode fade export integration`
+  - Added an ffmpeg-backed integration test that generates a temporary audio/video source, runs Re-encode with video and audio fades through `FfmpegRunner`, probes the output, and verifies temporary output cleanup.
 
 ## Implemented Capabilities
 
@@ -75,7 +77,7 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 Most recent successful checks:
 
 - `dotnet test VideoCutEditor.slnx`
-  - 55 tests passed.
+  - 56 tests passed.
 - `dotnet build src/VideoCutEditor/VideoCutEditor.csproj -p:Platform=x64`
   - Build succeeded.
 - `powershell -ExecutionPolicy Bypass -File tests\ui-tests.ps1 -AppPid <pid>`
@@ -86,7 +88,7 @@ When resuming in a new session, rerun the relevant subset before making assumpti
 ## Known Gaps
 
 - Waveform generation is implemented in code, but should still be manually verified with real videos that have audio streams.
-- Fade controls and fade-triggered Re-encode are implemented in code, but should still be manually verified on real video/audio inputs.
+- Fade controls and fade-triggered Re-encode are covered by generated audio/video integration tests, but should still be manually verified on representative real media.
 - Audio fade behavior for inputs without audio streams needs explicit coverage; the current planner emits `-af`/`-c:a aac` when audio fades are enabled.
 - Quality mode and advanced ffmpeg arguments are not implemented.
 - Real media export should still be manually verified for Fast copy and Re-encode on local sample files.
@@ -97,7 +99,7 @@ When resuming in a new session, rerun the relevant subset before making assumpti
 
 ## Recommended Next Slices
 
-1. Strengthen end-to-end verification.
+1. Continue end-to-end verification.
    - Add scripted picker workflow coverage where reliable.
    - Add manual verification notes for real preview/export/NVEnc/package runs.
 2. Packaging and release preparation.
