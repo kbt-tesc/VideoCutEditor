@@ -65,6 +65,7 @@ $expectedElements = @(
     "RangeStartTextBox",
     "RangeEndTextBox",
     "ExportModeRadioButtons",
+    "NormalizeAudioCheckBox",
     "FfmpegPathTextBox",
     "BrowseFfmpegPathButton",
     "FfprobePathTextBox",
@@ -95,6 +96,14 @@ Test-UI "Select Fast copy mode" {
     winapp ui wait-for "CodecFamilyComboBox" -a $AppPid --gone -t 3000 -q
 }
 
+Test-UI "Normalize audio defaults off" {
+    winapp ui wait-for "NormalizeAudioCheckBox" -a $AppPid --value "Off" -t 3000 -q
+}
+
+Test-UI "Normalize audio remains available in Fast copy mode" {
+    winapp ui wait-for "NormalizeAudioCheckBox" -a $AppPid -p IsEnabled --value "True" -t 3000 -q
+}
+
 Test-UI "Codec is hidden in Fast copy mode" {
     winapp ui wait-for "CodecFamilyComboBox" -a $AppPid --gone -t 3000 -q
 }
@@ -107,18 +116,13 @@ Test-UI "Fades are hidden in Fast copy mode" {
     winapp ui wait-for "VideoFadeInCheckBox" -a $AppPid --gone -t 3000 -q
 }
 
-Test-UI "Switch to Normalize audio mode" {
-    winapp ui invoke "Normalize audio" -a $AppPid
-    winapp ui wait-for "CodecFamilyComboBox" -a $AppPid --gone -t 3000 -q
-}
-
-Test-UI "Re-encode settings are hidden in Normalize audio mode" {
-    winapp ui wait-for "BitrateModeComboBox" -a $AppPid --gone -t 3000 -q
-}
-
 Test-UI "Switch to Re-encode mode" {
     winapp ui invoke "Re-encode" -a $AppPid
     winapp ui wait-for "CodecFamilyComboBox" -a $AppPid -t 3000 -q
+}
+
+Test-UI "Normalize audio remains available in Re-encode mode" {
+    winapp ui wait-for "NormalizeAudioCheckBox" -a $AppPid -p IsEnabled --value "True" -t 3000 -q
 }
 
 Test-UI "Codec defaults to H.264 in Re-encode mode" {

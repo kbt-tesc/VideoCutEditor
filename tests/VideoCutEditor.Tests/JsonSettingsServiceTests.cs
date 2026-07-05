@@ -28,13 +28,14 @@ public sealed class JsonSettingsServiceTests
             FfmpegPath = @"C:\Tools\ffmpeg.exe",
             FfprobePath = @"C:\Tools\ffprobe.exe",
             OutputDirectory = @"D:\Exports",
-            LastExportMode = ExportMode.AudioNormalize,
+            LastExportMode = ExportMode.Reencode,
             LastCodecFamily = CodecFamily.H265,
             LastEncoderKind = EncoderKind.Nvenc,
             LastBitrateMode = BitrateMode.TargetSize,
             LastVideoBitrateKbps = 4500,
             LastTargetSizeMegabytes = 80.5,
             LastQualityValue = 21,
+            NormalizeAudio = true,
             Fade = new FadeSettings
             {
                 VideoFadeIn = true,
@@ -62,6 +63,20 @@ public sealed class JsonSettingsServiceTests
         AppSettings settings = await service.LoadAsync();
 
         Assert.Equal(new FadeSettings(), settings.Fade);
+    }
+
+    [Fact]
+    public async Task LoadAsync_migrates_legacy_audio_normalize_mode_to_fast_copy_setting()
+    {
+        string directory = CreateTempDirectory();
+        var service = new JsonSettingsService(directory);
+        Directory.CreateDirectory(directory);
+        await File.WriteAllTextAsync(service.SettingsFilePath, """{"lastExportMode":"AudioNormalize"}""");
+
+        AppSettings settings = await service.LoadAsync();
+
+        Assert.Equal(ExportMode.FastCopy, settings.LastExportMode);
+        Assert.True(settings.NormalizeAudio);
     }
 
     private static string CreateTempDirectory()

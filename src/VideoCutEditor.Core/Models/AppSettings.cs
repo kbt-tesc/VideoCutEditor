@@ -22,5 +22,7 @@ public sealed record AppSettings
 
     public int? LastQualityValue { get; init; }
 
+    public bool NormalizeAudio { get; init; }
+
     public FadeSettings Fade { get; init; } = new();
 }

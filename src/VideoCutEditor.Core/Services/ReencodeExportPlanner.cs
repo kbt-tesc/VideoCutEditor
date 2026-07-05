@@ -24,6 +24,7 @@ public sealed class ReencodeExportPlanner : IExportPlanner
         ArgumentException.ThrowIfNullOrWhiteSpace(request.Settings.FfmpegPath);
         ArgumentException.ThrowIfNullOrWhiteSpace(request.SourcePath);
         ArgumentException.ThrowIfNullOrWhiteSpace(request.OutputPath);
+        AudioNormalizationArguments.ThrowIfRequestedWithoutAudio(request.Settings, request.MediaInfo);
 
         string? videoEncoder = capabilities.ChooseVideoEncoder(
             request.Settings.LastCodecFamily,
@@ -58,11 +59,11 @@ public sealed class ReencodeExportPlanner : IExportPlanner
 
         AddRateControlArguments(arguments, request.Settings, videoEncoder);
 
-        AddFadeArguments(
+        AddFilterArguments(
             arguments,
-            request.Settings.Fade,
+            request.Settings,
             request.Range.Duration,
-            MediaHasAudioStream(request.MediaInfo));
+            AudioNormalizationArguments.MayHaveAudioStream(request.MediaInfo));
 
         arguments.AddRange(
         [
@@ -95,42 +96,59 @@ public sealed class ReencodeExportPlanner : IExportPlanner
         arguments.Add($"{videoBitrateKbps}k");
     }
 
-    private static void AddFadeArguments(
+    private static void AddFilterArguments(
         List<string> arguments,
-        FadeSettings fade,
+        AppSettings settings,
         TimeSpan clipDuration,
         bool mediaHasAudioStream)
     {
-        if (!fade.HasAnyFade || clipDuration <= TimeSpan.Zero)
+        FadeSettings fade = settings.Fade;
+        bool hasFade = fade.HasAnyFade && clipDuration > TimeSpan.Zero;
+        bool hasAudioProcessing = settings.NormalizeAudio || hasFade;
+
+        if (!hasAudioProcessing)
         {
             return;
         }
 
-        double durationSeconds = TruncateToTwoDecimals(Math.Clamp(fade.DurationSeconds, 0, clipDuration.TotalSeconds));
-        if (durationSeconds <= 0)
-        {
-            return;
-        }
+        double durationSeconds = hasFade
+            ? TruncateToTwoDecimals(Math.Clamp(fade.DurationSeconds, 0, clipDuration.TotalSeconds))
+            : 0;
 
-        if (BuildFadeFilter("fade", fade.VideoFadeIn, fade.VideoFadeOut, durationSeconds, clipDuration) is { Length: > 0 } videoFilter)
+        if (durationSeconds > 0
+            && BuildFadeFilter("fade", fade.VideoFadeIn, fade.VideoFadeOut, durationSeconds, clipDuration) is { Length: > 0 } videoFilter)
         {
             arguments.Add("-vf");
             arguments.Add(videoFilter);
         }
 
-        if (mediaHasAudioStream
-            && BuildFadeFilter("afade", fade.AudioFadeIn, fade.AudioFadeOut, durationSeconds, clipDuration) is { Length: > 0 } audioFilter)
+        if (!mediaHasAudioStream)
         {
-            arguments.Add("-af");
-            arguments.Add(audioFilter);
-            arguments.Add("-c:a");
-            arguments.Add("aac");
+            return;
         }
-    }
 
-    private static bool MediaHasAudioStream(MediaInfo? mediaInfo) =>
-        mediaInfo is null
-        || mediaInfo.Streams.Any(stream => string.Equals(stream.CodecType, "audio", StringComparison.OrdinalIgnoreCase));
+        var audioFilters = new List<string>(capacity: 2);
+        if (settings.NormalizeAudio)
+        {
+            audioFilters.Add(AudioNormalizationArguments.LoudnormFilter);
+        }
+
+        if (durationSeconds > 0
+            && BuildFadeFilter("afade", fade.AudioFadeIn, fade.AudioFadeOut, durationSeconds, clipDuration) is { Length: > 0 } audioFadeFilter)
+        {
+            audioFilters.Add(audioFadeFilter);
+        }
+
+        if (audioFilters.Count == 0)
+        {
+            return;
+        }
+
+        arguments.Add("-af");
+        arguments.Add(string.Join(",", audioFilters));
+        arguments.Add("-c:a");
+        arguments.Add("aac");
+    }
 
     private static bool IsNvencEncoder(string videoEncoder) =>
         videoEncoder.EndsWith("_nvenc", StringComparison.OrdinalIgnoreCase);

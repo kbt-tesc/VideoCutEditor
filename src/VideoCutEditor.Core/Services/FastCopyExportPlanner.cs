@@ -12,11 +12,12 @@ public sealed class FastCopyExportPlanner : IExportPlanner
         ArgumentException.ThrowIfNullOrWhiteSpace(request.Settings.FfmpegPath);
         ArgumentException.ThrowIfNullOrWhiteSpace(request.SourcePath);
         ArgumentException.ThrowIfNullOrWhiteSpace(request.OutputPath);
+        AudioNormalizationArguments.ThrowIfRequestedWithoutAudio(request.Settings, request.MediaInfo);
 
         string temporaryOutputPath = ExportPlanPathHelper.CreateTemporaryOutputPath(request.OutputPath);
 
-        string[] arguments =
-        [
+        var arguments = new List<string>
+        {
             "-hide_banner",
             "-nostdin",
             "-y",
@@ -30,12 +31,27 @@ public sealed class FastCopyExportPlanner : IExportPlanner
             "0",
             "-c",
             "copy",
+        };
+
+        if (request.Settings.NormalizeAudio)
+        {
+            arguments.AddRange(
+            [
+                "-af",
+                AudioNormalizationArguments.LoudnormFilter,
+                "-c:a",
+                "aac",
+            ]);
+        }
+
+        arguments.AddRange(
+        [
             "-map_metadata",
             "0",
             "-avoid_negative_ts",
             "make_zero",
             temporaryOutputPath,
-        ];
+        ]);
 
         return new ExportPlan(
             request.Settings.FfmpegPath!,

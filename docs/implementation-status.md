@@ -6,7 +6,7 @@ This document is the handoff ledger for future Codex sessions. Read it after `AG
 
 ## Current State
 
-VideoCutEditor has a working WinUI 3/.NET 10 editor shell with a single-range video extraction workflow. The app can detect externally installed `ffmpeg` and `ffprobe`, probe media metadata, preview videos through Windows media playback when possible, set start/end markers, suggest re-encode bitrates from metadata, configure clip-edge fades, and export Fast copy, Re-encode through bitrate/target-size/quality rate control, or audio normalization.
+VideoCutEditor has a working WinUI 3/.NET 10 editor shell with a single-range video extraction workflow. The app can detect externally installed `ffmpeg` and `ffprobe`, probe media metadata, preview videos through Windows media playback when possible, set start/end markers, suggest re-encode bitrates from metadata, configure clip-edge fades, and export Fast copy or Re-encode through bitrate/target-size/quality rate control. Audio normalization is available as an option within both export modes.
 
 The project is being developed in small TDD slices. Keep using behavior-focused tests first, then implement the smallest production change, verify, and commit each slice.
 
@@ -58,12 +58,17 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
   - Replaced the two-option export mode drop-down with direct Fast copy/Re-encode choices.
   - Hid codec, encoder, rate-control, predicted-size, and fade controls while Fast copy is selected.
   - Prevented hidden Fast copy fade settings from silently forcing Re-encode.
-- `feat: add audio normalization mode`
+- `8f272ae feat: add audio normalization mode`
   - Added Normalize audio export mode with single-pass `loudnorm=I=-14:TP=-1.5:LRA=11`.
   - Stream-copies video and untouched streams while re-encoding filtered audio to AAC.
   - Added planner coverage for loudnorm arguments and no-audio rejection.
   - Added an ffmpeg-backed integration test for generated audio/video media.
   - Added the mode to the WinUI direct export choices.
+- `refactor: make audio normalization an export setting`
+  - Refactored Normalize audio from a third export mode into a checkbox setting available in both Fast copy and Re-encode.
+  - Fast copy keeps video and untouched streams on `-c copy` while adding `loudnorm` and AAC audio re-encode when normalization is enabled.
+  - Re-encode combines `loudnorm` with existing audio fade filters when both are enabled.
+  - Added settings migration from the legacy `AudioNormalize` mode value to `FastCopy` plus `NormalizeAudio=true`.
 
 ## Implemented Capabilities
 
@@ -79,9 +84,9 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 - Slow playback rates through the speed selector.
 - ffprobe metadata parsing and media summary display.
 - Fast copy export planning and execution.
-- Direct Fast copy/Re-encode/Normalize audio mode selection without a drop-down.
+- Direct Fast copy/Re-encode mode selection without a drop-down.
 - Re-encode export planning and execution for bitrate, target-size, and quality-based video encoding.
-- Audio normalization export planning and execution with `-14 LUFS` loudnorm, video stream copy, and AAC audio re-encode.
+- Audio normalization option with `-14 LUFS` loudnorm and AAC audio re-encode in both Fast copy and Re-encode.
 - Target-size mode that derives Re-encode video bitrate from desired output size.
 - Quality mode that maps a single quality value to `-crf` for software encoders and `-cq` for NVEnc encoders.
 - Clip-edge video/audio fade controls that force Re-encode and generate ffmpeg filters.
@@ -90,7 +95,7 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 - NVEnc/software encoder capability detection from `ffmpeg -encoders`.
 - Export progress parsing, log display, cancellation, temporary output path, and final promotion after success.
 - Output filename collision avoidance.
-- Settings persistence for tool paths, output directory, export mode, codec, encoder, bitrate mode, and video bitrate.
+- Settings persistence for tool paths, output directory, export mode, normalize audio, codec, encoder, bitrate mode, and video bitrate.
 - Re-encode video bitrate suggestions from source bitrate or resolution with codec-specific multipliers.
 - Predicted output size display for bitrate-based Re-encode when enough information is available.
 - Scripted WinUI UI smoke tests with screenshots.
@@ -100,11 +105,11 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 Most recent successful checks:
 
 - `dotnet test VideoCutEditor.slnx`
-  - 64 tests passed.
+  - 68 tests passed.
 - `dotnet build src/VideoCutEditor/VideoCutEditor.csproj -p:Platform=x64`
   - Build succeeded.
 - `powershell -ExecutionPolicy Bypass -File tests\ui-tests.ps1 -AppPid <pid>`
-  - 51 UI tests passed.
+  - 53 UI tests passed.
 
 When resuming in a new session, rerun the relevant subset before making assumptions if files have changed.
 

@@ -41,9 +41,13 @@ public sealed class JsonSettingsService : ISettingsService
             return new AppSettings();
         }
 
-        return settings.Fade is null
+        AppSettings normalizedSettings = settings.Fade is null
             ? settings with { Fade = new FadeSettings() }
             : settings;
+
+        return normalizedSettings.LastExportMode == ExportMode.AudioNormalize
+            ? normalizedSettings with { LastExportMode = ExportMode.FastCopy, NormalizeAudio = true }
+            : normalizedSettings;
     }
 
     public async ValueTask SaveAsync(AppSettings settings, CancellationToken cancellationToken = default)

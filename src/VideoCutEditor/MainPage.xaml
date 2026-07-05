@@ -333,12 +333,16 @@
                         <RadioButtons
                             AutomationProperties.AutomationId="ExportModeRadioButtons"
                             Header="Mode"
-                            MaxColumns="1"
+                            MaxColumns="2"
                             SelectedIndex="{x:Bind ViewModel.SelectedExportModeIndex, Mode=TwoWay}">
                             <x:String>Fast copy</x:String>
                             <x:String>Re-encode</x:String>
-                            <x:String>Normalize audio</x:String>
                         </RadioButtons>
+
+                        <CheckBox
+                            AutomationProperties.AutomationId="NormalizeAudioCheckBox"
+                            Content="Normalize audio (-14 LUFS)"
+                            IsChecked="{x:Bind ViewModel.NormalizeAudioEnabled, Mode=TwoWay}" />
 
                         <StackPanel
                             Spacing="16"

@@ -132,6 +132,9 @@ public partial class MainPageViewModel : ObservableObject
     public partial string PredictedOutputSizeText { get; set; } = "Estimated size unavailable";
 
     [ObservableProperty]
+    public partial bool NormalizeAudioEnabled { get; set; }
+
+    [ObservableProperty]
     public partial bool VideoFadeInEnabled { get; set; }
 
     [ObservableProperty]
@@ -164,10 +167,10 @@ public partial class MainPageViewModel : ObservableObject
 
     public string ExportNoticeText => HasActiveFadeEnabled
         ? "Fades force Re-encode because filters are enabled."
-        : CurrentExportMode == ExportMode.Reencode
-            ? "Re-encode uses the selected codec and rate control settings."
-            : CurrentExportMode == ExportMode.AudioNormalize
-                ? "Normalize audio targets -14 LUFS, copies video, and re-encodes audio."
+        : NormalizeAudioEnabled
+            ? "Normalize audio targets -14 LUFS and re-encodes audio."
+            : CurrentExportMode == ExportMode.Reencode
+                ? "Re-encode uses the selected codec and rate control settings."
                 : "Fast copy preserves streams where practical, but cuts can align to nearby keyframes.";
 
     public bool IsBitrateMode => CurrentBitrateMode == BitrateMode.Bitrate;
@@ -587,6 +590,11 @@ public partial class MainPageViewModel : ObservableObject
         UpdatePredictedOutputSizeText();
     }
 
+    partial void OnNormalizeAudioEnabledChanged(bool value)
+    {
+        OnPropertyChanged(nameof(ExportNoticeText));
+    }
+
     partial void OnTargetSizeMegabytesChanged(double value)
     {
         UpdateTargetSizeDerivedBitrate();
@@ -674,7 +682,6 @@ public partial class MainPageViewModel : ObservableObject
     private ExportMode CurrentExportMode => SelectedExportModeIndex switch
     {
         1 => ExportMode.Reencode,
-        2 => ExportMode.AudioNormalize,
         _ => ExportMode.FastCopy,
     };
 
@@ -720,6 +727,7 @@ public partial class MainPageViewModel : ObservableObject
         LastVideoBitrateKbps = GetVideoBitrateKbps(),
         LastTargetSizeMegabytes = GetTargetSizeMegabytes(),
         LastQualityValue = GetQualityValue(),
+        NormalizeAudio = NormalizeAudioEnabled,
         Fade = CurrentExportMode == ExportMode.Reencode
             ? new FadeSettings
             {
@@ -740,7 +748,6 @@ public partial class MainPageViewModel : ObservableObject
         SelectedExportModeIndex = settings.LastExportMode switch
         {
             ExportMode.Reencode => 1,
-            ExportMode.AudioNormalize => 2,
             _ => 0,
         };
         SelectedCodecFamilyIndex = settings.LastCodecFamily switch
@@ -767,6 +774,7 @@ public partial class MainPageViewModel : ObservableObject
         hasManualVideoBitrateOverride = settings.LastVideoBitrateKbps.HasValue;
         TargetSizeMegabytes = settings.LastTargetSizeMegabytes.GetValueOrDefault(100);
         QualityValue = settings.LastQualityValue.GetValueOrDefault(23);
+        NormalizeAudioEnabled = settings.NormalizeAudio || settings.LastExportMode == ExportMode.AudioNormalize;
         VideoFadeInEnabled = settings.Fade.VideoFadeIn;
         VideoFadeOutEnabled = settings.Fade.VideoFadeOut;
         AudioFadeInEnabled = settings.Fade.AudioFadeIn;

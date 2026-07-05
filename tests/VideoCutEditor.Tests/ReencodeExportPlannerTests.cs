@@ -318,6 +318,146 @@ public sealed class ReencodeExportPlannerTests
     }
 
     [Fact]
+    public void CreatePlan_adds_loudnorm_arguments_when_audio_normalization_is_enabled()
+    {
+        string outputDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(outputDirectory);
+
+        try
+        {
+            var capabilities = new FfmpegCapabilities(new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "libx264",
+            });
+            var planner = new ReencodeExportPlanner(capabilities);
+            string outputPath = Path.Combine(outputDirectory, "clip_cut.mp4");
+            var request = new ExportRequest(
+                @"C:\video\source.mp4",
+                outputPath,
+                new ClipRange(TimeSpan.Zero, TimeSpan.FromSeconds(10)),
+                new AppSettings
+                {
+                    FfmpegPath = @"C:\tools\ffmpeg.exe",
+                    LastExportMode = ExportMode.Reencode,
+                    LastCodecFamily = CodecFamily.H264,
+                    LastEncoderKind = EncoderKind.Software,
+                    LastVideoBitrateKbps = 2500,
+                    NormalizeAudio = true,
+                },
+                new MediaInfo(
+                    @"C:\video\source.mp4",
+                    TimeSpan.FromSeconds(10),
+                    "mov,mp4,m4a,3gp,3g2,mj2",
+                    2_500_000,
+                    [
+                        new MediaStreamInfo(0, "video", "h264", 2_500_000),
+                        new MediaStreamInfo(1, "audio", "aac", 128_000),
+                    ]));
+
+            ExportPlan plan = planner.CreatePlan(request);
+
+            Assert.Contains("-af", plan.Arguments);
+            Assert.Contains("loudnorm=I=-14:TP=-1.5:LRA=11", plan.Arguments);
+            Assert.Contains("-c:a", plan.Arguments);
+            Assert.Contains("aac", plan.Arguments);
+        }
+        finally
+        {
+            Directory.Delete(outputDirectory, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void CreatePlan_combines_loudnorm_and_audio_fade_filters()
+    {
+        string outputDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(outputDirectory);
+
+        try
+        {
+            var capabilities = new FfmpegCapabilities(new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "libx264",
+            });
+            var planner = new ReencodeExportPlanner(capabilities);
+            string outputPath = Path.Combine(outputDirectory, "clip_cut.mp4");
+            var request = new ExportRequest(
+                @"C:\video\source.mp4",
+                outputPath,
+                new ClipRange(TimeSpan.Zero, TimeSpan.FromSeconds(10)),
+                new AppSettings
+                {
+                    FfmpegPath = @"C:\tools\ffmpeg.exe",
+                    LastExportMode = ExportMode.Reencode,
+                    LastCodecFamily = CodecFamily.H264,
+                    LastEncoderKind = EncoderKind.Software,
+                    LastVideoBitrateKbps = 2500,
+                    NormalizeAudio = true,
+                    Fade = new FadeSettings
+                    {
+                        AudioFadeIn = true,
+                        AudioFadeOut = true,
+                        DurationSeconds = 2,
+                    },
+                },
+                new MediaInfo(
+                    @"C:\video\source.mp4",
+                    TimeSpan.FromSeconds(10),
+                    "mov,mp4,m4a,3gp,3g2,mj2",
+                    2_500_000,
+                    [
+                        new MediaStreamInfo(0, "video", "h264", 2_500_000),
+                        new MediaStreamInfo(1, "audio", "aac", 128_000),
+                    ]));
+
+            ExportPlan plan = planner.CreatePlan(request);
+
+            Assert.Contains(
+                "loudnorm=I=-14:TP=-1.5:LRA=11,afade=t=in:st=0:d=2,afade=t=out:st=8:d=2",
+                plan.Arguments);
+        }
+        finally
+        {
+            Directory.Delete(outputDirectory, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void CreatePlan_rejects_audio_normalization_when_media_has_no_audio_stream()
+    {
+        var capabilities = new FfmpegCapabilities(new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "libx264",
+        });
+        var planner = new ReencodeExportPlanner(capabilities);
+        var request = new ExportRequest(
+            @"C:\video\source.mp4",
+            @"C:\output\clip_cut.mp4",
+            new ClipRange(TimeSpan.Zero, TimeSpan.FromSeconds(10)),
+            new AppSettings
+            {
+                FfmpegPath = @"C:\tools\ffmpeg.exe",
+                LastExportMode = ExportMode.Reencode,
+                LastCodecFamily = CodecFamily.H264,
+                LastEncoderKind = EncoderKind.Software,
+                LastVideoBitrateKbps = 2500,
+                NormalizeAudio = true,
+            },
+            new MediaInfo(
+                @"C:\video\source.mp4",
+                TimeSpan.FromSeconds(10),
+                "mov,mp4,m4a,3gp,3g2,mj2",
+                2_500_000,
+                [
+                    new MediaStreamInfo(0, "video", "h264", 2_500_000),
+                ]));
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => planner.CreatePlan(request));
+
+        Assert.Contains("audio stream", exception.Message);
+    }
+
+    [Fact]
     public void CreatePlan_omits_audio_fade_filters_when_media_has_no_audio_stream()
     {
         string outputDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));

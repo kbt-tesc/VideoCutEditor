@@ -364,7 +364,7 @@ public sealed class FfmpegRunnerIntegrationTests
                 ]);
 
             MediaInfo sourceInfo = await new MediaProbeService().ProbeAsync(paths.FfprobePath, sourcePath);
-            var planner = new AudioNormalizeExportPlanner();
+            var planner = new FastCopyExportPlanner();
             ExportPlan plan = planner.CreatePlan(new ExportRequest(
                 sourcePath,
                 outputPath,
@@ -372,7 +372,8 @@ public sealed class FfmpegRunnerIntegrationTests
                 new AppSettings
                 {
                     FfmpegPath = paths.FfmpegPath,
-                    LastExportMode = ExportMode.AudioNormalize,
+                    LastExportMode = ExportMode.FastCopy,
+                    NormalizeAudio = true,
                 },
                 sourceInfo));
 
