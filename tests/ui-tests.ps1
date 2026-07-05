@@ -64,7 +64,7 @@ $expectedElements = @(
     "PlaybackRateComboBox",
     "RangeStartTextBox",
     "RangeEndTextBox",
-    "ExportModeComboBox",
+    "ExportModeRadioButtons",
     "FfmpegPathTextBox",
     "BrowseFfmpegPathButton",
     "FfprobePathTextBox",
@@ -74,18 +74,6 @@ $expectedElements = @(
     "PlannedOutputTextBox",
     "ExportLogTextBox",
     "EncoderSummaryTextBox",
-    "CodecFamilyComboBox",
-    "EncoderKindComboBox",
-    "BitrateModeComboBox",
-    "VideoBitrateTextBox",
-    "TargetSizeNumberBox",
-    "QualityNumberBox",
-    "PredictedOutputSizeTextBox",
-    "VideoFadeInCheckBox",
-    "VideoFadeOutCheckBox",
-    "AudioFadeInCheckBox",
-    "AudioFadeOutCheckBox",
-    "FadeDurationNumberBox",
     "MediaInfoTextBox",
     "SaveSettingsButton",
     "CancelExportButton",
@@ -98,35 +86,53 @@ foreach ($element in $expectedElements) {
     }
 }
 
-Test-UI "Export mode defaults to Fast copy" {
-    winapp ui wait-for "ExportModeComboBox" -a $AppPid --value "Fast copy" -t 3000 -q
+Test-UI "Export mode selector is enabled" {
+    winapp ui wait-for "ExportModeRadioButtons" -a $AppPid -p IsEnabled --value "True" -t 3000 -q
 }
 
-Test-UI "Export mode can be changed" {
-    winapp ui wait-for "ExportModeComboBox" -a $AppPid -p IsEnabled --value "True" -t 3000 -q
+Test-UI "Select Fast copy mode" {
+    winapp ui invoke "Fast copy" -a $AppPid
+    winapp ui wait-for "CodecFamilyComboBox" -a $AppPid --gone -t 3000 -q
 }
 
-Test-UI "Codec defaults to H.264" {
+Test-UI "Codec is hidden in Fast copy mode" {
+    winapp ui wait-for "CodecFamilyComboBox" -a $AppPid --gone -t 3000 -q
+}
+
+Test-UI "Rate control is hidden in Fast copy mode" {
+    winapp ui wait-for "BitrateModeComboBox" -a $AppPid --gone -t 3000 -q
+}
+
+Test-UI "Fades are hidden in Fast copy mode" {
+    winapp ui wait-for "VideoFadeInCheckBox" -a $AppPid --gone -t 3000 -q
+}
+
+Test-UI "Switch to Re-encode mode" {
+    winapp ui invoke "Re-encode" -a $AppPid
+    winapp ui wait-for "CodecFamilyComboBox" -a $AppPid -t 3000 -q
+}
+
+Test-UI "Codec defaults to H.264 in Re-encode mode" {
     winapp ui wait-for "CodecFamilyComboBox" -a $AppPid --value "H.264" -t 3000 -q
 }
 
-Test-UI "Encoder defaults to Auto" {
+Test-UI "Encoder defaults to Auto in Re-encode mode" {
     winapp ui wait-for "EncoderKindComboBox" -a $AppPid --value "Auto" -t 3000 -q
 }
 
-Test-UI "Rate control defaults to video bitrate" {
+Test-UI "Rate control defaults to video bitrate in Re-encode mode" {
     winapp ui wait-for "BitrateModeComboBox" -a $AppPid --value "Video bitrate" -t 3000 -q
 }
 
-Test-UI "Video bitrate defaults to 2500" {
+Test-UI "Video bitrate defaults to 2500 in Re-encode mode" {
     winapp ui wait-for "VideoBitrateTextBox" -a $AppPid --value "2500" -t 3000 -q
 }
 
-Test-UI "Target size is disabled in bitrate mode" {
+Test-UI "Target size is disabled in bitrate mode in Re-encode mode" {
     winapp ui wait-for "TargetSizeNumberBox" -a $AppPid -p IsEnabled --value "False" -t 3000 -q
 }
 
-Test-UI "Quality is disabled in bitrate mode" {
+Test-UI "Quality is disabled in bitrate mode in Re-encode mode" {
     winapp ui wait-for "QualityNumberBox" -a $AppPid -p IsEnabled --value "False" -t 3000 -q
 }
 

@@ -162,15 +162,19 @@ public partial class MainPageViewModel : ObservableObject
 
     public double TimelineContentWidth => Math.Max(TimelineViewportWidth, 1) * TimelineZoom;
 
-    public string ExportNoticeText => HasAnyFadeEnabled
+    public string ExportNoticeText => HasActiveFadeEnabled
         ? "Fades force Re-encode because filters are enabled."
-        : "Fast copy preserves streams where practical, but cuts can align to nearby keyframes.";
+        : CurrentExportMode == ExportMode.Reencode
+            ? "Re-encode uses the selected codec and rate control settings."
+            : "Fast copy preserves streams where practical, but cuts can align to nearby keyframes.";
 
     public bool IsBitrateMode => CurrentBitrateMode == BitrateMode.Bitrate;
 
     public bool IsTargetSizeMode => CurrentBitrateMode == BitrateMode.TargetSize;
 
     public bool IsQualityMode => CurrentBitrateMode == BitrateMode.Quality;
+
+    public bool IsReencodeSettingsVisible => CurrentExportMode == ExportMode.Reencode;
 
     public MainPageViewModel()
         : this(
@@ -565,6 +569,13 @@ public partial class MainPageViewModel : ObservableObject
         ApplySuggestedVideoBitrate(force: !hasManualVideoBitrateOverride);
     }
 
+    partial void OnSelectedExportModeIndexChanged(int value)
+    {
+        OnPropertyChanged(nameof(IsReencodeSettingsVisible));
+        OnPropertyChanged(nameof(ExportNoticeText));
+        UpdatePredictedOutputSizeText();
+    }
+
     partial void OnSelectedBitrateModeIndexChanged(int value)
     {
         OnPropertyChanged(nameof(IsBitrateMode));
@@ -689,6 +700,9 @@ public partial class MainPageViewModel : ObservableObject
         || AudioFadeInEnabled
         || AudioFadeOutEnabled;
 
+    private bool HasActiveFadeEnabled =>
+        CurrentExportMode == ExportMode.Reencode && HasAnyFadeEnabled;
+
     private AppSettings CreateCurrentSettings() => new()
     {
         FfmpegPath = FfmpegPath,
@@ -701,14 +715,16 @@ public partial class MainPageViewModel : ObservableObject
         LastVideoBitrateKbps = GetVideoBitrateKbps(),
         LastTargetSizeMegabytes = GetTargetSizeMegabytes(),
         LastQualityValue = GetQualityValue(),
-        Fade = new FadeSettings
-        {
-            VideoFadeIn = VideoFadeInEnabled,
-            VideoFadeOut = VideoFadeOutEnabled,
-            AudioFadeIn = AudioFadeInEnabled,
-            AudioFadeOut = AudioFadeOutEnabled,
-            DurationSeconds = GetFadeDurationSeconds(),
-        },
+        Fade = CurrentExportMode == ExportMode.Reencode
+            ? new FadeSettings
+            {
+                VideoFadeIn = VideoFadeInEnabled,
+                VideoFadeOut = VideoFadeOutEnabled,
+                AudioFadeIn = AudioFadeInEnabled,
+                AudioFadeOut = AudioFadeOutEnabled,
+                DurationSeconds = GetFadeDurationSeconds(),
+            }
+            : new FadeSettings(),
     };
 
     private static ExportMode GetEffectiveExportMode(AppSettings settings) =>

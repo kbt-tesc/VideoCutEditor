@@ -330,135 +330,139 @@
                     <StackPanel Margin="0,0,24,0" Spacing="16">
                         <TextBlock Text="Export" Style="{StaticResource SubtitleTextBlockStyle}" />
 
-                        <ComboBox
-                            AutomationProperties.AutomationId="ExportModeComboBox"
+                        <RadioButtons
+                            AutomationProperties.AutomationId="ExportModeRadioButtons"
                             Header="Mode"
-                            HorizontalAlignment="Stretch"
+                            MaxColumns="2"
                             SelectedIndex="{x:Bind ViewModel.SelectedExportModeIndex, Mode=TwoWay}">
-                            <ComboBoxItem Content="Fast copy" />
-                            <ComboBoxItem Content="Re-encode" />
-                        </ComboBox>
+                            <x:String>Fast copy</x:String>
+                            <x:String>Re-encode</x:String>
+                        </RadioButtons>
 
-                        <Grid ColumnSpacing="8">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
-
-                            <ComboBox
-                                AutomationProperties.AutomationId="CodecFamilyComboBox"
-                                Header="Codec"
-                                HorizontalAlignment="Stretch"
-                                SelectedIndex="{x:Bind ViewModel.SelectedCodecFamilyIndex, Mode=TwoWay}">
-                                <ComboBoxItem Content="H.264" />
-                                <ComboBoxItem Content="H.265" />
-                                <ComboBoxItem Content="AV1" />
-                            </ComboBox>
-
-                            <ComboBox
-                                Grid.Column="1"
-                                AutomationProperties.AutomationId="EncoderKindComboBox"
-                                Header="Encoder"
-                                HorizontalAlignment="Stretch"
-                                SelectedIndex="{x:Bind ViewModel.SelectedEncoderKindIndex, Mode=TwoWay}">
-                                <ComboBoxItem Content="Auto" />
-                                <ComboBoxItem Content="NVEnc" />
-                                <ComboBoxItem Content="Software" />
-                            </ComboBox>
-                        </Grid>
-
-                        <ComboBox
-                            AutomationProperties.AutomationId="BitrateModeComboBox"
-                            Header="Rate control"
-                            HorizontalAlignment="Stretch"
-                            SelectedIndex="{x:Bind ViewModel.SelectedBitrateModeIndex, Mode=TwoWay}">
-                            <ComboBoxItem Content="Video bitrate" />
-                            <ComboBoxItem Content="Target size" />
-                            <ComboBoxItem Content="Quality" />
-                        </ComboBox>
-
-                        <TextBox
-                            AutomationProperties.AutomationId="VideoBitrateTextBox"
-                            Header="Video bitrate (kbps)"
-                            IsEnabled="{x:Bind ViewModel.IsBitrateMode, Mode=OneWay}"
-                            InputScope="Number"
-                            Text="{x:Bind ViewModel.VideoBitrateText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-
-                        <NumberBox
-                            AutomationProperties.AutomationId="TargetSizeNumberBox"
-                            Header="Target size (MB)"
-                            IsEnabled="{x:Bind ViewModel.IsTargetSizeMode, Mode=OneWay}"
-                            LargeChange="10"
-                            Maximum="1048576"
-                            Minimum="1"
-                            NumberFormatter="{StaticResource TargetSizeNumberFormatter}"
-                            SmallChange="1"
-                            SpinButtonPlacementMode="Compact"
-                            Value="{x:Bind ViewModel.TargetSizeMegabytes, Mode=TwoWay}" />
-
-                        <NumberBox
-                            AutomationProperties.AutomationId="QualityNumberBox"
-                            Header="Quality (lower is better)"
-                            IsEnabled="{x:Bind ViewModel.IsQualityMode, Mode=OneWay}"
-                            LargeChange="5"
-                            Maximum="51"
-                            Minimum="0"
-                            NumberFormatter="{StaticResource QualityNumberFormatter}"
-                            SmallChange="1"
-                            SpinButtonPlacementMode="Compact"
-                            Value="{x:Bind ViewModel.QualityValue, Mode=TwoWay}" />
-
-                        <TextBox
-                            AutomationProperties.AutomationId="PredictedOutputSizeTextBox"
-                            Header="Predicted output size"
-                            IsReadOnly="True"
-                            Text="{x:Bind ViewModel.PredictedOutputSizeText, Mode=OneWay}" />
-
-                        <StackPanel Spacing="8">
-                            <TextBlock Text="Fades" Style="{StaticResource BodyStrongTextBlockStyle}" />
-
-                            <Grid ColumnSpacing="8" RowSpacing="4">
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="Auto" />
-                                </Grid.RowDefinitions>
+                        <StackPanel
+                            Spacing="16"
+                            Visibility="{x:Bind local:MainPage.BoolToVisibility(ViewModel.IsReencodeSettingsVisible), Mode=OneWay}">
+                            <Grid ColumnSpacing="8">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
 
-                                <CheckBox
-                                    AutomationProperties.AutomationId="VideoFadeInCheckBox"
-                                    Content="Video in"
-                                    IsChecked="{x:Bind ViewModel.VideoFadeInEnabled, Mode=TwoWay}" />
-                                <CheckBox
+                                <ComboBox
+                                    AutomationProperties.AutomationId="CodecFamilyComboBox"
+                                    Header="Codec"
+                                    HorizontalAlignment="Stretch"
+                                    SelectedIndex="{x:Bind ViewModel.SelectedCodecFamilyIndex, Mode=TwoWay}">
+                                    <ComboBoxItem Content="H.264" />
+                                    <ComboBoxItem Content="H.265" />
+                                    <ComboBoxItem Content="AV1" />
+                                </ComboBox>
+
+                                <ComboBox
                                     Grid.Column="1"
-                                    AutomationProperties.AutomationId="VideoFadeOutCheckBox"
-                                    Content="Video out"
-                                    IsChecked="{x:Bind ViewModel.VideoFadeOutEnabled, Mode=TwoWay}" />
-                                <CheckBox
-                                    Grid.Row="1"
-                                    AutomationProperties.AutomationId="AudioFadeInCheckBox"
-                                    Content="Audio in"
-                                    IsChecked="{x:Bind ViewModel.AudioFadeInEnabled, Mode=TwoWay}" />
-                                <CheckBox
-                                    Grid.Row="1"
-                                    Grid.Column="1"
-                                    AutomationProperties.AutomationId="AudioFadeOutCheckBox"
-                                    Content="Audio out"
-                                    IsChecked="{x:Bind ViewModel.AudioFadeOutEnabled, Mode=TwoWay}" />
+                                    AutomationProperties.AutomationId="EncoderKindComboBox"
+                                    Header="Encoder"
+                                    HorizontalAlignment="Stretch"
+                                    SelectedIndex="{x:Bind ViewModel.SelectedEncoderKindIndex, Mode=TwoWay}">
+                                    <ComboBoxItem Content="Auto" />
+                                    <ComboBoxItem Content="NVEnc" />
+                                    <ComboBoxItem Content="Software" />
+                                </ComboBox>
                             </Grid>
 
+                            <ComboBox
+                                AutomationProperties.AutomationId="BitrateModeComboBox"
+                                Header="Rate control"
+                                HorizontalAlignment="Stretch"
+                                SelectedIndex="{x:Bind ViewModel.SelectedBitrateModeIndex, Mode=TwoWay}">
+                                <ComboBoxItem Content="Video bitrate" />
+                                <ComboBoxItem Content="Target size" />
+                                <ComboBoxItem Content="Quality" />
+                            </ComboBox>
+
+                            <TextBox
+                                AutomationProperties.AutomationId="VideoBitrateTextBox"
+                                Header="Video bitrate (kbps)"
+                                IsEnabled="{x:Bind ViewModel.IsBitrateMode, Mode=OneWay}"
+                                InputScope="Number"
+                                Text="{x:Bind ViewModel.VideoBitrateText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+
                             <NumberBox
-                                AutomationProperties.AutomationId="FadeDurationNumberBox"
-                                Header="Fade duration (seconds)"
-                                LargeChange="0.25"
-                                Maximum="30"
-                                Minimum="0.25"
-                                NumberFormatter="{StaticResource FadeDurationNumberFormatter}"
-                                SmallChange="0.25"
+                                AutomationProperties.AutomationId="TargetSizeNumberBox"
+                                Header="Target size (MB)"
+                                IsEnabled="{x:Bind ViewModel.IsTargetSizeMode, Mode=OneWay}"
+                                LargeChange="10"
+                                Maximum="1048576"
+                                Minimum="1"
+                                NumberFormatter="{StaticResource TargetSizeNumberFormatter}"
+                                SmallChange="1"
                                 SpinButtonPlacementMode="Compact"
-                                Value="{x:Bind ViewModel.FadeDurationSeconds, Mode=TwoWay}" />
+                                Value="{x:Bind ViewModel.TargetSizeMegabytes, Mode=TwoWay}" />
+
+                            <NumberBox
+                                AutomationProperties.AutomationId="QualityNumberBox"
+                                Header="Quality (lower is better)"
+                                IsEnabled="{x:Bind ViewModel.IsQualityMode, Mode=OneWay}"
+                                LargeChange="5"
+                                Maximum="51"
+                                Minimum="0"
+                                NumberFormatter="{StaticResource QualityNumberFormatter}"
+                                SmallChange="1"
+                                SpinButtonPlacementMode="Compact"
+                                Value="{x:Bind ViewModel.QualityValue, Mode=TwoWay}" />
+
+                            <TextBox
+                                AutomationProperties.AutomationId="PredictedOutputSizeTextBox"
+                                Header="Predicted output size"
+                                IsReadOnly="True"
+                                Text="{x:Bind ViewModel.PredictedOutputSizeText, Mode=OneWay}" />
+
+                            <StackPanel Spacing="8">
+                                <TextBlock Text="Fades" Style="{StaticResource BodyStrongTextBlockStyle}" />
+
+                                <Grid ColumnSpacing="8" RowSpacing="4">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <CheckBox
+                                        AutomationProperties.AutomationId="VideoFadeInCheckBox"
+                                        Content="Video in"
+                                        IsChecked="{x:Bind ViewModel.VideoFadeInEnabled, Mode=TwoWay}" />
+                                    <CheckBox
+                                        Grid.Column="1"
+                                        AutomationProperties.AutomationId="VideoFadeOutCheckBox"
+                                        Content="Video out"
+                                        IsChecked="{x:Bind ViewModel.VideoFadeOutEnabled, Mode=TwoWay}" />
+                                    <CheckBox
+                                        Grid.Row="1"
+                                        AutomationProperties.AutomationId="AudioFadeInCheckBox"
+                                        Content="Audio in"
+                                        IsChecked="{x:Bind ViewModel.AudioFadeInEnabled, Mode=TwoWay}" />
+                                    <CheckBox
+                                        Grid.Row="1"
+                                        Grid.Column="1"
+                                        AutomationProperties.AutomationId="AudioFadeOutCheckBox"
+                                        Content="Audio out"
+                                        IsChecked="{x:Bind ViewModel.AudioFadeOutEnabled, Mode=TwoWay}" />
+                                </Grid>
+
+                                <NumberBox
+                                    AutomationProperties.AutomationId="FadeDurationNumberBox"
+                                    Header="Fade duration (seconds)"
+                                    LargeChange="0.25"
+                                    Maximum="30"
+                                    Minimum="0.25"
+                                    NumberFormatter="{StaticResource FadeDurationNumberFormatter}"
+                                    SmallChange="0.25"
+                                    SpinButtonPlacementMode="Compact"
+                                    Value="{x:Bind ViewModel.FadeDurationSeconds, Mode=TwoWay}" />
+                            </StackPanel>
                         </StackPanel>
 
                         <Grid ColumnSpacing="8">

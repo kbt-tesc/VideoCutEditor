@@ -54,6 +54,10 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
   - Added Re-encode planner support for software `-crf` and NVEnc `-cq` quality arguments.
   - Added UI and UI smoke coverage for the Quality control.
   - Added an ffmpeg-backed integration test for software quality-mode Re-encode.
+- `ui: simplify export mode controls`
+  - Replaced the two-option export mode drop-down with direct Fast copy/Re-encode choices.
+  - Hid codec, encoder, rate-control, predicted-size, and fade controls while Fast copy is selected.
+  - Prevented hidden Fast copy fade settings from silently forcing Re-encode.
 
 ## Implemented Capabilities
 
@@ -69,6 +73,7 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 - Slow playback rates through the speed selector.
 - ffprobe metadata parsing and media summary display.
 - Fast copy export planning and execution.
+- Direct Fast copy/Re-encode mode selection without a drop-down.
 - Re-encode export planning and execution for bitrate, target-size, and quality-based video encoding.
 - Target-size mode that derives Re-encode video bitrate from desired output size.
 - Quality mode that maps a single quality value to `-crf` for software encoders and `-cq` for NVEnc encoders.
@@ -92,7 +97,7 @@ Most recent successful checks:
 - `dotnet build src/VideoCutEditor/VideoCutEditor.csproj -p:Platform=x64`
   - Build succeeded.
 - `powershell -ExecutionPolicy Bypass -File tests\ui-tests.ps1 -AppPid <pid>`
-  - 57 UI tests passed.
+  - 49 UI tests passed.
 
 When resuming in a new session, rerun the relevant subset before making assumptions if files have changed.
 
@@ -102,6 +107,7 @@ When resuming in a new session, rerun the relevant subset before making assumpti
 - Fade controls and fade-triggered Re-encode are covered by generated audio/video integration tests, but should still be manually verified on representative real media.
 - Audio fade behavior for generated video-only inputs is covered; still verify representative real video-only media manually.
 - Advanced ffmpeg arguments are not implemented.
+- Audio normalization mode is requested but not implemented. The requested default target is `-14 LUFS`; the ffmpeg `loudnorm` policy still needs design and tests.
 - Quality mode is covered for generated software-encoded media; NVEnc quality-mode execution still needs manual hardware-backed verification.
 - Real media export should still be manually verified for Fast copy and Re-encode on local sample files.
 - NVEnc behavior should be manually verified on hardware and ffmpeg builds that expose NVEnc.
@@ -114,7 +120,11 @@ When resuming in a new session, rerun the relevant subset before making assumpti
 1. Continue end-to-end verification.
    - Add scripted picker workflow coverage where reliable.
    - Add manual verification notes for real preview/export/NVEnc/package runs.
-2. Packaging and release preparation.
+2. Add audio normalization mode.
+   - Define ffmpeg `loudnorm` command policy and default target.
+   - Prefer video stream copy while applying audio filtering.
+   - Add planner and integration tests for audio inputs, no-audio inputs, progress, and cancellation.
+3. Packaging and release preparation.
    - Use the repo-local `winui-packaging` skill.
    - Verify unpackaged/self-contained/single-file assumptions against the current Windows App SDK behavior.
 

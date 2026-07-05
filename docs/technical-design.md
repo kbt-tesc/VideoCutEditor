@@ -78,6 +78,8 @@ The initial capability detector runs `ffmpeg -hide_banner -encoders`, parses enc
 
 The initial re-encode planner builds command arguments for bitrate-based video re-encode. It selects the user-requested codec family and encoder preference from settings, uses the detected capability list to choose the concrete encoder, maps all streams, defaults non-video streams to copy with `-c copy`, overrides video with `-c:v <encoder> -b:v <kbps>k`, preserves metadata, and writes through a temporary output path before promotion. The WinUI shell exposes Fast copy/Re-encode mode, codec family, encoder preference, and video bitrate controls. The view model stores the last-used choices and routes export planning through `ExportPlannerFactory` so Fast copy remains the default while Re-encode uses the detected capability list.
 
+The WinUI shell presents Fast copy and Re-encode as direct mode choices. Re-encode-only settings are hidden while Fast copy is selected. Hidden fade controls are not applied in Fast copy mode, so invisible settings cannot silently force a re-encode.
+
 Expose a simple settings surface:
 
 - Codec family
@@ -141,6 +143,10 @@ Audio policy:
 - If audio fade is enabled and media metadata confirms an audio stream exists, re-encode audio to AAC.
 - If media metadata confirms there is no audio stream, omit audio fade filters and do not add an audio stream. If metadata is unavailable, keep the previous conservative behavior and assume audio may exist.
 - Preserve channel layout and sample rate where practical.
+
+## Audio Normalization
+
+Audio normalization is a planned follow-up export mode. It should normalize loudness without re-encoding video when practical, using stream-copy for video and an audio filter path for audio. The requested default loudness target is `-14 LUFS`. Before implementation, define the exact ffmpeg filter policy, likely based on `loudnorm`, including true peak, loudness range, single-pass versus two-pass behavior, metadata preservation, handling files without audio streams, and whether audio codec defaults to AAC or preserves codec where possible.
 
 ## Stream And Metadata Preservation
 
