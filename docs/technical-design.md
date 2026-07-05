@@ -131,7 +131,7 @@ Fade controls apply only to the clip edges:
 
 Any fade requiring filters forces re-encoding of the affected stream.
 
-The implemented planner keeps the selected clip range first, then applies fade filters relative to the trimmed clip timeline. Video fades use `-vf fade=t=in/out`, audio fades use `-af afade=t=in/out`, and audio fades override audio copying with `-c:a aac`. Fade duration is stored in settings and clamped to the selected clip duration during command construction.
+The implemented planner keeps the selected clip range first, then applies fade filters relative to the trimmed clip timeline. Video fades use `-vf fade=t=in/out`, audio fades use `-af afade=t=in/out`, and audio fades override audio copying with `-c:a aac`. Fade duration is adjusted in 0.25 second UI steps, stored in settings, truncated to two decimal places, and clamped to the selected clip duration during command construction.
 
 Audio policy:
 

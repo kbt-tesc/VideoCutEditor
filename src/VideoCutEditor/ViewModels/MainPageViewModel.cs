@@ -23,6 +23,7 @@ public partial class MainPageViewModel : ObservableObject
     private FfmpegCapabilities currentCapabilities = new(new HashSet<string>(StringComparer.OrdinalIgnoreCase));
     private bool isUpdatingRangeText;
     private bool isUpdatingSuggestedBitrate;
+    private bool isUpdatingFadeDuration;
     private bool hasManualVideoBitrateOverride;
 
     [ObservableProperty]
@@ -558,6 +559,30 @@ public partial class MainPageViewModel : ObservableObject
         OnPropertyChanged(nameof(ExportNoticeText));
     }
 
+    partial void OnFadeDurationSecondsChanged(double value)
+    {
+        if (isUpdatingFadeDuration)
+        {
+            return;
+        }
+
+        double normalizedValue = NormalizeFadeDurationSeconds(value);
+        if (Math.Abs(normalizedValue - value) < 0.0001)
+        {
+            return;
+        }
+
+        isUpdatingFadeDuration = true;
+        try
+        {
+            FadeDurationSeconds = normalizedValue;
+        }
+        finally
+        {
+            isUpdatingFadeDuration = false;
+        }
+    }
+
     partial void OnVideoBitrateTextChanged(string value)
     {
         if (!isUpdatingSuggestedBitrate)
@@ -654,7 +679,9 @@ public partial class MainPageViewModel : ObservableObject
         VideoFadeOutEnabled = settings.Fade.VideoFadeOut;
         AudioFadeInEnabled = settings.Fade.AudioFadeIn;
         AudioFadeOutEnabled = settings.Fade.AudioFadeOut;
-        FadeDurationSeconds = settings.Fade.DurationSeconds > 0 ? settings.Fade.DurationSeconds : 1;
+        FadeDurationSeconds = settings.Fade.DurationSeconds > 0
+            ? NormalizeFadeDurationSeconds(settings.Fade.DurationSeconds)
+            : 1;
     }
 
     private int? GetVideoBitrateKbps()
@@ -692,8 +719,18 @@ public partial class MainPageViewModel : ObservableObject
     private double GetFadeDurationSeconds()
     {
         return double.IsFinite(FadeDurationSeconds) && FadeDurationSeconds > 0
-            ? FadeDurationSeconds
+            ? NormalizeFadeDurationSeconds(FadeDurationSeconds)
             : 1;
+    }
+
+    private static double NormalizeFadeDurationSeconds(double seconds)
+    {
+        if (!double.IsFinite(seconds) || seconds <= 0)
+        {
+            return 1;
+        }
+
+        return Math.Max(0.25, Math.Truncate(seconds * 100) / 100);
     }
 
     private void UpdatePredictedOutputSizeText()

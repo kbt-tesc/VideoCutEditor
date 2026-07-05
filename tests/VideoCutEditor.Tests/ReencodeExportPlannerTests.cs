@@ -234,4 +234,47 @@ public sealed class ReencodeExportPlannerTests
             Directory.Delete(outputDirectory, recursive: true);
         }
     }
+
+    [Fact]
+    public void CreatePlan_truncates_fade_duration_to_two_decimal_places()
+    {
+        string outputDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(outputDirectory);
+
+        try
+        {
+            var capabilities = new FfmpegCapabilities(new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "libx264",
+            });
+            var planner = new ReencodeExportPlanner(capabilities);
+            string outputPath = Path.Combine(outputDirectory, "clip_cut.mp4");
+            var request = new ExportRequest(
+                @"C:\video\source.mp4",
+                outputPath,
+                new ClipRange(TimeSpan.Zero, TimeSpan.FromSeconds(10)),
+                new AppSettings
+                {
+                    FfmpegPath = @"C:\tools\ffmpeg.exe",
+                    LastExportMode = ExportMode.Reencode,
+                    LastCodecFamily = CodecFamily.H264,
+                    LastEncoderKind = EncoderKind.Software,
+                    LastVideoBitrateKbps = 2500,
+                    Fade = new FadeSettings
+                    {
+                        VideoFadeIn = true,
+                        VideoFadeOut = true,
+                        DurationSeconds = 1.239,
+                    },
+                });
+
+            ExportPlan plan = planner.CreatePlan(request);
+
+            Assert.Contains("fade=t=in:st=0:d=1.23,fade=t=out:st=8.77:d=1.23", plan.Arguments);
+        }
+        finally
+        {
+            Directory.Delete(outputDirectory, recursive: true);
+        }
+    }
 }

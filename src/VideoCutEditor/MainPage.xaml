@@ -4,10 +4,18 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:formatting="using:Windows.Globalization.NumberFormatting"
     xmlns:local="using:VideoCutEditor"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
     mc:Ignorable="d">
+
+    <Page.Resources>
+        <formatting:DecimalFormatter
+            x:Key="FadeDurationNumberFormatter"
+            FractionDigits="2"
+            IsGrouped="False" />
+    </Page.Resources>
 
     <Grid
         x:Name="EditorRoot"
@@ -401,9 +409,10 @@
                             <NumberBox
                                 AutomationProperties.AutomationId="FadeDurationNumberBox"
                                 Header="Fade duration (seconds)"
-                                LargeChange="1"
+                                LargeChange="0.25"
                                 Maximum="30"
-                                Minimum="0.1"
+                                Minimum="0.25"
+                                NumberFormatter="{StaticResource FadeDurationNumberFormatter}"
                                 SmallChange="0.25"
                                 SpinButtonPlacementMode="Compact"
                                 Value="{x:Bind ViewModel.FadeDurationSeconds, Mode=TwoWay}" />

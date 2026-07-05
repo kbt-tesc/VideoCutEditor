@@ -82,7 +82,7 @@ public sealed class ReencodeExportPlanner : IExportPlanner
             return;
         }
 
-        double durationSeconds = Math.Clamp(fade.DurationSeconds, 0, clipDuration.TotalSeconds);
+        double durationSeconds = TruncateToTwoDecimals(Math.Clamp(fade.DurationSeconds, 0, clipDuration.TotalSeconds));
         if (durationSeconds <= 0)
         {
             return;
@@ -128,5 +128,8 @@ public sealed class ReencodeExportPlanner : IExportPlanner
     }
 
     private static string FormatFilterSeconds(double seconds) =>
-        seconds.ToString("0.###", CultureInfo.InvariantCulture);
+        seconds.ToString("0.##", CultureInfo.InvariantCulture);
+
+    private static double TruncateToTwoDecimals(double value) =>
+        Math.Truncate(value * 100) / 100;
 }

@@ -36,6 +36,9 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 - `feat: add fade controls and filters`
   - Added video/audio fade-in and fade-out settings with duration persistence.
   - Added ffmpeg argument generation for `fade`/`afade`, AAC audio re-encode when audio fades are enabled, and automatic Re-encode routing whenever fades are enabled.
+- `fix: normalize fade duration precision`
+  - Set fade duration input changes to 0.25 second steps.
+  - Truncated fade duration values to two decimal places before settings/export use.
 
 ## Implemented Capabilities
 
@@ -53,6 +56,7 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 - Fast copy export planning and execution.
 - Re-encode export planning and execution for bitrate-based video encoding.
 - Clip-edge video/audio fade controls that force Re-encode and generate ffmpeg filters.
+- Fade duration input with 0.25 second steps and two-decimal truncation.
 - NVEnc/software encoder capability detection from `ffmpeg -encoders`.
 - Export progress parsing, log display, cancellation, temporary output path, and final promotion after success.
 - Output filename collision avoidance.
@@ -66,7 +70,7 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 Most recent successful checks:
 
 - `dotnet test VideoCutEditor.slnx`
-  - 52 tests passed.
+  - 53 tests passed.
 - `dotnet build src/VideoCutEditor/VideoCutEditor.csproj -p:Platform=x64`
   - Build succeeded.
 - `powershell -ExecutionPolicy Bypass -File tests\ui-tests.ps1 -AppPid <pid>`
