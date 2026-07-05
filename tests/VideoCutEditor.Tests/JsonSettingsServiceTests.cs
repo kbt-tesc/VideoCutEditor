@@ -33,6 +33,7 @@ public sealed class JsonSettingsServiceTests
             LastEncoderKind = EncoderKind.Nvenc,
             LastBitrateMode = BitrateMode.TargetSize,
             LastVideoBitrateKbps = 4500,
+            LastTargetSizeMegabytes = 80.5,
             Fade = new FadeSettings
             {
                 VideoFadeIn = true,

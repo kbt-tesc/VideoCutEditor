@@ -33,12 +33,16 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 - `4667a55 feat: suggest re-encode bitrate from media`
   - Added a tested core bitrate suggestion service using video stream bitrate, container bitrate, and resolution fallback defaults.
   - Wired suggestions into media load and codec-family changes while preserving saved or manually edited bitrate values.
-- `feat: add fade controls and filters`
+- `891208a feat: add fade controls and filters`
   - Added video/audio fade-in and fade-out settings with duration persistence.
   - Added ffmpeg argument generation for `fade`/`afade`, AAC audio re-encode when audio fades are enabled, and automatic Re-encode routing whenever fades are enabled.
-- `fix: normalize fade duration precision`
+- `7b0eeb4 fix: normalize fade duration precision`
   - Set fade duration input changes to 0.25 second steps.
   - Truncated fade duration values to two decimal places before settings/export use.
+- `feat: add target size mode`
+  - Added target-size rate control with MB persistence.
+  - Added tested bitrate derivation from target size, duration, detected audio bitrate, and container overhead.
+  - Wired target-size mode to pass the derived bitrate into the existing Re-encode planner.
 
 ## Implemented Capabilities
 
@@ -55,6 +59,7 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 - ffprobe metadata parsing and media summary display.
 - Fast copy export planning and execution.
 - Re-encode export planning and execution for bitrate-based video encoding.
+- Target-size mode that derives Re-encode video bitrate from desired output size.
 - Clip-edge video/audio fade controls that force Re-encode and generate ffmpeg filters.
 - Fade duration input with 0.25 second steps and two-decimal truncation.
 - NVEnc/software encoder capability detection from `ffmpeg -encoders`.
@@ -70,11 +75,11 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 Most recent successful checks:
 
 - `dotnet test VideoCutEditor.slnx`
-  - 53 tests passed.
+  - 55 tests passed.
 - `dotnet build src/VideoCutEditor/VideoCutEditor.csproj -p:Platform=x64`
   - Build succeeded.
 - `powershell -ExecutionPolicy Bypass -File tests\ui-tests.ps1 -AppPid <pid>`
-  - 51 UI tests passed.
+  - 55 UI tests passed.
 
 When resuming in a new session, rerun the relevant subset before making assumptions if files have changed.
 
@@ -83,7 +88,7 @@ When resuming in a new session, rerun the relevant subset before making assumpti
 - Waveform generation is implemented in code, but should still be manually verified with real videos that have audio streams.
 - Fade controls and fade-triggered Re-encode are implemented in code, but should still be manually verified on real video/audio inputs.
 - Audio fade behavior for inputs without audio streams needs explicit coverage; the current planner emits `-af`/`-c:a aac` when audio fades are enabled.
-- Target size mode, quality mode, and advanced ffmpeg arguments are not implemented.
+- Quality mode and advanced ffmpeg arguments are not implemented.
 - Real media export should still be manually verified for Fast copy and Re-encode on local sample files.
 - NVEnc behavior should be manually verified on hardware and ffmpeg builds that expose NVEnc.
 - Preview-unavailable fallback behavior needs more manual and/or UI coverage.
@@ -92,13 +97,10 @@ When resuming in a new session, rerun the relevant subset before making assumpti
 
 ## Recommended Next Slices
 
-1. Add target size mode.
-   - Invert the predicted-size calculation to derive video bitrate.
-   - Add settings persistence and UI tests.
-2. Strengthen end-to-end verification.
+1. Strengthen end-to-end verification.
    - Add scripted picker workflow coverage where reliable.
    - Add manual verification notes for real preview/export/NVEnc/package runs.
-3. Packaging and release preparation.
+2. Packaging and release preparation.
    - Use the repo-local `winui-packaging` skill.
    - Verify unpackaged/self-contained/single-file assumptions against the current Windows App SDK behavior.
 

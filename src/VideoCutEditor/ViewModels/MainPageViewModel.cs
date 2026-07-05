@@ -117,7 +117,13 @@ public partial class MainPageViewModel : ObservableObject
     public partial int SelectedEncoderKindIndex { get; set; }
 
     [ObservableProperty]
+    public partial int SelectedBitrateModeIndex { get; set; }
+
+    [ObservableProperty]
     public partial string VideoBitrateText { get; set; } = "2500";
+
+    [ObservableProperty]
+    public partial double TargetSizeMegabytes { get; set; } = 100;
 
     [ObservableProperty]
     public partial string PredictedOutputSizeText { get; set; } = "Estimated size unavailable";
@@ -156,6 +162,10 @@ public partial class MainPageViewModel : ObservableObject
     public string ExportNoticeText => HasAnyFadeEnabled
         ? "Fades force Re-encode because filters are enabled."
         : "Fast copy preserves streams where practical, but cuts can align to nearby keyframes.";
+
+    public bool IsBitrateMode => CurrentBitrateMode == BitrateMode.Bitrate;
+
+    public bool IsTargetSizeMode => CurrentBitrateMode == BitrateMode.TargetSize;
 
     public MainPageViewModel()
         : this(
@@ -354,9 +364,12 @@ public partial class MainPageViewModel : ObservableObject
             return;
         }
 
-        if (GetEffectiveExportMode(CreateCurrentSettings()) == ExportMode.Reencode && GetVideoBitrateKbps() is null)
+        int? exportVideoBitrateKbps = GetEffectiveVideoBitrateKbps(range);
+        if (GetEffectiveExportMode(CreateCurrentSettings()) == ExportMode.Reencode && exportVideoBitrateKbps is null)
         {
-            StatusMessage = "Set a valid video bitrate";
+            StatusMessage = CurrentBitrateMode == BitrateMode.TargetSize
+                ? "Set a valid target size"
+                : "Set a valid video bitrate";
             return;
         }
 
@@ -377,7 +390,10 @@ public partial class MainPageViewModel : ObservableObject
 
         try
         {
-            AppSettings settings = CreateCurrentSettings();
+            AppSettings settings = CreateCurrentSettings() with
+            {
+                LastVideoBitrateKbps = exportVideoBitrateKbps,
+            };
             await settingsService.SaveAsync(settings);
 
             var request = new ExportRequest(SelectedSourcePath, PlannedOutputPath, range, settings);
@@ -483,12 +499,14 @@ public partial class MainPageViewModel : ObservableObject
     partial void OnRangeStartSecondsChanged(double value)
     {
         OnPropertyChanged(nameof(RangeStartDisplayText));
+        UpdateTargetSizeDerivedBitrate();
         UpdatePredictedOutputSizeText();
     }
 
     partial void OnRangeEndSecondsChanged(double value)
     {
         OnPropertyChanged(nameof(RangeEndDisplayText));
+        UpdateTargetSizeDerivedBitrate();
         UpdatePredictedOutputSizeText();
     }
 
@@ -537,6 +555,20 @@ public partial class MainPageViewModel : ObservableObject
     partial void OnSelectedCodecFamilyIndexChanged(int value)
     {
         ApplySuggestedVideoBitrate(force: !hasManualVideoBitrateOverride);
+    }
+
+    partial void OnSelectedBitrateModeIndexChanged(int value)
+    {
+        OnPropertyChanged(nameof(IsBitrateMode));
+        OnPropertyChanged(nameof(IsTargetSizeMode));
+        UpdateTargetSizeDerivedBitrate();
+        UpdatePredictedOutputSizeText();
+    }
+
+    partial void OnTargetSizeMegabytesChanged(double value)
+    {
+        UpdateTargetSizeDerivedBitrate();
+        UpdatePredictedOutputSizeText();
     }
 
     partial void OnVideoFadeInEnabledChanged(bool value)
@@ -627,6 +659,10 @@ public partial class MainPageViewModel : ObservableObject
         _ => EncoderKind.Auto,
     };
 
+    private BitrateMode CurrentBitrateMode => SelectedBitrateModeIndex == 1
+        ? BitrateMode.TargetSize
+        : BitrateMode.Bitrate;
+
     private bool HasAnyFadeEnabled =>
         VideoFadeInEnabled
         || VideoFadeOutEnabled
@@ -641,8 +677,9 @@ public partial class MainPageViewModel : ObservableObject
         LastExportMode = CurrentExportMode,
         LastCodecFamily = CurrentCodecFamily,
         LastEncoderKind = CurrentEncoderKind,
-        LastBitrateMode = BitrateMode.Bitrate,
+        LastBitrateMode = CurrentBitrateMode,
         LastVideoBitrateKbps = GetVideoBitrateKbps(),
+        LastTargetSizeMegabytes = GetTargetSizeMegabytes(),
         Fade = new FadeSettings
         {
             VideoFadeIn = VideoFadeInEnabled,
@@ -671,10 +708,12 @@ public partial class MainPageViewModel : ObservableObject
             EncoderKind.Software => 2,
             _ => 0,
         };
+        SelectedBitrateModeIndex = settings.LastBitrateMode == BitrateMode.TargetSize ? 1 : 0;
 
         int initialBitrateKbps = settings.LastVideoBitrateKbps.GetValueOrDefault(2500);
         SetVideoBitrateTextFromSuggestion(initialBitrateKbps);
         hasManualVideoBitrateOverride = settings.LastVideoBitrateKbps.HasValue;
+        TargetSizeMegabytes = settings.LastTargetSizeMegabytes.GetValueOrDefault(100);
         VideoFadeInEnabled = settings.Fade.VideoFadeIn;
         VideoFadeOutEnabled = settings.Fade.VideoFadeOut;
         AudioFadeInEnabled = settings.Fade.AudioFadeIn;
@@ -694,7 +733,7 @@ public partial class MainPageViewModel : ObservableObject
 
     private void ApplySuggestedVideoBitrate(bool force)
     {
-        if (!force || CurrentMediaInfo is null)
+        if (!force || CurrentMediaInfo is null || CurrentBitrateMode != BitrateMode.Bitrate)
         {
             return;
         }
@@ -733,18 +772,75 @@ public partial class MainPageViewModel : ObservableObject
         return Math.Max(0.25, Math.Truncate(seconds * 100) / 100);
     }
 
-    private void UpdatePredictedOutputSizeText()
+    private double? GetTargetSizeMegabytes()
     {
-        int? videoBitrateKbps = GetVideoBitrateKbps();
-        if (CurrentMediaInfo is null || videoBitrateKbps is null)
+        return double.IsFinite(TargetSizeMegabytes) && TargetSizeMegabytes > 0
+            ? Math.Round(TargetSizeMegabytes, 2, MidpointRounding.AwayFromZero)
+            : null;
+    }
+
+    private long? GetTargetSizeBytes()
+    {
+        return GetTargetSizeMegabytes() is { } megabytes
+            ? (long)Math.Round(megabytes * 1024 * 1024, MidpointRounding.AwayFromZero)
+            : null;
+    }
+
+    private int? GetEffectiveVideoBitrateKbps(ClipRange range)
+    {
+        if (CurrentBitrateMode == BitrateMode.Bitrate)
         {
-            PredictedOutputSizeText = "Estimated size unavailable";
+            return GetVideoBitrateKbps();
+        }
+
+        if (!range.IsValid || GetTargetSizeBytes() is not { } targetBytes)
+        {
+            return null;
+        }
+
+        try
+        {
+            return PredictedOutputSizeCalculator.EstimateVideoBitrateKbps(
+                targetBytes,
+                GetPrimaryAudioBitrate(),
+                range.Duration);
+        }
+        catch (InvalidOperationException)
+        {
+            return null;
+        }
+    }
+
+    private void UpdateTargetSizeDerivedBitrate()
+    {
+        if (CurrentBitrateMode != BitrateMode.TargetSize)
+        {
             return;
         }
 
         var range = new ClipRange(
             TimeSpan.FromSeconds(RangeStartSeconds),
             TimeSpan.FromSeconds(RangeEndSeconds));
+        int? bitrateKbps = GetEffectiveVideoBitrateKbps(range);
+        if (bitrateKbps is not { } value)
+        {
+            return;
+        }
+
+        SetVideoBitrateTextFromSuggestion(value);
+    }
+
+    private void UpdatePredictedOutputSizeText()
+    {
+        var range = new ClipRange(
+            TimeSpan.FromSeconds(RangeStartSeconds),
+            TimeSpan.FromSeconds(RangeEndSeconds));
+        int? videoBitrateKbps = GetEffectiveVideoBitrateKbps(range);
+        if (CurrentMediaInfo is null || videoBitrateKbps is null)
+        {
+            PredictedOutputSizeText = "Estimated size unavailable";
+            return;
+        }
 
         if (!range.IsValid)
         {
@@ -752,14 +848,19 @@ public partial class MainPageViewModel : ObservableObject
             return;
         }
 
-        long? audioBitrate = CurrentMediaInfo.Streams
-            .FirstOrDefault(stream => stream.CodecType == "audio")
-            ?.Bitrate;
+        long? audioBitrate = GetPrimaryAudioBitrate();
         long bytes = PredictedOutputSizeCalculator.EstimateBytes(
             videoBitrateKbps.Value,
             audioBitrate,
             range.Duration);
         PredictedOutputSizeText = $"Estimated size: {FormatBytes(bytes)}";
+    }
+
+    private long? GetPrimaryAudioBitrate()
+    {
+        return CurrentMediaInfo?.Streams
+            .FirstOrDefault(stream => stream.CodecType == "audio")
+            ?.Bitrate;
     }
 
     private static string FormatBytes(long bytes)
@@ -888,6 +989,7 @@ public partial class MainPageViewModel : ObservableObject
             CurrentMediaInfo = info;
             ApplyMediaInfo(info);
             ApplySuggestedVideoBitrate(force: !hasManualVideoBitrateOverride);
+            UpdateTargetSizeDerivedBitrate();
             UpdatePredictedOutputSizeText();
             MediaSummaryText = CreateMediaSummary(info);
             StatusMessage = "Video selected";

@@ -18,5 +18,7 @@ public sealed record AppSettings
 
     public int? LastVideoBitrateKbps { get; init; }
 
+    public double? LastTargetSizeMegabytes { get; init; }
+
     public FadeSettings Fade { get; init; } = new();
 }

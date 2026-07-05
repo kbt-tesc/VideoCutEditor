@@ -76,7 +76,9 @@ $expectedElements = @(
     "EncoderSummaryTextBox",
     "CodecFamilyComboBox",
     "EncoderKindComboBox",
+    "BitrateModeComboBox",
     "VideoBitrateTextBox",
+    "TargetSizeNumberBox",
     "PredictedOutputSizeTextBox",
     "VideoFadeInCheckBox",
     "VideoFadeOutCheckBox",
@@ -111,8 +113,16 @@ Test-UI "Encoder defaults to Auto" {
     winapp ui wait-for "EncoderKindComboBox" -a $AppPid --value "Auto" -t 3000 -q
 }
 
+Test-UI "Rate control defaults to video bitrate" {
+    winapp ui wait-for "BitrateModeComboBox" -a $AppPid --value "Video bitrate" -t 3000 -q
+}
+
 Test-UI "Video bitrate defaults to 2500" {
     winapp ui wait-for "VideoBitrateTextBox" -a $AppPid --value "2500" -t 3000 -q
+}
+
+Test-UI "Target size is disabled in bitrate mode" {
+    winapp ui wait-for "TargetSizeNumberBox" -a $AppPid -p IsEnabled --value "False" -t 3000 -q
 }
 
 Test-UI "Predicted output size starts unavailable" {

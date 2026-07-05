@@ -35,4 +35,25 @@ public sealed class PredictedOutputSizeCalculatorTests
                 audioBitrateBitsPerSecond: 128_000,
                 duration: TimeSpan.Zero));
     }
+
+    [Fact]
+    public void EstimateVideoBitrateKbps_inverts_estimated_size()
+    {
+        int bitrateKbps = PredictedOutputSizeCalculator.EstimateVideoBitrateKbps(
+            targetBytes: 20_104_200,
+            audioBitrateBitsPerSecond: 128_000,
+            duration: TimeSpan.FromSeconds(60));
+
+        Assert.Equal(2500, bitrateKbps);
+    }
+
+    [Fact]
+    public void EstimateVideoBitrateKbps_rejects_target_too_small_for_audio()
+    {
+        Assert.Throws<InvalidOperationException>(() =>
+            PredictedOutputSizeCalculator.EstimateVideoBitrateKbps(
+                targetBytes: 10_000,
+                audioBitrateBitsPerSecond: 128_000,
+                duration: TimeSpan.FromSeconds(60)));
+    }
 }

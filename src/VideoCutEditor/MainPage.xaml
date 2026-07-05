@@ -15,6 +15,10 @@
             x:Key="FadeDurationNumberFormatter"
             FractionDigits="2"
             IsGrouped="False" />
+        <formatting:DecimalFormatter
+            x:Key="TargetSizeNumberFormatter"
+            FractionDigits="2"
+            IsGrouped="False" />
     </Page.Resources>
 
     <Grid
@@ -359,11 +363,33 @@
                             </ComboBox>
                         </Grid>
 
+                        <ComboBox
+                            AutomationProperties.AutomationId="BitrateModeComboBox"
+                            Header="Rate control"
+                            HorizontalAlignment="Stretch"
+                            SelectedIndex="{x:Bind ViewModel.SelectedBitrateModeIndex, Mode=TwoWay}">
+                            <ComboBoxItem Content="Video bitrate" />
+                            <ComboBoxItem Content="Target size" />
+                        </ComboBox>
+
                         <TextBox
                             AutomationProperties.AutomationId="VideoBitrateTextBox"
                             Header="Video bitrate (kbps)"
+                            IsEnabled="{x:Bind ViewModel.IsBitrateMode, Mode=OneWay}"
                             InputScope="Number"
                             Text="{x:Bind ViewModel.VideoBitrateText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+
+                        <NumberBox
+                            AutomationProperties.AutomationId="TargetSizeNumberBox"
+                            Header="Target size (MB)"
+                            IsEnabled="{x:Bind ViewModel.IsTargetSizeMode, Mode=OneWay}"
+                            LargeChange="10"
+                            Maximum="1048576"
+                            Minimum="1"
+                            NumberFormatter="{StaticResource TargetSizeNumberFormatter}"
+                            SmallChange="1"
+                            SpinButtonPlacementMode="Compact"
+                            Value="{x:Bind ViewModel.TargetSizeMegabytes, Mode=TwoWay}" />
 
                         <TextBox
                             AutomationProperties.AutomationId="PredictedOutputSizeTextBox"
