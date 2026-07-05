@@ -6,7 +6,7 @@ This document is the handoff ledger for future Codex sessions. Read it after `AG
 
 ## Current State
 
-VideoCutEditor has a working WinUI 3/.NET 10 editor shell with a single-range video extraction workflow. The app can detect externally installed `ffmpeg` and `ffprobe`, probe media metadata, preview videos through Windows media playback when possible, set start/end markers, suggest re-encode bitrates from metadata, configure clip-edge fades, and export either Fast copy or bitrate-based Re-encode through generated ffmpeg plans.
+VideoCutEditor has a working WinUI 3/.NET 10 editor shell with a single-range video extraction workflow. The app can detect externally installed `ffmpeg` and `ffprobe`, probe media metadata, preview videos through Windows media playback when possible, set start/end markers, suggest re-encode bitrates from metadata, configure clip-edge fades, and export Fast copy or Re-encode through bitrate, target-size, or quality rate control.
 
 The project is being developed in small TDD slices. Keep using behavior-focused tests first, then implement the smallest production change, verify, and commit each slice.
 
@@ -45,10 +45,15 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
   - Wired target-size mode to pass the derived bitrate into the existing Re-encode planner.
 - `ad06fe6 test: cover re-encode fade export integration`
   - Added an ffmpeg-backed integration test that generates a temporary audio/video source, runs Re-encode with video and audio fades through `FfmpegRunner`, probes the output, and verifies temporary output cleanup.
-- `fix: skip audio fade filters without audio`
+- `17f7cd7 fix: skip audio fade filters without audio`
   - Added metadata-aware Re-encode planning so audio fade filters and AAC audio re-encode are emitted only when media metadata shows an audio stream.
   - Passed probed media metadata from the WinUI export flow into the export planner.
   - Added planner and ffmpeg-backed integration coverage for video-only inputs with audio fade controls enabled.
+- `feat: add quality rate control`
+  - Added Quality rate control with a persisted numeric quality value.
+  - Added Re-encode planner support for software `-crf` and NVEnc `-cq` quality arguments.
+  - Added UI and UI smoke coverage for the Quality control.
+  - Added an ffmpeg-backed integration test for software quality-mode Re-encode.
 
 ## Implemented Capabilities
 
@@ -64,8 +69,9 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 - Slow playback rates through the speed selector.
 - ffprobe metadata parsing and media summary display.
 - Fast copy export planning and execution.
-- Re-encode export planning and execution for bitrate-based video encoding.
+- Re-encode export planning and execution for bitrate, target-size, and quality-based video encoding.
 - Target-size mode that derives Re-encode video bitrate from desired output size.
+- Quality mode that maps a single quality value to `-crf` for software encoders and `-cq` for NVEnc encoders.
 - Clip-edge video/audio fade controls that force Re-encode and generate ffmpeg filters.
 - Audio fade planning skips audio filters for probed video-only inputs instead of adding synthetic audio.
 - Fade duration input with 0.25 second steps and two-decimal truncation.
@@ -82,11 +88,11 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 Most recent successful checks:
 
 - `dotnet test VideoCutEditor.slnx`
-  - 58 tests passed.
+  - 61 tests passed.
 - `dotnet build src/VideoCutEditor/VideoCutEditor.csproj -p:Platform=x64`
   - Build succeeded.
 - `powershell -ExecutionPolicy Bypass -File tests\ui-tests.ps1 -AppPid <pid>`
-  - 55 UI tests passed.
+  - 57 UI tests passed.
 
 When resuming in a new session, rerun the relevant subset before making assumptions if files have changed.
 
@@ -95,7 +101,8 @@ When resuming in a new session, rerun the relevant subset before making assumpti
 - Waveform generation is implemented in code, but should still be manually verified with real videos that have audio streams.
 - Fade controls and fade-triggered Re-encode are covered by generated audio/video integration tests, but should still be manually verified on representative real media.
 - Audio fade behavior for generated video-only inputs is covered; still verify representative real video-only media manually.
-- Quality mode and advanced ffmpeg arguments are not implemented.
+- Advanced ffmpeg arguments are not implemented.
+- Quality mode is covered for generated software-encoded media; NVEnc quality-mode execution still needs manual hardware-backed verification.
 - Real media export should still be manually verified for Fast copy and Re-encode on local sample files.
 - NVEnc behavior should be manually verified on hardware and ffmpeg builds that expose NVEnc.
 - Preview-unavailable fallback behavior needs more manual and/or UI coverage.

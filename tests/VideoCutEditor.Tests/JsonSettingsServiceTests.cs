@@ -34,6 +34,7 @@ public sealed class JsonSettingsServiceTests
             LastBitrateMode = BitrateMode.TargetSize,
             LastVideoBitrateKbps = 4500,
             LastTargetSizeMegabytes = 80.5,
+            LastQualityValue = 21,
             Fade = new FadeSettings
             {
                 VideoFadeIn = true,

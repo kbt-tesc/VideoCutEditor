@@ -6,6 +6,9 @@ namespace VideoCutEditor.Core.Services;
 public sealed class ReencodeExportPlanner : IExportPlanner
 {
     private const int DefaultVideoBitrateKbps = 2500;
+    private const int DefaultQualityValue = 23;
+    private const int MinQualityValue = 0;
+    private const int MaxQualityValue = 51;
 
     private readonly FfmpegCapabilities capabilities;
 
@@ -32,7 +35,6 @@ public sealed class ReencodeExportPlanner : IExportPlanner
                 $"No supported video encoder is available for {request.Settings.LastCodecFamily} with {request.Settings.LastEncoderKind}.");
         }
 
-        int videoBitrateKbps = request.Settings.LastVideoBitrateKbps.GetValueOrDefault(DefaultVideoBitrateKbps);
         string temporaryOutputPath = ExportPlanPathHelper.CreateTemporaryOutputPath(request.OutputPath);
 
         var arguments = new List<string>
@@ -52,9 +54,9 @@ public sealed class ReencodeExportPlanner : IExportPlanner
             "copy",
             "-c:v",
             videoEncoder,
-            "-b:v",
-            $"{videoBitrateKbps}k",
         };
+
+        AddRateControlArguments(arguments, request.Settings, videoEncoder);
 
         AddFadeArguments(
             arguments,
@@ -77,6 +79,20 @@ public sealed class ReencodeExportPlanner : IExportPlanner
             temporaryOutputPath,
             request.OutputPath,
             arguments);
+    }
+
+    private static void AddRateControlArguments(List<string> arguments, AppSettings settings, string videoEncoder)
+    {
+        if (settings.LastBitrateMode == BitrateMode.Quality)
+        {
+            arguments.Add(IsNvencEncoder(videoEncoder) ? "-cq" : "-crf");
+            arguments.Add(NormalizeQualityValue(settings.LastQualityValue).ToString(CultureInfo.InvariantCulture));
+            return;
+        }
+
+        int videoBitrateKbps = settings.LastVideoBitrateKbps.GetValueOrDefault(DefaultVideoBitrateKbps);
+        arguments.Add("-b:v");
+        arguments.Add($"{videoBitrateKbps}k");
     }
 
     private static void AddFadeArguments(
@@ -115,6 +131,12 @@ public sealed class ReencodeExportPlanner : IExportPlanner
     private static bool MediaHasAudioStream(MediaInfo? mediaInfo) =>
         mediaInfo is null
         || mediaInfo.Streams.Any(stream => string.Equals(stream.CodecType, "audio", StringComparison.OrdinalIgnoreCase));
+
+    private static bool IsNvencEncoder(string videoEncoder) =>
+        videoEncoder.EndsWith("_nvenc", StringComparison.OrdinalIgnoreCase);
+
+    private static int NormalizeQualityValue(int? qualityValue) =>
+        Math.Clamp(qualityValue.GetValueOrDefault(DefaultQualityValue), MinQualityValue, MaxQualityValue);
 
     private static string? BuildFadeFilter(
         string filterName,

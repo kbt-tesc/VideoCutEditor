@@ -38,6 +38,7 @@ Only one keep range is supported per export.
 - Show ffmpeg progress, current status, log output, and a cancel button during export.
 - The first export implementation supports Fast copy with progress/log display and cancellation.
 - Re-encode mode supports codec family, encoder preference, bitrate-based export controls, target-size export controls, and clip-edge fade controls.
+- Quality mode uses a single numeric quality value where lower values mean higher quality and output size is not predicted.
 - Fade duration is adjusted in 0.25 second steps and is truncated to two decimal places.
 - Audio fade controls affect existing audio streams only. They do not synthesize or add audio to inputs that have no audio stream.
 - When media metadata is available, Re-encode mode suggests an initial video bitrate from the source bitrate or resolution. The value remains editable and saved user settings take precedence.
@@ -67,7 +68,7 @@ Persist these settings in the user's AppData folder:
 - `ffprobePath`
 - `outputDirectory`
 - Last-used export mode
-- Last-used codec, encoder, bitrate mode, and related encode settings
+- Last-used codec, encoder, rate control mode, and related encode settings
 
 The app should try configured paths first, then PATH discovery as a fallback.
 

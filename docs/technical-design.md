@@ -118,6 +118,8 @@ Use a small overhead allowance for display. Treat the value as an estimate, not 
 
 Target size mode inverts this calculation to derive a video bitrate after reserving detected audio bitrate and overhead. The UI stores target size in MB, updates the derived video bitrate when enough media/range information is available, and passes the derived bitrate to the existing re-encode planner.
 
+Quality mode stores a single numeric quality value. Lower values mean higher quality. Software encoders use `-crf <value>` and NVEnc encoders use `-cq <value>`. The initial UI range is 0 to 51 with a default of 23. Because quality mode does not target a specific bitrate, predicted output size remains unavailable in this mode.
+
 The initial UI displays a read-only predicted output size for bitrate-based re-encode settings when media metadata, selected range duration, and a valid video bitrate are available. The calculation includes selected video bitrate, detected audio bitrate when present, and a small container overhead allowance.
 
 ## Fade Policy

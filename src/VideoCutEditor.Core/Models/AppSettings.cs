@@ -20,5 +20,7 @@ public sealed record AppSettings
 
     public double? LastTargetSizeMegabytes { get; init; }
 
+    public int? LastQualityValue { get; init; }
+
     public FadeSettings Fade { get; init; } = new();
 }

@@ -242,6 +242,82 @@ public sealed class FfmpegRunnerIntegrationTests
     }
 
     [Fact]
+    public async Task RunAsync_creates_reencode_output_with_quality_mode_when_tools_are_available()
+    {
+        FfmpegToolPaths paths = new FfmpegToolPathService().Resolve(new AppSettings());
+        if (string.IsNullOrWhiteSpace(paths.FfmpegPath)
+            || string.IsNullOrWhiteSpace(paths.FfprobePath)
+            || !File.Exists(paths.FfmpegPath)
+            || !File.Exists(paths.FfprobePath))
+        {
+            return;
+        }
+
+        FfmpegCapabilities capabilities = await new FfmpegCapabilityService().DetectAsync(paths.FfmpegPath);
+        if (!capabilities.SupportsEncoder("libx264"))
+        {
+            return;
+        }
+
+        string workingDirectory = Path.Combine(Path.GetTempPath(), "VideoCutEditor.Tests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(workingDirectory);
+
+        try
+        {
+            string sourcePath = Path.Combine(workingDirectory, "source-quality.mp4");
+            string outputPath = Path.Combine(workingDirectory, "source-quality_cut.mp4");
+            await RunProcessAsync(
+                paths.FfmpegPath,
+                [
+                    "-hide_banner",
+                    "-loglevel",
+                    "error",
+                    "-y",
+                    "-f",
+                    "lavfi",
+                    "-i",
+                    "testsrc=size=128x72:rate=24",
+                    "-t",
+                    "2",
+                    "-c:v",
+                    "mpeg4",
+                    "-q:v",
+                    "5",
+                    sourcePath,
+                ]);
+
+            var planner = new ReencodeExportPlanner(capabilities);
+            ExportPlan plan = planner.CreatePlan(new ExportRequest(
+                sourcePath,
+                outputPath,
+                new ClipRange(TimeSpan.Zero, TimeSpan.FromSeconds(1.5)),
+                new AppSettings
+                {
+                    FfmpegPath = paths.FfmpegPath,
+                    LastExportMode = ExportMode.Reencode,
+                    LastCodecFamily = CodecFamily.H264,
+                    LastEncoderKind = EncoderKind.Software,
+                    LastBitrateMode = BitrateMode.Quality,
+                    LastQualityValue = 23,
+                }));
+
+            ExportResult result = await new FfmpegRunner().RunAsync(plan);
+
+            Assert.True(result.Succeeded, result.ErrorMessage);
+            Assert.True(File.Exists(outputPath));
+            Assert.False(File.Exists(plan.TemporaryOutputPath));
+
+            MediaInfo outputInfo = await new MediaProbeService().ProbeAsync(paths.FfprobePath, outputPath);
+            Assert.Contains(outputInfo.Streams, stream => stream.CodecType == "video");
+            Assert.InRange(outputInfo.Duration.TotalSeconds, 1.0, 2.1);
+        }
+        finally
+        {
+            Directory.Delete(workingDirectory, recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task RunAsync_cleans_temporary_output_when_export_is_canceled()
     {
         FfmpegToolPaths paths = new FfmpegToolPathService().Resolve(new AppSettings());

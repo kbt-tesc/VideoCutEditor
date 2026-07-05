@@ -126,6 +126,9 @@ public partial class MainPageViewModel : ObservableObject
     public partial double TargetSizeMegabytes { get; set; } = 100;
 
     [ObservableProperty]
+    public partial double QualityValue { get; set; } = 23;
+
+    [ObservableProperty]
     public partial string PredictedOutputSizeText { get; set; } = "Estimated size unavailable";
 
     [ObservableProperty]
@@ -166,6 +169,8 @@ public partial class MainPageViewModel : ObservableObject
     public bool IsBitrateMode => CurrentBitrateMode == BitrateMode.Bitrate;
 
     public bool IsTargetSizeMode => CurrentBitrateMode == BitrateMode.TargetSize;
+
+    public bool IsQualityMode => CurrentBitrateMode == BitrateMode.Quality;
 
     public MainPageViewModel()
         : this(
@@ -364,8 +369,11 @@ public partial class MainPageViewModel : ObservableObject
             return;
         }
 
+        AppSettings currentSettings = CreateCurrentSettings();
         int? exportVideoBitrateKbps = GetEffectiveVideoBitrateKbps(range);
-        if (GetEffectiveExportMode(CreateCurrentSettings()) == ExportMode.Reencode && exportVideoBitrateKbps is null)
+        if (GetEffectiveExportMode(currentSettings) == ExportMode.Reencode
+            && CurrentBitrateMode != BitrateMode.Quality
+            && exportVideoBitrateKbps is null)
         {
             StatusMessage = CurrentBitrateMode == BitrateMode.TargetSize
                 ? "Set a valid target size"
@@ -390,7 +398,7 @@ public partial class MainPageViewModel : ObservableObject
 
         try
         {
-            AppSettings settings = CreateCurrentSettings() with
+            AppSettings settings = currentSettings with
             {
                 LastVideoBitrateKbps = exportVideoBitrateKbps,
             };
@@ -561,6 +569,7 @@ public partial class MainPageViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(IsBitrateMode));
         OnPropertyChanged(nameof(IsTargetSizeMode));
+        OnPropertyChanged(nameof(IsQualityMode));
         UpdateTargetSizeDerivedBitrate();
         UpdatePredictedOutputSizeText();
     }
@@ -569,6 +578,14 @@ public partial class MainPageViewModel : ObservableObject
     {
         UpdateTargetSizeDerivedBitrate();
         UpdatePredictedOutputSizeText();
+    }
+
+    partial void OnQualityValueChanged(double value)
+    {
+        if (!double.IsFinite(value))
+        {
+            QualityValue = 23;
+        }
     }
 
     partial void OnVideoFadeInEnabledChanged(bool value)
@@ -659,9 +676,12 @@ public partial class MainPageViewModel : ObservableObject
         _ => EncoderKind.Auto,
     };
 
-    private BitrateMode CurrentBitrateMode => SelectedBitrateModeIndex == 1
-        ? BitrateMode.TargetSize
-        : BitrateMode.Bitrate;
+    private BitrateMode CurrentBitrateMode => SelectedBitrateModeIndex switch
+    {
+        1 => BitrateMode.TargetSize,
+        2 => BitrateMode.Quality,
+        _ => BitrateMode.Bitrate,
+    };
 
     private bool HasAnyFadeEnabled =>
         VideoFadeInEnabled
@@ -680,6 +700,7 @@ public partial class MainPageViewModel : ObservableObject
         LastBitrateMode = CurrentBitrateMode,
         LastVideoBitrateKbps = GetVideoBitrateKbps(),
         LastTargetSizeMegabytes = GetTargetSizeMegabytes(),
+        LastQualityValue = GetQualityValue(),
         Fade = new FadeSettings
         {
             VideoFadeIn = VideoFadeInEnabled,
@@ -708,12 +729,18 @@ public partial class MainPageViewModel : ObservableObject
             EncoderKind.Software => 2,
             _ => 0,
         };
-        SelectedBitrateModeIndex = settings.LastBitrateMode == BitrateMode.TargetSize ? 1 : 0;
+        SelectedBitrateModeIndex = settings.LastBitrateMode switch
+        {
+            BitrateMode.TargetSize => 1,
+            BitrateMode.Quality => 2,
+            _ => 0,
+        };
 
         int initialBitrateKbps = settings.LastVideoBitrateKbps.GetValueOrDefault(2500);
         SetVideoBitrateTextFromSuggestion(initialBitrateKbps);
         hasManualVideoBitrateOverride = settings.LastVideoBitrateKbps.HasValue;
         TargetSizeMegabytes = settings.LastTargetSizeMegabytes.GetValueOrDefault(100);
+        QualityValue = settings.LastQualityValue.GetValueOrDefault(23);
         VideoFadeInEnabled = settings.Fade.VideoFadeIn;
         VideoFadeOutEnabled = settings.Fade.VideoFadeOut;
         AudioFadeInEnabled = settings.Fade.AudioFadeIn;
@@ -779,6 +806,13 @@ public partial class MainPageViewModel : ObservableObject
             : null;
     }
 
+    private int? GetQualityValue()
+    {
+        return double.IsFinite(QualityValue)
+            ? Math.Clamp((int)Math.Round(QualityValue, MidpointRounding.AwayFromZero), 0, 51)
+            : null;
+    }
+
     private long? GetTargetSizeBytes()
     {
         return GetTargetSizeMegabytes() is { } megabytes
@@ -791,6 +825,11 @@ public partial class MainPageViewModel : ObservableObject
         if (CurrentBitrateMode == BitrateMode.Bitrate)
         {
             return GetVideoBitrateKbps();
+        }
+
+        if (CurrentBitrateMode == BitrateMode.Quality)
+        {
+            return null;
         }
 
         if (!range.IsValid || GetTargetSizeBytes() is not { } targetBytes)

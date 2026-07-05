@@ -110,6 +110,88 @@ public sealed class ReencodeExportPlannerTests
     }
 
     [Fact]
+    public void CreatePlan_uses_crf_for_software_quality_mode()
+    {
+        string outputDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(outputDirectory);
+
+        try
+        {
+            var capabilities = new FfmpegCapabilities(new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "libx264",
+            });
+            var planner = new ReencodeExportPlanner(capabilities);
+            string outputPath = Path.Combine(outputDirectory, "clip_cut.mp4");
+            var request = new ExportRequest(
+                @"C:\video\source.mp4",
+                outputPath,
+                new ClipRange(TimeSpan.Zero, TimeSpan.FromSeconds(10)),
+                new AppSettings
+                {
+                    FfmpegPath = @"C:\tools\ffmpeg.exe",
+                    LastExportMode = ExportMode.Reencode,
+                    LastCodecFamily = CodecFamily.H264,
+                    LastEncoderKind = EncoderKind.Software,
+                    LastBitrateMode = BitrateMode.Quality,
+                    LastQualityValue = 22,
+                });
+
+            ExportPlan plan = planner.CreatePlan(request);
+
+            Assert.Contains("-crf", plan.Arguments);
+            Assert.Contains("22", plan.Arguments);
+            Assert.DoesNotContain("-b:v", plan.Arguments);
+            Assert.DoesNotContain("2500k", plan.Arguments);
+        }
+        finally
+        {
+            Directory.Delete(outputDirectory, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void CreatePlan_uses_cq_for_nvenc_quality_mode()
+    {
+        string outputDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(outputDirectory);
+
+        try
+        {
+            var capabilities = new FfmpegCapabilities(new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "h264_nvenc",
+            });
+            var planner = new ReencodeExportPlanner(capabilities);
+            string outputPath = Path.Combine(outputDirectory, "clip_cut.mp4");
+            var request = new ExportRequest(
+                @"C:\video\source.mp4",
+                outputPath,
+                new ClipRange(TimeSpan.Zero, TimeSpan.FromSeconds(10)),
+                new AppSettings
+                {
+                    FfmpegPath = @"C:\tools\ffmpeg.exe",
+                    LastExportMode = ExportMode.Reencode,
+                    LastCodecFamily = CodecFamily.H264,
+                    LastEncoderKind = EncoderKind.Nvenc,
+                    LastBitrateMode = BitrateMode.Quality,
+                    LastQualityValue = 19,
+                });
+
+            ExportPlan plan = planner.CreatePlan(request);
+
+            Assert.Contains("-cq", plan.Arguments);
+            Assert.Contains("19", plan.Arguments);
+            Assert.DoesNotContain("-b:v", plan.Arguments);
+            Assert.DoesNotContain("2500k", plan.Arguments);
+        }
+        finally
+        {
+            Directory.Delete(outputDirectory, recursive: true);
+        }
+    }
+
+    [Fact]
     public void CreatePlan_rejects_explicit_nvenc_when_encoder_is_unavailable()
     {
         string outputDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));

@@ -79,6 +79,7 @@ $expectedElements = @(
     "BitrateModeComboBox",
     "VideoBitrateTextBox",
     "TargetSizeNumberBox",
+    "QualityNumberBox",
     "PredictedOutputSizeTextBox",
     "VideoFadeInCheckBox",
     "VideoFadeOutCheckBox",
@@ -123,6 +124,10 @@ Test-UI "Video bitrate defaults to 2500" {
 
 Test-UI "Target size is disabled in bitrate mode" {
     winapp ui wait-for "TargetSizeNumberBox" -a $AppPid -p IsEnabled --value "False" -t 3000 -q
+}
+
+Test-UI "Quality is disabled in bitrate mode" {
+    winapp ui wait-for "QualityNumberBox" -a $AppPid -p IsEnabled --value "False" -t 3000 -q
 }
 
 Test-UI "Predicted output size starts unavailable" {

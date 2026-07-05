@@ -19,6 +19,10 @@
             x:Key="TargetSizeNumberFormatter"
             FractionDigits="2"
             IsGrouped="False" />
+        <formatting:DecimalFormatter
+            x:Key="QualityNumberFormatter"
+            FractionDigits="0"
+            IsGrouped="False" />
     </Page.Resources>
 
     <Grid
@@ -370,6 +374,7 @@
                             SelectedIndex="{x:Bind ViewModel.SelectedBitrateModeIndex, Mode=TwoWay}">
                             <ComboBoxItem Content="Video bitrate" />
                             <ComboBoxItem Content="Target size" />
+                            <ComboBoxItem Content="Quality" />
                         </ComboBox>
 
                         <TextBox
@@ -390,6 +395,18 @@
                             SmallChange="1"
                             SpinButtonPlacementMode="Compact"
                             Value="{x:Bind ViewModel.TargetSizeMegabytes, Mode=TwoWay}" />
+
+                        <NumberBox
+                            AutomationProperties.AutomationId="QualityNumberBox"
+                            Header="Quality (lower is better)"
+                            IsEnabled="{x:Bind ViewModel.IsQualityMode, Mode=OneWay}"
+                            LargeChange="5"
+                            Maximum="51"
+                            Minimum="0"
+                            NumberFormatter="{StaticResource QualityNumberFormatter}"
+                            SmallChange="1"
+                            SpinButtonPlacementMode="Compact"
+                            Value="{x:Bind ViewModel.QualityValue, Mode=TwoWay}" />
 
                         <TextBox
                             AutomationProperties.AutomationId="PredictedOutputSizeTextBox"
