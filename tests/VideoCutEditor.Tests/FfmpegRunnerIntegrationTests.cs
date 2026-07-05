@@ -145,7 +145,7 @@ public sealed class FfmpegRunnerIntegrationTests
             Assert.True(File.Exists(outputPath));
             Assert.True(new FileInfo(outputPath).Length > 0);
             Assert.False(File.Exists(plan.TemporaryOutputPath));
-            Assert.Contains(progressEvents, progress => progress.Percent == 1);
+            Assert.Contains(progressEvents, progress => progress is not null && progress.Percent == 1);
 
             MediaInfo outputInfo = await new MediaProbeService().ProbeAsync(paths.FfprobePath, outputPath);
             Assert.Contains(outputInfo.Streams, stream => stream.CodecType == "video");
@@ -309,6 +309,83 @@ public sealed class FfmpegRunnerIntegrationTests
 
             MediaInfo outputInfo = await new MediaProbeService().ProbeAsync(paths.FfprobePath, outputPath);
             Assert.Contains(outputInfo.Streams, stream => stream.CodecType == "video");
+            Assert.InRange(outputInfo.Duration.TotalSeconds, 1.0, 2.1);
+        }
+        finally
+        {
+            Directory.Delete(workingDirectory, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task RunAsync_creates_audio_normalized_output_when_tools_are_available()
+    {
+        FfmpegToolPaths paths = new FfmpegToolPathService().Resolve(new AppSettings());
+        if (string.IsNullOrWhiteSpace(paths.FfmpegPath)
+            || string.IsNullOrWhiteSpace(paths.FfprobePath)
+            || !File.Exists(paths.FfmpegPath)
+            || !File.Exists(paths.FfprobePath))
+        {
+            return;
+        }
+
+        string workingDirectory = Path.Combine(Path.GetTempPath(), "VideoCutEditor.Tests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(workingDirectory);
+
+        try
+        {
+            string sourcePath = Path.Combine(workingDirectory, "source-normalize.mp4");
+            string outputPath = Path.Combine(workingDirectory, "source-normalize_cut.mp4");
+            await RunProcessAsync(
+                paths.FfmpegPath,
+                [
+                    "-hide_banner",
+                    "-loglevel",
+                    "error",
+                    "-y",
+                    "-f",
+                    "lavfi",
+                    "-i",
+                    "testsrc=size=128x72:rate=24",
+                    "-f",
+                    "lavfi",
+                    "-i",
+                    "sine=frequency=1000:sample_rate=44100",
+                    "-t",
+                    "2",
+                    "-c:v",
+                    "mpeg4",
+                    "-q:v",
+                    "5",
+                    "-c:a",
+                    "aac",
+                    "-shortest",
+                    sourcePath,
+                ]);
+
+            MediaInfo sourceInfo = await new MediaProbeService().ProbeAsync(paths.FfprobePath, sourcePath);
+            var planner = new AudioNormalizeExportPlanner();
+            ExportPlan plan = planner.CreatePlan(new ExportRequest(
+                sourcePath,
+                outputPath,
+                new ClipRange(TimeSpan.Zero, TimeSpan.FromSeconds(1.5)),
+                new AppSettings
+                {
+                    FfmpegPath = paths.FfmpegPath,
+                    LastExportMode = ExportMode.AudioNormalize,
+                },
+                sourceInfo));
+
+            ExportResult result = await new FfmpegRunner().RunAsync(plan);
+
+            Assert.True(result.Succeeded, result.ErrorMessage);
+            Assert.True(File.Exists(outputPath));
+            Assert.False(File.Exists(plan.TemporaryOutputPath));
+
+            MediaInfo outputInfo = await new MediaProbeService().ProbeAsync(paths.FfprobePath, outputPath);
+            Assert.Contains(outputInfo.Streams, stream => stream.CodecType == "video");
+            Assert.Contains(outputInfo.Streams, stream => stream.CodecType == "audio");
+            Assert.Contains(outputInfo.Streams, stream => stream.CodecType == "audio" && stream.CodecName == "aac");
             Assert.InRange(outputInfo.Duration.TotalSeconds, 1.0, 2.1);
         }
         finally

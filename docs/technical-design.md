@@ -146,7 +146,21 @@ Audio policy:
 
 ## Audio Normalization
 
-Audio normalization is a planned follow-up export mode. It should normalize loudness without re-encoding video when practical, using stream-copy for video and an audio filter path for audio. The requested default loudness target is `-14 LUFS`. Before implementation, define the exact ffmpeg filter policy, likely based on `loudnorm`, including true peak, loudness range, single-pass versus two-pass behavior, metadata preservation, handling files without audio streams, and whether audio codec defaults to AAC or preserves codec where possible.
+Audio normalization is an export mode for changing loudness without re-encoding video when practical. The initial implementation uses a single-pass `loudnorm` filter with the requested loudness target:
+
+`loudnorm=I=-14:TP=-1.5:LRA=11`
+
+Command policy:
+
+- Select the requested time range with `-ss` and duration.
+- Map all streams where practical with `-map 0`.
+- Default to `-c copy` so video and untouched streams are stream-copied.
+- Apply `-af loudnorm=I=-14:TP=-1.5:LRA=11`.
+- Override audio with `-c:a aac` because audio filters require decoding and encoding.
+- Preserve metadata with `-map_metadata 0` where supported.
+- Use temporary output promotion and cancellation handling through the common `FfmpegRunner` path.
+
+If media metadata confirms there is no audio stream, the planner rejects the export with a clear error. If metadata is unavailable, the planner assumes audio may exist and lets ffmpeg report any process-level failure. Future work may add two-pass loudnorm analysis, configurable true peak/loudness range, and codec-preserving audio encode choices.
 
 ## Stream And Metadata Preservation
 

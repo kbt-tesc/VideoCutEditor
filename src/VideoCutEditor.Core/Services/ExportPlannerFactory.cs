@@ -16,6 +16,7 @@ public sealed class ExportPlannerFactory
         {
             ExportMode.FastCopy => new FastCopyExportPlanner(),
             ExportMode.Reencode => new ReencodeExportPlanner(capabilities),
+            ExportMode.AudioNormalize => new AudioNormalizeExportPlanner(),
             _ => throw new ArgumentOutOfRangeException(nameof(exportMode)),
         };
 }

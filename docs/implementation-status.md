@@ -1,12 +1,12 @@
 # Implementation Status
 
-Last updated: 2026-07-05
+Last updated: 2026-07-06
 
 This document is the handoff ledger for future Codex sessions. Read it after `AGENTS.md`, `docs/product-spec.md`, `docs/technical-design.md`, `docs/codex-workflow.md`, and `docs/implementation-kickoff.md` before choosing the next implementation slice.
 
 ## Current State
 
-VideoCutEditor has a working WinUI 3/.NET 10 editor shell with a single-range video extraction workflow. The app can detect externally installed `ffmpeg` and `ffprobe`, probe media metadata, preview videos through Windows media playback when possible, set start/end markers, suggest re-encode bitrates from metadata, configure clip-edge fades, and export Fast copy or Re-encode through bitrate, target-size, or quality rate control.
+VideoCutEditor has a working WinUI 3/.NET 10 editor shell with a single-range video extraction workflow. The app can detect externally installed `ffmpeg` and `ffprobe`, probe media metadata, preview videos through Windows media playback when possible, set start/end markers, suggest re-encode bitrates from metadata, configure clip-edge fades, and export Fast copy, Re-encode through bitrate/target-size/quality rate control, or audio normalization.
 
 The project is being developed in small TDD slices. Keep using behavior-focused tests first, then implement the smallest production change, verify, and commit each slice.
 
@@ -49,15 +49,21 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
   - Added metadata-aware Re-encode planning so audio fade filters and AAC audio re-encode are emitted only when media metadata shows an audio stream.
   - Passed probed media metadata from the WinUI export flow into the export planner.
   - Added planner and ffmpeg-backed integration coverage for video-only inputs with audio fade controls enabled.
-- `feat: add quality rate control`
+- `45b54c2 feat: add quality rate control`
   - Added Quality rate control with a persisted numeric quality value.
   - Added Re-encode planner support for software `-crf` and NVEnc `-cq` quality arguments.
   - Added UI and UI smoke coverage for the Quality control.
   - Added an ffmpeg-backed integration test for software quality-mode Re-encode.
-- `ui: simplify export mode controls`
+- `618cdd5 ui: simplify export mode controls`
   - Replaced the two-option export mode drop-down with direct Fast copy/Re-encode choices.
   - Hid codec, encoder, rate-control, predicted-size, and fade controls while Fast copy is selected.
   - Prevented hidden Fast copy fade settings from silently forcing Re-encode.
+- `feat: add audio normalization mode`
+  - Added Normalize audio export mode with single-pass `loudnorm=I=-14:TP=-1.5:LRA=11`.
+  - Stream-copies video and untouched streams while re-encoding filtered audio to AAC.
+  - Added planner coverage for loudnorm arguments and no-audio rejection.
+  - Added an ffmpeg-backed integration test for generated audio/video media.
+  - Added the mode to the WinUI direct export choices.
 
 ## Implemented Capabilities
 
@@ -73,8 +79,9 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 - Slow playback rates through the speed selector.
 - ffprobe metadata parsing and media summary display.
 - Fast copy export planning and execution.
-- Direct Fast copy/Re-encode mode selection without a drop-down.
+- Direct Fast copy/Re-encode/Normalize audio mode selection without a drop-down.
 - Re-encode export planning and execution for bitrate, target-size, and quality-based video encoding.
+- Audio normalization export planning and execution with `-14 LUFS` loudnorm, video stream copy, and AAC audio re-encode.
 - Target-size mode that derives Re-encode video bitrate from desired output size.
 - Quality mode that maps a single quality value to `-crf` for software encoders and `-cq` for NVEnc encoders.
 - Clip-edge video/audio fade controls that force Re-encode and generate ffmpeg filters.
@@ -93,11 +100,11 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 Most recent successful checks:
 
 - `dotnet test VideoCutEditor.slnx`
-  - 61 tests passed.
+  - 64 tests passed.
 - `dotnet build src/VideoCutEditor/VideoCutEditor.csproj -p:Platform=x64`
   - Build succeeded.
 - `powershell -ExecutionPolicy Bypass -File tests\ui-tests.ps1 -AppPid <pid>`
-  - 49 UI tests passed.
+  - 51 UI tests passed.
 
 When resuming in a new session, rerun the relevant subset before making assumptions if files have changed.
 
@@ -107,7 +114,8 @@ When resuming in a new session, rerun the relevant subset before making assumpti
 - Fade controls and fade-triggered Re-encode are covered by generated audio/video integration tests, but should still be manually verified on representative real media.
 - Audio fade behavior for generated video-only inputs is covered; still verify representative real video-only media manually.
 - Advanced ffmpeg arguments are not implemented.
-- Audio normalization mode is requested but not implemented. The requested default target is `-14 LUFS`; the ffmpeg `loudnorm` policy still needs design and tests.
+- Audio normalization uses single-pass loudnorm only. Two-pass loudnorm analysis and configurable loudness/true peak/LRA are not implemented.
+- Audio normalization is covered for generated audio/video media; representative real media and no-audio UI error handling still need manual verification.
 - Quality mode is covered for generated software-encoded media; NVEnc quality-mode execution still needs manual hardware-backed verification.
 - Real media export should still be manually verified for Fast copy and Re-encode on local sample files.
 - NVEnc behavior should be manually verified on hardware and ffmpeg builds that expose NVEnc.
@@ -120,10 +128,9 @@ When resuming in a new session, rerun the relevant subset before making assumpti
 1. Continue end-to-end verification.
    - Add scripted picker workflow coverage where reliable.
    - Add manual verification notes for real preview/export/NVEnc/package runs.
-2. Add audio normalization mode.
-   - Define ffmpeg `loudnorm` command policy and default target.
-   - Prefer video stream copy while applying audio filtering.
-   - Add planner and integration tests for audio inputs, no-audio inputs, progress, and cancellation.
+2. Deepen audio normalization verification.
+   - Manually verify representative real media and no-audio media.
+   - Consider two-pass loudnorm analysis and configurable loudness/true peak/LRA.
 3. Packaging and release preparation.
    - Use the repo-local `winui-packaging` skill.
    - Verify unpackaged/self-contained/single-file assumptions against the current Windows App SDK behavior.

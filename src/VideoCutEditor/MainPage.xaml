@@ -333,10 +333,11 @@
                         <RadioButtons
                             AutomationProperties.AutomationId="ExportModeRadioButtons"
                             Header="Mode"
-                            MaxColumns="2"
+                            MaxColumns="1"
                             SelectedIndex="{x:Bind ViewModel.SelectedExportModeIndex, Mode=TwoWay}">
                             <x:String>Fast copy</x:String>
                             <x:String>Re-encode</x:String>
+                            <x:String>Normalize audio</x:String>
                         </RadioButtons>
 
                         <StackPanel

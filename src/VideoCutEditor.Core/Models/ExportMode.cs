@@ -4,4 +4,5 @@ public enum ExportMode
 {
     FastCopy,
     Reencode,
+    AudioNormalize,
 }

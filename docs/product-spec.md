@@ -32,16 +32,16 @@ Only one keep range is supported per export.
 - Show export mode controls:
   - Fast copy
   - Re-encode
-  - Audio normalization as a planned follow-up mode
+  - Normalize audio
   - Fade controls
   - Codec and encoder controls
   - Bitrate, target size, or quality controls
-- Because Fast copy and Re-encode are the primary two export modes, show them as direct choices rather than a drop-down.
+- Show export modes as direct choices rather than a drop-down.
 - In Fast copy mode, hide Re-encode-only controls such as codec, encoder, rate control, predicted re-encode size, and fades.
 - Show ffmpeg progress, current status, log output, and a cancel button during export.
 - The first export implementation supports Fast copy with progress/log display and cancellation.
 - Re-encode mode supports codec family, encoder preference, bitrate-based export controls, target-size export controls, and clip-edge fade controls.
-- A planned audio normalization mode should support normalizing loudness without re-encoding video when practical. The requested default target is `-14 LUFS`.
+- Normalize audio mode normalizes loudness to `-14 LUFS`, stream-copies video where practical, re-encodes audio to AAC, and reports a clear error when probed media has no audio stream.
 - Quality mode uses a single numeric quality value where lower values mean higher quality and output size is not predicted.
 - Fade duration is adjusted in 0.25 second steps and is truncated to two decimal places.
 - Audio fade controls affect existing audio streams only. They do not synthesize or add audio to inputs that have no audio stream.
@@ -63,6 +63,7 @@ The first screen should be the usable editor, not a landing page or marketing sc
 - The default output container follows the input extension.
 - Stream-copy cuts may not be frame-accurate because they depend on keyframes. The UI should make that tradeoff clear.
 - Enabling any fade forces the export through Re-encode even when the visible export mode is Fast copy, because ffmpeg filters require decoding and encoding.
+- Normalize audio mode applies an audio filter and therefore re-encodes audio, but should not re-encode video when video stream copy is possible.
 
 ## Settings
 
@@ -85,6 +86,7 @@ Show clear recoverable errors for:
 - Invalid output directory
 - ffprobe metadata read failure
 - Unsupported or unavailable encoder
+- Audio normalization requested for media without an audio stream
 - Export process failure
 - Export cancellation
 - Start/end range errors

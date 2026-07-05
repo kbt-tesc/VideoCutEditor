@@ -28,7 +28,7 @@ public sealed class JsonSettingsServiceTests
             FfmpegPath = @"C:\Tools\ffmpeg.exe",
             FfprobePath = @"C:\Tools\ffprobe.exe",
             OutputDirectory = @"D:\Exports",
-            LastExportMode = ExportMode.Reencode,
+            LastExportMode = ExportMode.AudioNormalize,
             LastCodecFamily = CodecFamily.H265,
             LastEncoderKind = EncoderKind.Nvenc,
             LastBitrateMode = BitrateMode.TargetSize,

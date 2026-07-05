@@ -166,7 +166,9 @@ public partial class MainPageViewModel : ObservableObject
         ? "Fades force Re-encode because filters are enabled."
         : CurrentExportMode == ExportMode.Reencode
             ? "Re-encode uses the selected codec and rate control settings."
-            : "Fast copy preserves streams where practical, but cuts can align to nearby keyframes.";
+            : CurrentExportMode == ExportMode.AudioNormalize
+                ? "Normalize audio targets -14 LUFS, copies video, and re-encodes audio."
+                : "Fast copy preserves streams where practical, but cuts can align to nearby keyframes.";
 
     public bool IsBitrateMode => CurrentBitrateMode == BitrateMode.Bitrate;
 
@@ -669,9 +671,12 @@ public partial class MainPageViewModel : ObservableObject
         PlannedOutputPath = outputPathService.CreateAvailableCutPath(SelectedSourcePath, OutputDirectory);
     }
 
-    private ExportMode CurrentExportMode => SelectedExportModeIndex == 1
-        ? ExportMode.Reencode
-        : ExportMode.FastCopy;
+    private ExportMode CurrentExportMode => SelectedExportModeIndex switch
+    {
+        1 => ExportMode.Reencode,
+        2 => ExportMode.AudioNormalize,
+        _ => ExportMode.FastCopy,
+    };
 
     private CodecFamily CurrentCodecFamily => SelectedCodecFamilyIndex switch
     {
@@ -732,7 +737,12 @@ public partial class MainPageViewModel : ObservableObject
 
     private void ApplyExportSettings(AppSettings settings)
     {
-        SelectedExportModeIndex = settings.LastExportMode == ExportMode.Reencode ? 1 : 0;
+        SelectedExportModeIndex = settings.LastExportMode switch
+        {
+            ExportMode.Reencode => 1,
+            ExportMode.AudioNormalize => 2,
+            _ => 0,
+        };
         SelectedCodecFamilyIndex = settings.LastCodecFamily switch
         {
             CodecFamily.H265 => 1,
