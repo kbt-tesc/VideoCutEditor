@@ -1,12 +1,12 @@
 # Implementation Status
 
-Last updated: 2026-07-06
+Last updated: 2026-07-08
 
 This document is the handoff ledger for future Codex sessions. Read it after `AGENTS.md`, `docs/product-spec.md`, `docs/technical-design.md`, `docs/codex-workflow.md`, and `docs/implementation-kickoff.md` before choosing the next implementation slice.
 
 ## Current State
 
-VideoCutEditor has a working WinUI 3/.NET 10 editor shell with a single-range video extraction workflow. The app can detect externally installed `ffmpeg` and `ffprobe`, probe media metadata, preview videos through Windows media playback when possible, set start/end markers, suggest re-encode bitrates from metadata, configure clip-edge fades, and export Fast copy or Re-encode through bitrate/target-size/quality rate control. Audio normalization is available as an option within both export modes.
+VideoCutEditor has a working WinUI 3/.NET 10 editor shell with a single-range video extraction workflow. The app can detect externally installed `ffmpeg` and `ffprobe`, probe media metadata, preview videos through Windows media playback when possible, set start/end markers, suggest re-encode bitrates from metadata, configure clip-edge fades, and export Fast copy or Re-encode through bitrate/target-size/quality rate control. Audio normalization is available as an option within both export modes, and Re-encode exposes an advanced additional ffmpeg arguments field.
 
 The project is being developed in small TDD slices. Keep using behavior-focused tests first, then implement the smallest production change, verify, and commit each slice.
 
@@ -69,6 +69,10 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
   - Fast copy keeps video and untouched streams on `-c copy` while adding `loudnorm` and AAC audio re-encode when normalization is enabled.
   - Re-encode combines `loudnorm` with existing audio fade filters when both are enabled.
   - Added settings migration from the legacy `AudioNormalize` mode value to `FastCopy` plus `NormalizeAudio=true`.
+- `feat: add re-encode additional ffmpeg arguments`
+  - Added a Re-encode-only advanced ffmpeg arguments TextBox.
+  - Added quote-aware argument parsing and planner tests so the field is appended as process arguments rather than shell text.
+  - Persisted the additional arguments setting.
 
 ## Implemented Capabilities
 
@@ -86,6 +90,7 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 - Fast copy export planning and execution.
 - Direct Fast copy/Re-encode mode selection without a drop-down.
 - Re-encode export planning and execution for bitrate, target-size, and quality-based video encoding.
+- Re-encode advanced additional ffmpeg arguments with quote-aware argument parsing.
 - Audio normalization option with `-14 LUFS` loudnorm and AAC audio re-encode in both Fast copy and Re-encode.
 - Target-size mode that derives Re-encode video bitrate from desired output size.
 - Quality mode that maps a single quality value to `-crf` for software encoders and `-cq` for NVEnc encoders.
@@ -95,7 +100,7 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 - NVEnc/software encoder capability detection from `ffmpeg -encoders`.
 - Export progress parsing, log display, cancellation, temporary output path, and final promotion after success.
 - Output filename collision avoidance.
-- Settings persistence for tool paths, output directory, export mode, normalize audio, codec, encoder, bitrate mode, and video bitrate.
+- Settings persistence for tool paths, output directory, export mode, normalize audio, codec, encoder, bitrate mode, video bitrate, and additional ffmpeg arguments.
 - Re-encode video bitrate suggestions from source bitrate or resolution with codec-specific multipliers.
 - Predicted output size display for bitrate-based Re-encode when enough information is available.
 - Scripted WinUI UI smoke tests with screenshots.
@@ -105,11 +110,11 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 Most recent successful checks:
 
 - `dotnet test VideoCutEditor.slnx`
-  - 68 tests passed.
+  - 73 tests passed.
 - `dotnet build src/VideoCutEditor/VideoCutEditor.csproj -p:Platform=x64`
   - Build succeeded.
 - `powershell -ExecutionPolicy Bypass -File tests\ui-tests.ps1 -AppPid <pid>`
-  - 53 UI tests passed.
+  - 55 UI tests passed.
 
 When resuming in a new session, rerun the relevant subset before making assumptions if files have changed.
 
@@ -118,7 +123,7 @@ When resuming in a new session, rerun the relevant subset before making assumpti
 - Waveform generation is implemented in code, but should still be manually verified with real videos that have audio streams.
 - Fade controls and fade-triggered Re-encode are covered by generated audio/video integration tests, but should still be manually verified on representative real media.
 - Audio fade behavior for generated video-only inputs is covered; still verify representative real video-only media manually.
-- Advanced ffmpeg arguments are not implemented.
+- Advanced ffmpeg arguments are implemented for Re-encode mode only. They are quote-parsed and passed as argument-list entries, but there is not yet per-option validation or guardrail messaging for conflicting ffmpeg options.
 - Audio normalization uses single-pass loudnorm only. Two-pass loudnorm analysis and configurable loudness/true peak/LRA are not implemented.
 - Audio normalization is covered for generated audio/video media; representative real media and no-audio UI error handling still need manual verification.
 - Quality mode is covered for generated software-encoded media; NVEnc quality-mode execution still needs manual hardware-backed verification.

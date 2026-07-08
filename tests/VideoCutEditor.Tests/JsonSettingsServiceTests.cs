@@ -36,6 +36,7 @@ public sealed class JsonSettingsServiceTests
             LastTargetSizeMegabytes = 80.5,
             LastQualityValue = 21,
             NormalizeAudio = true,
+            AdditionalFfmpegArguments = "-preset slow -movflags +faststart",
             Fade = new FadeSettings
             {
                 VideoFadeIn = true,

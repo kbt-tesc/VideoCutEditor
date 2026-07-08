@@ -24,5 +24,7 @@ public sealed record AppSettings
 
     public bool NormalizeAudio { get; init; }
 
+    public string? AdditionalFfmpegArguments { get; init; }
+
     public FadeSettings Fade { get; init; } = new();
 }

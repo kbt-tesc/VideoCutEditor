@@ -468,6 +468,12 @@
                                     SpinButtonPlacementMode="Compact"
                                     Value="{x:Bind ViewModel.FadeDurationSeconds, Mode=TwoWay}" />
                             </StackPanel>
+
+                            <TextBox
+                                AutomationProperties.AutomationId="AdditionalFfmpegArgumentsTextBox"
+                                Header="Additional ffmpeg arguments"
+                                Text="{x:Bind ViewModel.AdditionalFfmpegArgumentsText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                TextWrapping="Wrap" />
                         </StackPanel>
 
                         <Grid ColumnSpacing="8">

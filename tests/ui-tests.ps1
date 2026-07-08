@@ -116,9 +116,17 @@ Test-UI "Fades are hidden in Fast copy mode" {
     winapp ui wait-for "VideoFadeInCheckBox" -a $AppPid --gone -t 3000 -q
 }
 
+Test-UI "Additional arguments are hidden in Fast copy mode" {
+    winapp ui wait-for "AdditionalFfmpegArgumentsTextBox" -a $AppPid --gone -t 3000 -q
+}
+
 Test-UI "Switch to Re-encode mode" {
     winapp ui invoke "Re-encode" -a $AppPid
     winapp ui wait-for "CodecFamilyComboBox" -a $AppPid -t 3000 -q
+}
+
+Test-UI "Additional arguments are visible in Re-encode mode" {
+    winapp ui wait-for "AdditionalFfmpegArgumentsTextBox" -a $AppPid -t 3000 -q
 }
 
 Test-UI "Normalize audio remains available in Re-encode mode" {

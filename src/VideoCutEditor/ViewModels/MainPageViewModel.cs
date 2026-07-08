@@ -135,6 +135,9 @@ public partial class MainPageViewModel : ObservableObject
     public partial bool NormalizeAudioEnabled { get; set; }
 
     [ObservableProperty]
+    public partial string AdditionalFfmpegArgumentsText { get; set; } = string.Empty;
+
+    [ObservableProperty]
     public partial bool VideoFadeInEnabled { get; set; }
 
     [ObservableProperty]
@@ -728,6 +731,9 @@ public partial class MainPageViewModel : ObservableObject
         LastTargetSizeMegabytes = GetTargetSizeMegabytes(),
         LastQualityValue = GetQualityValue(),
         NormalizeAudio = NormalizeAudioEnabled,
+        AdditionalFfmpegArguments = string.IsNullOrWhiteSpace(AdditionalFfmpegArgumentsText)
+            ? null
+            : AdditionalFfmpegArgumentsText,
         Fade = CurrentExportMode == ExportMode.Reencode
             ? new FadeSettings
             {
@@ -775,6 +781,7 @@ public partial class MainPageViewModel : ObservableObject
         TargetSizeMegabytes = settings.LastTargetSizeMegabytes.GetValueOrDefault(100);
         QualityValue = settings.LastQualityValue.GetValueOrDefault(23);
         NormalizeAudioEnabled = settings.NormalizeAudio || settings.LastExportMode == ExportMode.AudioNormalize;
+        AdditionalFfmpegArgumentsText = settings.AdditionalFfmpegArguments ?? string.Empty;
         VideoFadeInEnabled = settings.Fade.VideoFadeIn;
         VideoFadeOutEnabled = settings.Fade.VideoFadeOut;
         AudioFadeInEnabled = settings.Fade.AudioFadeIn;

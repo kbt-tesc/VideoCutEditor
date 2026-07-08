@@ -89,6 +89,8 @@ Expose a simple settings surface:
 - Quality mode
 - Additional ffmpeg arguments for advanced users
 
+Additional ffmpeg arguments are stored as a user-entered string for Re-encode mode, parsed into an argument list with whitespace splitting and quote handling, and appended after generated encode/filter/metadata/timestamp options but before the output path. The app must continue passing ffmpeg arguments through `ProcessStartInfo.ArgumentList`; it must not concatenate the advanced field into a shell command. Malformed quotes fail before process launch with a recoverable error.
+
 ## Bitrate And Predicted Size
 
 The default re-encode mode is bitrate-based so the app can estimate output size.

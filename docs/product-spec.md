@@ -37,11 +37,12 @@ Only one keep range is supported per export.
   - Codec and encoder controls
   - Bitrate, target size, or quality controls
 - Show export modes as direct choices rather than a drop-down.
-- In Fast copy mode, hide Re-encode-only controls such as codec, encoder, rate control, predicted re-encode size, and fades.
+- In Fast copy mode, hide Re-encode-only controls such as codec, encoder, rate control, predicted re-encode size, fades, and additional ffmpeg arguments.
 - Show ffmpeg progress, current status, log output, and a cancel button during export.
 - The first export implementation supports Fast copy with progress/log display and cancellation.
 - Re-encode mode supports codec family, encoder preference, bitrate-based export controls, target-size export controls, and clip-edge fade controls.
 - Normalize audio is a setting available in both Fast copy and Re-encode. It normalizes loudness to `-14 LUFS`, re-encodes audio to AAC, preserves video according to the selected mode where practical, and reports a clear error when probed media has no audio stream.
+- Re-encode mode includes an advanced additional ffmpeg arguments field. The app parses the field into explicit process arguments, supports quoted values with spaces, and shows a recoverable error for malformed quoting.
 - Quality mode uses a single numeric quality value where lower values mean higher quality and output size is not predicted.
 - Fade duration is adjusted in 0.25 second steps and is truncated to two decimal places.
 - Audio fade controls affect existing audio streams only. They do not synthesize or add audio to inputs that have no audio stream.
@@ -75,6 +76,7 @@ Persist these settings in the user's AppData folder:
 - Last-used export mode
 - Last-used codec, encoder, rate control mode, and related encode settings
 - Last-used normalize audio setting
+- Last-used additional ffmpeg arguments
 
 The app should try configured paths first, then PATH discovery as a fallback.
 
@@ -88,6 +90,7 @@ Show clear recoverable errors for:
 - ffprobe metadata read failure
 - Unsupported or unavailable encoder
 - Audio normalization requested for media without an audio stream
+- Malformed additional ffmpeg arguments
 - Export process failure
 - Export cancellation
 - Start/end range errors

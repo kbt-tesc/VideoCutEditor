@@ -71,8 +71,10 @@ public sealed class ReencodeExportPlanner : IExportPlanner
             "0",
             "-avoid_negative_ts",
             "make_zero",
-            temporaryOutputPath,
         ]);
+
+        arguments.AddRange(FfmpegArgumentParser.Parse(request.Settings.AdditionalFfmpegArguments));
+        arguments.Add(temporaryOutputPath);
 
         return new ExportPlan(
             request.Settings.FfmpegPath!,

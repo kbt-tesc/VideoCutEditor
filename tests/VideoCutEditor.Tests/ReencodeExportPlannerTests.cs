@@ -110,6 +110,53 @@ public sealed class ReencodeExportPlannerTests
     }
 
     [Fact]
+    public void CreatePlan_appends_additional_ffmpeg_arguments_before_output_path()
+    {
+        string outputDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(outputDirectory);
+
+        try
+        {
+            var capabilities = new FfmpegCapabilities(new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "libx264",
+            });
+            var planner = new ReencodeExportPlanner(capabilities);
+            string outputPath = Path.Combine(outputDirectory, "clip_cut.mp4");
+            var request = new ExportRequest(
+                @"C:\video\source.mp4",
+                outputPath,
+                new ClipRange(TimeSpan.Zero, TimeSpan.FromSeconds(10)),
+                new AppSettings
+                {
+                    FfmpegPath = @"C:\tools\ffmpeg.exe",
+                    LastExportMode = ExportMode.Reencode,
+                    LastCodecFamily = CodecFamily.H264,
+                    LastEncoderKind = EncoderKind.Software,
+                    LastVideoBitrateKbps = 2500,
+                    AdditionalFfmpegArguments = "-preset slow -metadata title=\"Sample clip\"",
+                });
+
+            ExportPlan plan = planner.CreatePlan(request);
+            int mapMetadataIndex = Array.IndexOf(plan.Arguments.ToArray(), "-map_metadata");
+            int presetIndex = Array.IndexOf(plan.Arguments.ToArray(), "-preset");
+
+            Assert.True(presetIndex > 0);
+            Assert.True(mapMetadataIndex > 0);
+            Assert.True(mapMetadataIndex < presetIndex);
+            Assert.Equal("slow", plan.Arguments[presetIndex + 1]);
+            Assert.Equal("-metadata", plan.Arguments[presetIndex + 2]);
+            Assert.Equal("title=Sample clip", plan.Arguments[presetIndex + 3]);
+            Assert.True(presetIndex < plan.Arguments.Count - 1);
+            Assert.Equal(plan.TemporaryOutputPath, plan.Arguments[^1]);
+        }
+        finally
+        {
+            Directory.Delete(outputDirectory, recursive: true);
+        }
+    }
+
+    [Fact]
     public void CreatePlan_uses_crf_for_software_quality_mode()
     {
         string outputDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
