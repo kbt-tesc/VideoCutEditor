@@ -92,6 +92,10 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
   - Added measured loudnorm replacement in `FfmpegRunner` and integration coverage with a fake ffmpeg process.
   - Kept loudness/true peak/LRA settings fixed and not user-configurable.
   - Tightened Re-encode additional ffmpeg argument validation only for obvious syntax mistakes: bare values and missing values for common value-taking options.
+- `chore: add all-platform portable publish script`
+  - Added `scripts/Publish-AllPortable.ps1` to run the validated portable publish flow for x64, x86, and arm64.
+  - Added dry-run coverage for default platform selection and explicit platform selection.
+  - Verified x86 and arm64 Release publishes with artifact validation.
 
 ## Implemented Capabilities
 
@@ -126,17 +130,20 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 - Portable x64/x86/arm64 publish profiles for unpackaged self-contained single-file output.
 - Self-contained WinUI app builds for both packaged debug launch and portable publish.
 - Automated portable publish artifact validation for single-file shape and external ffmpeg/ffprobe policy.
+- All-platform portable publish script for x64, x86, and arm64.
 
 ## Current Verification Baseline
 
 Most recent successful checks:
 
 - `dotnet test VideoCutEditor.slnx`
-  - 103 tests passed.
+  - 105 tests passed.
 - `dotnet build src/VideoCutEditor/VideoCutEditor.csproj -p:Platform=x64`
   - Build succeeded.
 - `powershell -ExecutionPolicy Bypass -File scripts\Publish-Portable.ps1 -Platform x64 -Configuration Release`
   - Publish succeeded, artifact validation passed, and `VideoCutEditor.exe` was produced under `src\VideoCutEditor\bin\Release\net10.0-windows10.0.26100.0\win-x64\publish`.
+- `powershell -ExecutionPolicy Bypass -File scripts\Publish-AllPortable.ps1 -Platforms x86,arm64 -Configuration Release`
+  - x86 and arm64 Release publishes succeeded with artifact validation.
 - `powershell -ExecutionPolicy Bypass -File tests\ui-tests.ps1 -AppPid <pid>`
   - 55 UI tests passed for packaged Debug launch.
   - 55 UI tests passed for the published unpackaged x64 EXE.
@@ -155,7 +162,7 @@ When resuming in a new session, rerun the relevant subset before making assumpti
 - Real media export should still be manually verified for Fast copy and Re-encode on local sample files.
 - NVEnc behavior should be manually verified on hardware and ffmpeg builds that expose NVEnc.
 - Preview-unavailable fallback behavior needs more manual and/or UI coverage.
-- Portable x64 publish, artifact validation, and published EXE startup smoke testing now succeed. x86/ARM64 publish, signing, MSIX packaging, installer validation, and distribution packaging still need verification.
+- Portable x64 publish, x86 publish, arm64 publish, artifact validation, and published x64 EXE startup smoke testing now succeed. Signing, MSIX packaging, installer validation, distribution packaging, and x86/arm64 runtime startup on matching devices still need verification.
 - UI tests currently cover presence and defaults more than full user workflows with real picker interactions and export completion.
 
 ## Recommended Next Slices
@@ -168,8 +175,7 @@ When resuming in a new session, rerun the relevant subset before making assumpti
    - Consider configurable loudness/true peak/LRA only if real users need targets other than `-14 LUFS`.
 3. Continue packaging and release preparation.
    - Use the repo-local `winui-packaging` skill.
-   - Verify published EXE startup.
-   - Verify x86/ARM64 publish when needed.
+   - Verify x86/ARM64 published EXE startup on matching devices when available.
    - Add signing/MSIX packaging when distribution format is chosen.
 
 ## Resume Checklist

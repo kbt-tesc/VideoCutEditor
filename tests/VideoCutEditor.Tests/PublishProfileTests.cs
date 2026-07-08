@@ -93,6 +93,28 @@ public sealed class PublishProfileTests
         Assert.Contains("Test-PortablePublish.ps1", script);
     }
 
+    [Fact]
+    public void Publish_all_portable_script_dry_run_lists_all_platforms_by_default()
+    {
+        (int exitCode, string output) = RunPublishAllDryRun();
+
+        Assert.Equal(0, exitCode);
+        Assert.Contains("Would publish: x64", output);
+        Assert.Contains("Would publish: x86", output);
+        Assert.Contains("Would publish: arm64", output);
+    }
+
+    [Fact]
+    public void Publish_all_portable_script_dry_run_honors_selected_platforms()
+    {
+        (int exitCode, string output) = RunPublishAllDryRun("-Platforms", "x64,arm64");
+
+        Assert.Equal(0, exitCode);
+        Assert.Contains("Would publish: x64", output);
+        Assert.DoesNotContain("Would publish: x86", output);
+        Assert.Contains("Would publish: arm64", output);
+    }
+
     private static (int ExitCode, string Output) RunPortableValidation(string publishDirectory)
     {
         string scriptPath = Path.Combine(FindRepositoryRoot(), "scripts", "Test-PortablePublish.ps1");
@@ -108,6 +130,32 @@ public sealed class PublishProfileTests
         startInfo.ArgumentList.Add(scriptPath);
         startInfo.ArgumentList.Add("-PublishDirectory");
         startInfo.ArgumentList.Add(publishDirectory);
+
+        using Process process = Process.Start(startInfo) ?? throw new InvalidOperationException("Failed to start PowerShell.");
+        string output = process.StandardOutput.ReadToEnd() + process.StandardError.ReadToEnd();
+        process.WaitForExit();
+        return (process.ExitCode, output);
+    }
+
+    private static (int ExitCode, string Output) RunPublishAllDryRun(params string[] arguments)
+    {
+        string scriptPath = Path.Combine(FindRepositoryRoot(), "scripts", "Publish-AllPortable.ps1");
+        var startInfo = new ProcessStartInfo("powershell")
+        {
+            RedirectStandardError = true,
+            RedirectStandardOutput = true,
+            UseShellExecute = false,
+        };
+        startInfo.ArgumentList.Add("-ExecutionPolicy");
+        startInfo.ArgumentList.Add("Bypass");
+        startInfo.ArgumentList.Add("-File");
+        startInfo.ArgumentList.Add(scriptPath);
+        startInfo.ArgumentList.Add("-WhatIf");
+
+        foreach (string argument in arguments)
+        {
+            startInfo.ArgumentList.Add(argument);
+        }
 
         using Process process = Process.Start(startInfo) ?? throw new InvalidOperationException("Failed to start PowerShell.");
         string output = process.StandardOutput.ReadToEnd() + process.StandardError.ReadToEnd();

@@ -31,8 +31,10 @@ dotnet build src/VideoCutEditor/VideoCutEditor.csproj -p:Platform=x64
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\Publish-Portable.ps1 -Platform x64 -Configuration Release
+powershell -ExecutionPolicy Bypass -File scripts\Publish-AllPortable.ps1 -Configuration Release
 ```
 
 The portable publish output is written under `src\VideoCutEditor\bin\Release\...\publish`.
 The WinUI app is built self-contained so packaged debug launches and portable output do not depend on a machine-wide .NET runtime probe.
 `Publish-Portable.ps1` also runs `scripts\Test-PortablePublish.ps1` to verify that the output contains `VideoCutEditor.exe`, does not include sidecar runtime files, and does not bundle ffmpeg or ffprobe.
+`Publish-AllPortable.ps1` runs the same publish and validation flow for x64, x86, and arm64.
