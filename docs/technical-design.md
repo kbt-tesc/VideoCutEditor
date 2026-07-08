@@ -89,7 +89,9 @@ Expose a simple settings surface:
 - Quality mode
 - Additional ffmpeg arguments for advanced users
 
-Additional ffmpeg arguments are stored as a user-entered string for Re-encode mode, parsed into an argument list with whitespace splitting and quote handling, and appended after generated encode/filter/metadata/timestamp options but before the output path. The app must continue passing ffmpeg arguments through `ProcessStartInfo.ArgumentList`; it must not concatenate the advanced field into a shell command. Malformed quotes fail before process launch with a recoverable error.
+Additional ffmpeg arguments are stored as a user-entered string for Re-encode mode, parsed into an argument list with whitespace splitting and quote handling, validated against app-managed options, and appended after generated encode/filter/metadata/timestamp options but before the output path. The app must continue passing ffmpeg arguments through `ProcessStartInfo.ArgumentList`; it must not concatenate the advanced field into a shell command. Malformed quotes and blocked options fail before process launch with a recoverable error.
+
+Blocked additional options include app-managed input/range/output-control options (`-i`, `-ss`, `-t`, `-to`, `-y`, `-n`, `-nostdin`, `-map`, `-map_metadata`, `-avoid_negative_ts`) and generated codec/rate/filter options (`-c`, `-codec`, `-c:v`, `-codec:v`, `-c:a`, `-codec:a`, `-b:v`, `-crf`, `-cq`, `-vf`, `-filter:v`, `-af`, `-filter:a`). Future work can add more nuanced option validation if the advanced field expands beyond Re-encode tuning.
 
 ## Bitrate And Predicted Size
 

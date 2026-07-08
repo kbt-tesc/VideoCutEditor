@@ -73,6 +73,9 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
   - Added a Re-encode-only advanced ffmpeg arguments TextBox.
   - Added quote-aware argument parsing and planner tests so the field is appended as process arguments rather than shell text.
   - Persisted the additional arguments setting.
+- `fix: validate additional ffmpeg arguments`
+  - Added guardrails that reject app-managed input, range, codec, filter, and output-control ffmpeg options in the advanced field.
+  - Added focused validator and planner tests for allowed options, blocked options, and inline option values.
 
 ## Implemented Capabilities
 
@@ -90,7 +93,7 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 - Fast copy export planning and execution.
 - Direct Fast copy/Re-encode mode selection without a drop-down.
 - Re-encode export planning and execution for bitrate, target-size, and quality-based video encoding.
-- Re-encode advanced additional ffmpeg arguments with quote-aware argument parsing.
+- Re-encode advanced additional ffmpeg arguments with quote-aware argument parsing and app-managed option validation.
 - Audio normalization option with `-14 LUFS` loudnorm and AAC audio re-encode in both Fast copy and Re-encode.
 - Target-size mode that derives Re-encode video bitrate from desired output size.
 - Quality mode that maps a single quality value to `-crf` for software encoders and `-cq` for NVEnc encoders.
@@ -110,7 +113,7 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 Most recent successful checks:
 
 - `dotnet test VideoCutEditor.slnx`
-  - 73 tests passed.
+  - 86 tests passed.
 - `dotnet build src/VideoCutEditor/VideoCutEditor.csproj -p:Platform=x64`
   - Build succeeded.
 - `powershell -ExecutionPolicy Bypass -File tests\ui-tests.ps1 -AppPid <pid>`
@@ -123,7 +126,7 @@ When resuming in a new session, rerun the relevant subset before making assumpti
 - Waveform generation is implemented in code, but should still be manually verified with real videos that have audio streams.
 - Fade controls and fade-triggered Re-encode are covered by generated audio/video integration tests, but should still be manually verified on representative real media.
 - Audio fade behavior for generated video-only inputs is covered; still verify representative real video-only media manually.
-- Advanced ffmpeg arguments are implemented for Re-encode mode only. They are quote-parsed and passed as argument-list entries, but there is not yet per-option validation or guardrail messaging for conflicting ffmpeg options.
+- Advanced ffmpeg arguments are implemented for Re-encode mode only. They are quote-parsed, reject app-managed options, and are passed as argument-list entries. There is not yet nuanced validation of every ffmpeg option's arity or compatibility.
 - Audio normalization uses single-pass loudnorm only. Two-pass loudnorm analysis and configurable loudness/true peak/LRA are not implemented.
 - Audio normalization is covered for generated audio/video media; representative real media and no-audio UI error handling still need manual verification.
 - Quality mode is covered for generated software-encoded media; NVEnc quality-mode execution still needs manual hardware-backed verification.

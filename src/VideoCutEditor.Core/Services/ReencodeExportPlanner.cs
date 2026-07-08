@@ -25,6 +25,8 @@ public sealed class ReencodeExportPlanner : IExportPlanner
         ArgumentException.ThrowIfNullOrWhiteSpace(request.SourcePath);
         ArgumentException.ThrowIfNullOrWhiteSpace(request.OutputPath);
         AudioNormalizationArguments.ThrowIfRequestedWithoutAudio(request.Settings, request.MediaInfo);
+        IReadOnlyList<string> additionalArguments = FfmpegArgumentParser.Parse(request.Settings.AdditionalFfmpegArguments);
+        FfmpegAdditionalArgumentValidator.Validate(additionalArguments);
 
         string? videoEncoder = capabilities.ChooseVideoEncoder(
             request.Settings.LastCodecFamily,
@@ -73,7 +75,7 @@ public sealed class ReencodeExportPlanner : IExportPlanner
             "make_zero",
         ]);
 
-        arguments.AddRange(FfmpegArgumentParser.Parse(request.Settings.AdditionalFfmpegArguments));
+        arguments.AddRange(additionalArguments);
         arguments.Add(temporaryOutputPath);
 
         return new ExportPlan(

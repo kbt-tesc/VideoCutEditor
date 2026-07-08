@@ -157,6 +157,33 @@ public sealed class ReencodeExportPlannerTests
     }
 
     [Fact]
+    public void CreatePlan_rejects_app_managed_additional_ffmpeg_arguments()
+    {
+        var capabilities = new FfmpegCapabilities(new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "libx264",
+        });
+        var planner = new ReencodeExportPlanner(capabilities);
+        var request = new ExportRequest(
+            @"C:\video\source.mp4",
+            @"C:\output\clip_cut.mp4",
+            new ClipRange(TimeSpan.Zero, TimeSpan.FromSeconds(10)),
+            new AppSettings
+            {
+                FfmpegPath = @"C:\tools\ffmpeg.exe",
+                LastExportMode = ExportMode.Reencode,
+                LastCodecFamily = CodecFamily.H264,
+                LastEncoderKind = EncoderKind.Software,
+                AdditionalFfmpegArguments = "-i other.mp4",
+            });
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => planner.CreatePlan(request));
+
+        Assert.Contains("-i", exception.Message);
+        Assert.Contains("managed by VideoCutEditor", exception.Message);
+    }
+
+    [Fact]
     public void CreatePlan_uses_crf_for_software_quality_mode()
     {
         string outputDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));

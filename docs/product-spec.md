@@ -42,7 +42,7 @@ Only one keep range is supported per export.
 - The first export implementation supports Fast copy with progress/log display and cancellation.
 - Re-encode mode supports codec family, encoder preference, bitrate-based export controls, target-size export controls, and clip-edge fade controls.
 - Normalize audio is a setting available in both Fast copy and Re-encode. It normalizes loudness to `-14 LUFS`, re-encodes audio to AAC, preserves video according to the selected mode where practical, and reports a clear error when probed media has no audio stream.
-- Re-encode mode includes an advanced additional ffmpeg arguments field. The app parses the field into explicit process arguments, supports quoted values with spaces, and shows a recoverable error for malformed quoting.
+- Re-encode mode includes an advanced additional ffmpeg arguments field. The app parses the field into explicit process arguments, supports quoted values with spaces, rejects app-managed options such as input, range, codec, filter, and output-control arguments, and shows a recoverable error for malformed quoting or blocked options.
 - Quality mode uses a single numeric quality value where lower values mean higher quality and output size is not predicted.
 - Fade duration is adjusted in 0.25 second steps and is truncated to two decimal places.
 - Audio fade controls affect existing audio streams only. They do not synthesize or add audio to inputs that have no audio stream.
@@ -91,6 +91,7 @@ Show clear recoverable errors for:
 - Unsupported or unavailable encoder
 - Audio normalization requested for media without an audio stream
 - Malformed additional ffmpeg arguments
+- Additional ffmpeg arguments that conflict with app-managed export options
 - Export process failure
 - Export cancellation
 - Start/end range errors
