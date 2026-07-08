@@ -58,7 +58,8 @@ public sealed class FastCopyExportPlanner : IExportPlanner
             request.SourcePath,
             temporaryOutputPath,
             request.OutputPath,
-            arguments);
+            arguments,
+            AudioNormalizationArguments.CreateAnalysisPlan(request));
     }
 
     internal static string FormatTimestamp(TimeSpan time)

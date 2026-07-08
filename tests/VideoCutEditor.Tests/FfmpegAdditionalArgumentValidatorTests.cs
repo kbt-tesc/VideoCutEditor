@@ -40,4 +40,42 @@ public sealed class FfmpegAdditionalArgumentValidatorTests
 
         Assert.Contains("-ss", exception.Message);
     }
+
+    [Fact]
+    public void Validate_rejects_bare_values_without_an_option()
+    {
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+            () => FfmpegAdditionalArgumentValidator.Validate(["slow"]));
+
+        Assert.Contains("does not belong to an option", exception.Message);
+    }
+
+    [Theory]
+    [InlineData("-preset")]
+    [InlineData("-metadata")]
+    [InlineData("-movflags")]
+    public void Validate_rejects_known_value_options_without_values(string option)
+    {
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+            () => FfmpegAdditionalArgumentValidator.Validate([option]));
+
+        Assert.Contains(option, exception.Message);
+        Assert.Contains("requires a value", exception.Message);
+    }
+
+    [Fact]
+    public void Validate_rejects_known_value_options_followed_by_another_option()
+    {
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+            () => FfmpegAdditionalArgumentValidator.Validate(["-preset", "-movflags", "+faststart"]));
+
+        Assert.Contains("-preset", exception.Message);
+        Assert.Contains("requires a value", exception.Message);
+    }
+
+    [Fact]
+    public void Validate_allows_inline_values_for_known_value_options()
+    {
+        FfmpegAdditionalArgumentValidator.Validate(["-metadata=title=Sample clip"]);
+    }
 }

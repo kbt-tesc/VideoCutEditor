@@ -22,54 +22,42 @@ public sealed partial class FfmpegRunner : IFfmpegRunner
         {
             DeleteIfExists(plan.TemporaryOutputPath);
 
-            using var process = new Process
+            IReadOnlyList<string> exportArguments = plan.Arguments;
+            if (plan.AudioNormalizationAnalysis is not null)
             {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = plan.FfmpegPath,
-                    UseShellExecute = false,
-                    RedirectStandardError = true,
-                    RedirectStandardOutput = true,
-                    CreateNoWindow = true,
-                },
-                EnableRaisingEvents = true,
-            };
+                progress?.Report(new ExportProgress(null, null, "Analyzing audio loudness..."));
+                FfmpegProcessResult analysisResult = await RunProcessAsync(
+                    plan.FfmpegPath,
+                    plan.AudioNormalizationAnalysis.Arguments,
+                    progress,
+                    cancellationToken);
 
-            foreach (string argument in plan.Arguments)
-            {
-                process.StartInfo.ArgumentList.Add(argument);
+                if (analysisResult.ExitCode != 0)
+                {
+                    DeleteIfExists(plan.TemporaryOutputPath);
+                    return new ExportResult(false, CreateFailureMessage(analysisResult.ExitCode, analysisResult.Stderr));
+                }
+
+                string measuredLoudnormFilter = AudioNormalizationArguments.CreateMeasuredLoudnormFilter(analysisResult.Stderr);
+                exportArguments = ReplaceLoudnormFilter(plan.Arguments, measuredLoudnormFilter);
+                progress?.Report(new ExportProgress(null, null, "Applying audio normalization..."));
             }
 
-            if (!process.Start())
+            FfmpegProcessResult exportResult = await RunProcessAsync(
+                plan.FfmpegPath,
+                exportArguments,
+                progress,
+                cancellationToken);
+
+            if (!exportResult.Started)
             {
                 return new ExportResult(false, "ffmpeg failed to start.");
             }
 
-            await using CancellationTokenRegistration cancellationRegistration = cancellationToken.Register(() =>
-            {
-                try
-                {
-                    if (!process.HasExited)
-                    {
-                        process.Kill(entireProcessTree: true);
-                    }
-                }
-                catch (InvalidOperationException)
-                {
-                }
-            });
-
-            Task<string> stderrTask = ReadStreamAsync(process.StandardError, progress, cancellationToken);
-            Task<string> stdoutTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
-
-            await process.WaitForExitAsync(cancellationToken);
-            string stderr = await stderrTask;
-            _ = await stdoutTask;
-
-            if (process.ExitCode != 0)
+            if (exportResult.ExitCode != 0)
             {
                 DeleteIfExists(plan.TemporaryOutputPath);
-                return new ExportResult(false, CreateFailureMessage(process.ExitCode, stderr));
+                return new ExportResult(false, CreateFailureMessage(exportResult.ExitCode, exportResult.Stderr));
             }
 
             if (!File.Exists(plan.TemporaryOutputPath))
@@ -97,6 +85,89 @@ public sealed partial class FfmpegRunner : IFfmpegRunner
             DeleteIfExists(plan.TemporaryOutputPath);
             return new ExportResult(false, exception.Message);
         }
+    }
+
+    private static async Task<FfmpegProcessResult> RunProcessAsync(
+        string ffmpegPath,
+        IReadOnlyList<string> arguments,
+        IProgress<ExportProgress>? progress,
+        CancellationToken cancellationToken)
+    {
+        using var process = new Process
+        {
+            StartInfo = new ProcessStartInfo
+            {
+                FileName = ffmpegPath,
+                UseShellExecute = false,
+                RedirectStandardError = true,
+                RedirectStandardOutput = true,
+                CreateNoWindow = true,
+            },
+            EnableRaisingEvents = true,
+        };
+
+        foreach (string argument in arguments)
+        {
+            process.StartInfo.ArgumentList.Add(argument);
+        }
+
+        if (!process.Start())
+        {
+            return new FfmpegProcessResult(false, -1, string.Empty);
+        }
+
+        await using CancellationTokenRegistration cancellationRegistration = cancellationToken.Register(() =>
+        {
+            try
+            {
+                if (!process.HasExited)
+                {
+                    process.Kill(entireProcessTree: true);
+                }
+            }
+            catch (InvalidOperationException)
+            {
+            }
+        });
+
+        Task<string> stderrTask = ReadStreamAsync(process.StandardError, progress, cancellationToken);
+        Task<string> stdoutTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
+
+        await process.WaitForExitAsync(cancellationToken);
+        string stderr = await stderrTask;
+        _ = await stdoutTask;
+
+        return new FfmpegProcessResult(true, process.ExitCode, stderr);
+    }
+
+    private static IReadOnlyList<string> ReplaceLoudnormFilter(
+        IReadOnlyList<string> arguments,
+        string measuredLoudnormFilter)
+    {
+        var replacedArguments = new List<string>(arguments.Count);
+        bool replaced = false;
+
+        foreach (string argument in arguments)
+        {
+            if (argument.Contains(AudioNormalizationArguments.LoudnormFilter, StringComparison.Ordinal))
+            {
+                replacedArguments.Add(argument.Replace(
+                    AudioNormalizationArguments.LoudnormFilter,
+                    measuredLoudnormFilter,
+                    StringComparison.Ordinal));
+                replaced = true;
+                continue;
+            }
+
+            replacedArguments.Add(argument);
+        }
+
+        if (!replaced)
+        {
+            throw new InvalidOperationException("Could not apply measured loudness normalization arguments.");
+        }
+
+        return replacedArguments;
     }
 
     private static async Task<string> ReadStreamAsync(
@@ -154,4 +225,6 @@ public sealed partial class FfmpegRunner : IFfmpegRunner
 
     [GeneratedRegex(@"time=(?<time>\d{2}:\d{2}:\d{2}\.\d{2,3})")]
     private static partial Regex FfmpegTimeRegex();
+
+    private sealed record FfmpegProcessResult(bool Started, int ExitCode, string Stderr);
 }

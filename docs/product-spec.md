@@ -41,8 +41,8 @@ Only one keep range is supported per export.
 - Show ffmpeg progress, current status, log output, and a cancel button during export.
 - The first export implementation supports Fast copy with progress/log display and cancellation.
 - Re-encode mode supports codec family, encoder preference, bitrate-based export controls, target-size export controls, and clip-edge fade controls.
-- Normalize audio is a setting available in both Fast copy and Re-encode. It normalizes loudness to `-14 LUFS`, re-encodes audio to AAC, preserves video according to the selected mode where practical, and reports a clear error when probed media has no audio stream.
-- Re-encode mode includes an advanced additional ffmpeg arguments field. The app parses the field into explicit process arguments, supports quoted values with spaces, rejects app-managed options such as input, range, codec, filter, and output-control arguments, and shows a recoverable error for malformed quoting or blocked options.
+- Normalize audio is a setting available in both Fast copy and Re-encode. It uses two-pass loudness normalization to `-14 LUFS`, re-encodes audio to AAC, preserves video according to the selected mode where practical, and reports a clear error when probed media has no audio stream.
+- Re-encode mode includes an advanced additional ffmpeg arguments field. The app parses the field into explicit process arguments, supports quoted values with spaces, rejects app-managed options such as input, range, codec, filter, and output-control arguments, catches obvious syntax mistakes such as bare values and missing values for common value-taking options, and shows a recoverable error.
 - Quality mode uses a single numeric quality value where lower values mean higher quality and output size is not predicted.
 - Fade duration is adjusted in 0.25 second steps and is truncated to two decimal places.
 - Audio fade controls affect existing audio streams only. They do not synthesize or add audio to inputs that have no audio stream.
@@ -64,7 +64,7 @@ The first screen should be the usable editor, not a landing page or marketing sc
 - The default output container follows the input extension.
 - Stream-copy cuts may not be frame-accurate because they depend on keyframes. The UI should make that tradeoff clear.
 - Enabling any fade forces the export through Re-encode even when the visible export mode is Fast copy, because ffmpeg filters require decoding and encoding.
-- The normalize audio option applies an audio filter and therefore re-encodes audio. In Fast copy mode it should not re-encode video when video stream copy is possible; in Re-encode mode it combines with the selected video encode settings.
+- The normalize audio option analyzes audio loudness before the final export, then applies an audio filter and therefore re-encodes audio. In Fast copy mode it should not re-encode video when video stream copy is possible; in Re-encode mode it combines with the selected video encode settings.
 
 ## Settings
 

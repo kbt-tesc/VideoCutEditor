@@ -90,7 +90,7 @@ Expose a simple settings surface:
 - Quality mode
 - Additional ffmpeg arguments for advanced users
 
-Additional ffmpeg arguments are stored as a user-entered string for Re-encode mode, parsed into an argument list with whitespace splitting and quote handling, validated against app-managed options, and appended after generated encode/filter/metadata/timestamp options but before the output path. The app must continue passing ffmpeg arguments through `ProcessStartInfo.ArgumentList`; it must not concatenate the advanced field into a shell command. Malformed quotes and blocked options fail before process launch with a recoverable error.
+Additional ffmpeg arguments are stored as a user-entered string for Re-encode mode, parsed into an argument list with whitespace splitting and quote handling, validated against app-managed options, and appended after generated encode/filter/metadata/timestamp options but before the output path. The app must continue passing ffmpeg arguments through `ProcessStartInfo.ArgumentList`; it must not concatenate the advanced field into a shell command. Malformed quotes, blocked options, bare values that are not attached to an option, and missing values for common value-taking options fail before process launch with a recoverable error. The validator intentionally avoids complete ffmpeg option compatibility validation because option support varies by ffmpeg build, encoder, and muxer.
 
 Blocked additional options include app-managed input/range/output-control options (`-i`, `-ss`, `-t`, `-to`, `-y`, `-n`, `-nostdin`, `-map`, `-map_metadata`, `-avoid_negative_ts`) and generated codec/rate/filter options (`-c`, `-codec`, `-c:v`, `-codec:v`, `-c:a`, `-codec:a`, `-b:v`, `-crf`, `-cq`, `-vf`, `-filter:v`, `-af`, `-filter:a`). Future work can add more nuanced option validation if the advanced field expands beyond Re-encode tuning.
 
@@ -151,12 +151,15 @@ Audio policy:
 
 ## Audio Normalization
 
-Audio normalization is an export setting available in both Fast Copy and Re-encode for changing loudness. The initial implementation uses a single-pass `loudnorm` filter with the requested loudness target:
+Audio normalization is an export setting available in both Fast Copy and Re-encode for changing loudness. The implementation uses a fixed-target two-pass `loudnorm` workflow:
 
 `loudnorm=I=-14:TP=-1.5:LRA=11`
 
+The first pass runs against the selected time range with `loudnorm=I=-14:TP=-1.5:LRA=11:print_format=json`, no video/subtitle/data output, and a null muxer. `FfmpegRunner` parses the loudnorm JSON from stderr, then replaces the generated loudnorm filter in the final export with measured values (`measured_I`, `measured_TP`, `measured_LRA`, `measured_thresh`, `offset`, `linear=true`). The loudness target, true peak, and LRA values are not user-configurable in this implementation.
+
 Fast Copy command policy when normalize audio is enabled:
 
+- Analyze the requested time range first, then run the final export with measured loudnorm values.
 - Select the requested time range with `-ss` and duration.
 - Map all streams where practical with `-map 0`.
 - Default to `-c copy` so video and untouched streams are stream-copied.
@@ -167,11 +170,12 @@ Fast Copy command policy when normalize audio is enabled:
 
 Re-encode command policy when normalize audio is enabled:
 
+- Analyze the requested time range first, then run the final export with measured loudnorm values.
 - Keep the selected video codec, encoder, and rate-control arguments.
-- Add the same `loudnorm` audio filter and override audio with `-c:a aac`.
+- Add the measured `loudnorm` audio filter and override audio with `-c:a aac`.
 - If clip-edge audio fades are also enabled, combine `loudnorm` and `afade` in a single `-af` chain.
 
-If media metadata confirms there is no audio stream, the planner rejects the export with a clear error. If metadata is unavailable, the planner assumes audio may exist and lets ffmpeg report any process-level failure. Future work may add two-pass loudnorm analysis, configurable true peak/loudness range, and codec-preserving audio encode choices.
+If media metadata confirms there is no audio stream, the planner rejects the export with a clear error. If metadata is unavailable, the planner assumes audio may exist and lets the loudnorm analysis pass report any process-level failure. Future work may add configurable true peak/loudness range and codec-preserving audio encode choices.
 
 ## Stream And Metadata Preservation
 

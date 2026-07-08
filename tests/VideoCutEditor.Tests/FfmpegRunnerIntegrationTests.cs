@@ -7,6 +7,96 @@ namespace VideoCutEditor.Tests;
 public sealed class FfmpegRunnerIntegrationTests
 {
     [Fact]
+    public async Task RunAsync_applies_two_pass_loudnorm_measurements_before_export()
+    {
+        string? powershellPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), @"WindowsPowerShell\v1.0\powershell.exe");
+        if (string.IsNullOrWhiteSpace(powershellPath) || !File.Exists(powershellPath))
+        {
+            return;
+        }
+
+        string workingDirectory = Path.Combine(Path.GetTempPath(), "VideoCutEditor.Tests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(workingDirectory);
+
+        try
+        {
+            string fakeScriptPath = Path.Combine(workingDirectory, "fake-ffmpeg.ps1");
+            string argumentsLogPath = Path.Combine(workingDirectory, "final-arguments.txt");
+            string temporaryOutputPath = Path.Combine(workingDirectory, "output.partial.mp4");
+            string finalOutputPath = Path.Combine(workingDirectory, "output.mp4");
+            File.WriteAllText(
+                fakeScriptPath,
+                """
+                param(
+                    [Parameter(ValueFromRemainingArguments = $true)]
+                    [string[]]$Remaining
+                )
+
+                if ($Remaining[0] -eq "analysis") {
+                    [Console]::Error.WriteLine('{')
+                    [Console]::Error.WriteLine('  "input_i" : "-20.00",')
+                    [Console]::Error.WriteLine('  "input_tp" : "-1.00",')
+                    [Console]::Error.WriteLine('  "input_lra" : "5.00",')
+                    [Console]::Error.WriteLine('  "input_thresh" : "-30.00",')
+                    [Console]::Error.WriteLine('  "target_offset" : "1.25"')
+                    [Console]::Error.WriteLine('}')
+                    exit 0
+                }
+
+                $logPath = $Remaining[1]
+                $outputPath = $Remaining[$Remaining.Length - 1]
+                Set-Content -LiteralPath $logPath -Value ($Remaining -join "`n")
+                Set-Content -LiteralPath $outputPath -Value "output"
+                exit 0
+                """);
+
+            var plan = new ExportPlan(
+                powershellPath,
+                "source.mp4",
+                temporaryOutputPath,
+                finalOutputPath,
+                [
+                    "-ExecutionPolicy",
+                    "Bypass",
+                    "-File",
+                    fakeScriptPath,
+                    "final",
+                    argumentsLogPath,
+                    "-af",
+                    "loudnorm=I=-14:TP=-1.5:LRA=11",
+                    temporaryOutputPath,
+                ],
+                new AudioNormalizationAnalysisPlan(
+                [
+                    "-ExecutionPolicy",
+                    "Bypass",
+                    "-File",
+                    fakeScriptPath,
+                    "analysis",
+                ]));
+
+            ExportResult result = await new FfmpegRunner().RunAsync(plan);
+
+            Assert.True(result.Succeeded, result.ErrorMessage);
+            Assert.True(File.Exists(finalOutputPath));
+            Assert.False(File.Exists(temporaryOutputPath));
+
+            string finalArguments = File.ReadAllText(argumentsLogPath);
+            Assert.Contains("measured_I=-20.00", finalArguments);
+            Assert.Contains("measured_TP=-1.00", finalArguments);
+            Assert.Contains("measured_LRA=5.00", finalArguments);
+            Assert.Contains("measured_thresh=-30.00", finalArguments);
+            Assert.Contains("offset=1.25", finalArguments);
+            Assert.Contains("linear=true", finalArguments);
+            Assert.DoesNotContain("print_format=json", finalArguments);
+        }
+        finally
+        {
+            Directory.Delete(workingDirectory, recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task RunAsync_creates_fast_copy_output_when_ffmpeg_is_available()
     {
         FfmpegToolPaths paths = new FfmpegToolPathService().Resolve(new AppSettings());

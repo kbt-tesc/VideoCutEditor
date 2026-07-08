@@ -83,7 +83,8 @@ public sealed class ReencodeExportPlanner : IExportPlanner
             request.SourcePath,
             temporaryOutputPath,
             request.OutputPath,
-            arguments);
+            arguments,
+            AudioNormalizationArguments.CreateAnalysisPlan(request));
     }
 
     private static void AddRateControlArguments(List<string> arguments, AppSettings settings, string videoEncoder)

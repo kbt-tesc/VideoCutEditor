@@ -6,7 +6,7 @@ This document is the handoff ledger for future Codex sessions. Read it after `AG
 
 ## Current State
 
-VideoCutEditor has a working WinUI 3/.NET 10 editor shell with a single-range video extraction workflow. The app can detect externally installed `ffmpeg` and `ffprobe`, probe media metadata, preview videos through Windows media playback when possible, set start/end markers, suggest re-encode bitrates from metadata, configure clip-edge fades, and export Fast copy or Re-encode through bitrate/target-size/quality rate control. Audio normalization is available as an option within both export modes, and Re-encode exposes an advanced additional ffmpeg arguments field.
+VideoCutEditor has a working WinUI 3/.NET 10 editor shell with a single-range video extraction workflow. The app can detect externally installed `ffmpeg` and `ffprobe`, probe media metadata, preview videos through Windows media playback when possible, set start/end markers, suggest re-encode bitrates from metadata, configure clip-edge fades, and export Fast copy or Re-encode through bitrate/target-size/quality rate control. Two-pass audio normalization is available as an option within both export modes, and Re-encode exposes an advanced additional ffmpeg arguments field with focused guardrails.
 
 The project is being developed in small TDD slices. Keep using behavior-focused tests first, then implement the smallest production change, verify, and commit each slice.
 
@@ -86,6 +86,12 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
   - Added `scripts/Test-PortablePublish.ps1` to verify portable publish output after publishing.
   - The validation requires `VideoCutEditor.exe`, rejects sidecar runtime/package files that should be inside the single-file EXE, and rejects bundled `ffmpeg`/`ffprobe`.
   - Added tests for accepted symbol-only sidecars, rejected runtime sidecars, rejected bundled tools, and the publish script validation hook.
+- `feat: use two-pass audio normalization`
+  - Changed audio normalization from single-pass loudnorm to a fixed-target two-pass loudnorm flow.
+  - Added loudnorm analysis planning for Fast copy and Re-encode exports.
+  - Added measured loudnorm replacement in `FfmpegRunner` and integration coverage with a fake ffmpeg process.
+  - Kept loudness/true peak/LRA settings fixed and not user-configurable.
+  - Tightened Re-encode additional ffmpeg argument validation only for obvious syntax mistakes: bare values and missing values for common value-taking options.
 
 ## Implemented Capabilities
 
@@ -103,8 +109,8 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 - Fast copy export planning and execution.
 - Direct Fast copy/Re-encode mode selection without a drop-down.
 - Re-encode export planning and execution for bitrate, target-size, and quality-based video encoding.
-- Re-encode advanced additional ffmpeg arguments with quote-aware argument parsing and app-managed option validation.
-- Audio normalization option with `-14 LUFS` loudnorm and AAC audio re-encode in both Fast copy and Re-encode.
+- Re-encode advanced additional ffmpeg arguments with quote-aware argument parsing, app-managed option validation, and obvious syntax-mistake validation.
+- Two-pass audio normalization option with fixed `-14 LUFS` loudnorm and AAC audio re-encode in both Fast copy and Re-encode.
 - Target-size mode that derives Re-encode video bitrate from desired output size.
 - Quality mode that maps a single quality value to `-crf` for software encoders and `-cq` for NVEnc encoders.
 - Clip-edge video/audio fade controls that force Re-encode and generate ffmpeg filters.
@@ -126,7 +132,7 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 Most recent successful checks:
 
 - `dotnet test VideoCutEditor.slnx`
-  - 96 tests passed.
+  - 103 tests passed.
 - `dotnet build src/VideoCutEditor/VideoCutEditor.csproj -p:Platform=x64`
   - Build succeeded.
 - `powershell -ExecutionPolicy Bypass -File scripts\Publish-Portable.ps1 -Platform x64 -Configuration Release`
@@ -142,9 +148,9 @@ When resuming in a new session, rerun the relevant subset before making assumpti
 - Waveform generation is implemented in code, but should still be manually verified with real videos that have audio streams.
 - Fade controls and fade-triggered Re-encode are covered by generated audio/video integration tests, but should still be manually verified on representative real media.
 - Audio fade behavior for generated video-only inputs is covered; still verify representative real video-only media manually.
-- Advanced ffmpeg arguments are implemented for Re-encode mode only. They are quote-parsed, reject app-managed options, and are passed as argument-list entries. There is not yet nuanced validation of every ffmpeg option's arity or compatibility.
-- Audio normalization uses single-pass loudnorm only. Two-pass loudnorm analysis and configurable loudness/true peak/LRA are not implemented.
-- Audio normalization is covered for generated audio/video media; representative real media and no-audio UI error handling still need manual verification.
+- Advanced ffmpeg arguments are implemented for Re-encode mode only. They are quote-parsed, reject app-managed options, catch obvious syntax mistakes, and are passed as argument-list entries. Full ffmpeg option compatibility validation is intentionally not implemented because support varies by ffmpeg build, encoder, and muxer.
+- Audio normalization now uses fixed-target two-pass loudnorm. Configurable loudness/true peak/LRA values are intentionally not implemented.
+- Audio normalization is covered for generated audio/video media and fake-process two-pass argument replacement; representative real media and no-audio UI error handling still need manual verification.
 - Quality mode is covered for generated software-encoded media; NVEnc quality-mode execution still needs manual hardware-backed verification.
 - Real media export should still be manually verified for Fast copy and Re-encode on local sample files.
 - NVEnc behavior should be manually verified on hardware and ffmpeg builds that expose NVEnc.
@@ -159,7 +165,7 @@ When resuming in a new session, rerun the relevant subset before making assumpti
    - Add manual verification notes for real preview/export/NVEnc/package runs.
 2. Deepen audio normalization verification.
    - Manually verify representative real media and no-audio media.
-   - Consider two-pass loudnorm analysis and configurable loudness/true peak/LRA.
+   - Consider configurable loudness/true peak/LRA only if real users need targets other than `-14 LUFS`.
 3. Continue packaging and release preparation.
    - Use the repo-local `winui-packaging` skill.
    - Verify published EXE startup.

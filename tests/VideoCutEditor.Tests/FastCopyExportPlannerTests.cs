@@ -102,6 +102,28 @@ public sealed class FastCopyExportPlannerTests
 
             ExportPlan plan = planner.CreatePlan(request);
 
+            Assert.NotNull(plan.AudioNormalizationAnalysis);
+            Assert.Equal(
+                [
+                    "-hide_banner",
+                    "-nostdin",
+                    "-y",
+                    "-ss",
+                    "00:00:02.000",
+                    "-i",
+                    @"C:\video\source.mp4",
+                    "-t",
+                    "00:00:10.000",
+                    "-vn",
+                    "-sn",
+                    "-dn",
+                    "-af",
+                    "loudnorm=I=-14:TP=-1.5:LRA=11:print_format=json",
+                    "-f",
+                    "null",
+                    "-",
+                ],
+                plan.AudioNormalizationAnalysis.Arguments);
             Assert.Equal(
                 [
                     "-hide_banner",

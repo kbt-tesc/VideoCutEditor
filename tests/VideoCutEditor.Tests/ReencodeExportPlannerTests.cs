@@ -430,6 +430,7 @@ public sealed class ReencodeExportPlannerTests
 
             ExportPlan plan = planner.CreatePlan(request);
 
+            Assert.NotNull(plan.AudioNormalizationAnalysis);
             Assert.Contains("-af", plan.Arguments);
             Assert.Contains("loudnorm=I=-14:TP=-1.5:LRA=11", plan.Arguments);
             Assert.Contains("-c:a", plan.Arguments);
@@ -486,6 +487,7 @@ public sealed class ReencodeExportPlannerTests
 
             ExportPlan plan = planner.CreatePlan(request);
 
+            Assert.NotNull(plan.AudioNormalizationAnalysis);
             Assert.Contains(
                 "loudnorm=I=-14:TP=-1.5:LRA=11,afade=t=in:st=0:d=2,afade=t=out:st=8:d=2",
                 plan.Arguments);
