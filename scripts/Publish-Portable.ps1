@@ -38,6 +38,15 @@ if (!(Test-Path $exePath)) {
     throw "Publish completed but VideoCutEditor.exe was not found at $exePath"
 }
 
+& (Join-Path $PSScriptRoot "Test-PortablePublish.ps1") `
+    -Platform $Platform `
+    -Configuration $Configuration `
+    -PublishDirectory $publishDirectory
+
+if ($LASTEXITCODE -ne 0) {
+    throw "portable publish validation failed with exit code $LASTEXITCODE"
+}
+
 Write-Host "Portable publish completed:"
 Write-Host $publishDirectory
 Write-Host $exePath

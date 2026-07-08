@@ -82,6 +82,10 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
   - Added a custom `Program.Main` for unpackaged portable builds to set `MICROSOFT_WINDOWSAPPRUNTIME_BASE_DIRECTORY` before WinUI starts in single-file builds.
   - Made the WinUI app self-contained by default so packaged debug launch does not fail with a misleading machine-wide .NET runtime prompt.
   - Added tests that lock portable publish profile and self-contained project settings.
+- `chore: validate portable publish artifacts`
+  - Added `scripts/Test-PortablePublish.ps1` to verify portable publish output after publishing.
+  - The validation requires `VideoCutEditor.exe`, rejects sidecar runtime/package files that should be inside the single-file EXE, and rejects bundled `ffmpeg`/`ffprobe`.
+  - Added tests for accepted symbol-only sidecars, rejected runtime sidecars, rejected bundled tools, and the publish script validation hook.
 
 ## Implemented Capabilities
 
@@ -115,17 +119,18 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 - Scripted WinUI UI smoke tests with screenshots.
 - Portable x64/x86/arm64 publish profiles for unpackaged self-contained single-file output.
 - Self-contained WinUI app builds for both packaged debug launch and portable publish.
+- Automated portable publish artifact validation for single-file shape and external ffmpeg/ffprobe policy.
 
 ## Current Verification Baseline
 
 Most recent successful checks:
 
 - `dotnet test VideoCutEditor.slnx`
-  - 90 tests passed.
+  - 96 tests passed.
 - `dotnet build src/VideoCutEditor/VideoCutEditor.csproj -p:Platform=x64`
   - Build succeeded.
 - `powershell -ExecutionPolicy Bypass -File scripts\Publish-Portable.ps1 -Platform x64 -Configuration Release`
-  - Publish succeeded and produced `VideoCutEditor.exe` under `src\VideoCutEditor\bin\Release\net10.0-windows10.0.26100.0\win-x64\publish`.
+  - Publish succeeded, artifact validation passed, and `VideoCutEditor.exe` was produced under `src\VideoCutEditor\bin\Release\net10.0-windows10.0.26100.0\win-x64\publish`.
 - `powershell -ExecutionPolicy Bypass -File tests\ui-tests.ps1 -AppPid <pid>`
   - 55 UI tests passed for packaged Debug launch.
   - 55 UI tests passed for the published unpackaged x64 EXE.
@@ -144,7 +149,7 @@ When resuming in a new session, rerun the relevant subset before making assumpti
 - Real media export should still be manually verified for Fast copy and Re-encode on local sample files.
 - NVEnc behavior should be manually verified on hardware and ffmpeg builds that expose NVEnc.
 - Preview-unavailable fallback behavior needs more manual and/or UI coverage.
-- Portable x64 publish and published EXE startup smoke testing now succeed. x86/ARM64 publish, signing, MSIX packaging, installer validation, and distribution packaging still need verification.
+- Portable x64 publish, artifact validation, and published EXE startup smoke testing now succeed. x86/ARM64 publish, signing, MSIX packaging, installer validation, and distribution packaging still need verification.
 - UI tests currently cover presence and defaults more than full user workflows with real picker interactions and export completion.
 
 ## Recommended Next Slices
