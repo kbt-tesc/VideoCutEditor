@@ -1,6 +1,6 @@
 # Implementation Status
 
-Last updated: 2026-07-08
+Last updated: 2026-07-09
 
 This document is the handoff ledger for future Codex sessions. Read it after `AGENTS.md`, `docs/product-spec.md`, `docs/technical-design.md`, `docs/codex-workflow.md`, and `docs/implementation-kickoff.md` before choosing the next implementation slice.
 
@@ -76,6 +76,12 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 - `fix: validate additional ffmpeg arguments`
   - Added guardrails that reject app-managed input, range, codec, filter, and output-control ffmpeg options in the advanced field.
   - Added focused validator and planner tests for allowed options, blocked options, and inline option values.
+- `chore: add portable publish workflow`
+  - Updated Windows publish profiles for unpackaged, Windows App SDK self-contained, single-file portable output.
+  - Added `scripts/Publish-Portable.ps1` as the repeatable publish entry point.
+  - Added a custom `Program.Main` for unpackaged portable builds to set `MICROSOFT_WINDOWSAPPRUNTIME_BASE_DIRECTORY` before WinUI starts in single-file builds.
+  - Made the WinUI app self-contained by default so packaged debug launch does not fail with a misleading machine-wide .NET runtime prompt.
+  - Added tests that lock portable publish profile and self-contained project settings.
 
 ## Implemented Capabilities
 
@@ -107,17 +113,22 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 - Re-encode video bitrate suggestions from source bitrate or resolution with codec-specific multipliers.
 - Predicted output size display for bitrate-based Re-encode when enough information is available.
 - Scripted WinUI UI smoke tests with screenshots.
+- Portable x64/x86/arm64 publish profiles for unpackaged self-contained single-file output.
+- Self-contained WinUI app builds for both packaged debug launch and portable publish.
 
 ## Current Verification Baseline
 
 Most recent successful checks:
 
 - `dotnet test VideoCutEditor.slnx`
-  - 86 tests passed.
+  - 90 tests passed.
 - `dotnet build src/VideoCutEditor/VideoCutEditor.csproj -p:Platform=x64`
   - Build succeeded.
+- `powershell -ExecutionPolicy Bypass -File scripts\Publish-Portable.ps1 -Platform x64 -Configuration Release`
+  - Publish succeeded and produced `VideoCutEditor.exe` under `src\VideoCutEditor\bin\Release\net10.0-windows10.0.26100.0\win-x64\publish`.
 - `powershell -ExecutionPolicy Bypass -File tests\ui-tests.ps1 -AppPid <pid>`
-  - 55 UI tests passed.
+  - 55 UI tests passed for packaged Debug launch.
+  - 55 UI tests passed for the published unpackaged x64 EXE.
 
 When resuming in a new session, rerun the relevant subset before making assumptions if files have changed.
 
@@ -133,7 +144,7 @@ When resuming in a new session, rerun the relevant subset before making assumpti
 - Real media export should still be manually verified for Fast copy and Re-encode on local sample files.
 - NVEnc behavior should be manually verified on hardware and ffmpeg builds that expose NVEnc.
 - Preview-unavailable fallback behavior needs more manual and/or UI coverage.
-- Packaging, signing, portable/self-contained publish, and installer validation are not done.
+- Portable x64 publish and published EXE startup smoke testing now succeed. x86/ARM64 publish, signing, MSIX packaging, installer validation, and distribution packaging still need verification.
 - UI tests currently cover presence and defaults more than full user workflows with real picker interactions and export completion.
 
 ## Recommended Next Slices
@@ -144,9 +155,11 @@ When resuming in a new session, rerun the relevant subset before making assumpti
 2. Deepen audio normalization verification.
    - Manually verify representative real media and no-audio media.
    - Consider two-pass loudnorm analysis and configurable loudness/true peak/LRA.
-3. Packaging and release preparation.
+3. Continue packaging and release preparation.
    - Use the repo-local `winui-packaging` skill.
-   - Verify unpackaged/self-contained/single-file assumptions against the current Windows App SDK behavior.
+   - Verify published EXE startup.
+   - Verify x86/ARM64 publish when needed.
+   - Add signing/MSIX packaging when distribution format is chosen.
 
 ## Resume Checklist
 

@@ -26,3 +26,12 @@ The repo-local skills in `.agents/skills` include the VideoCutEditor workflow sk
 dotnet test VideoCutEditor.slnx
 dotnet build src/VideoCutEditor/VideoCutEditor.csproj -p:Platform=x64
 ```
+
+## Publish
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\Publish-Portable.ps1 -Platform x64 -Configuration Release
+```
+
+The portable publish output is written under `src\VideoCutEditor\bin\Release\...\publish`.
+The WinUI app is built self-contained so packaged debug launches and portable output do not depend on a machine-wide .NET runtime probe.
