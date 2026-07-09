@@ -153,6 +153,9 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
   - Moved the output-folder open button beside the main planned output controls.
   - Moved encoder information, media information, and export logs into an INFO dialog with an internal ScrollViewer.
   - Updated the UI smoke element list to follow the main surface after the settings/INFO split.
+- `fix: avoid generated partial property diagnostic for output filename`
+  - Changed `PlannedOutputFileName` from a CommunityToolkit-generated partial property to a hand-written property using `SetProperty`.
+  - This avoids VS Code/Roslyn design-time diagnostics (`CS9248`, `CS8050`, `CS0759`) while preserving the editable output filename behavior.
 
 ## Implemented Capabilities
 
@@ -205,6 +208,7 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 - Settings dialog owns ffmpeg, ffprobe, and output-folder configuration.
 - Main export surface supports editing the output file name before export.
 - INFO dialog shows encoder information, media information, and export logs without growing the main editor layout.
+- Editable output filename uses a hand-written view-model property to avoid source-generator design-time diagnostics in VS Code.
 
 ## Current Verification Baseline
 
@@ -212,6 +216,10 @@ Most recent successful checks:
 
 - `dotnet test VideoCutEditor.slnx`
   - 119 tests passed.
+- `dotnet test VideoCutEditor.slnx --filter Settings_output_filename_and_info_surfaces_are_separated`
+  - 1 test passed after changing `PlannedOutputFileName` to a hand-written `SetProperty` property and locking that it is no longer a partial generated property.
+- `dotnet build src\VideoCutEditor\VideoCutEditor.csproj -c Release -p:Platform=x64 -p:WindowsPackageType=None`
+  - Build succeeded with 0 warnings and 0 errors after replacing the generated partial output filename property.
 - `dotnet test VideoCutEditor.slnx --filter Settings_output_filename_and_info_surfaces_are_separated`
   - 1 test passed after first confirming failure while the settings/INFO split and editable output filename were missing.
 - `dotnet test VideoCutEditor.slnx --filter UserInterfaceSourceTests`

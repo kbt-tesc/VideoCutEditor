@@ -30,6 +30,7 @@ public partial class MainPageViewModel : ObservableObject
     private bool isUpdatingPlannedOutputFileName;
     private bool hasManualVideoBitrateOverride;
     private bool hasManualOutputFileNameOverride;
+    private string plannedOutputFileName = string.Empty;
 
     [ObservableProperty]
     public partial string? SelectedSourcePath { get; set; }
@@ -40,8 +41,25 @@ public partial class MainPageViewModel : ObservableObject
     [ObservableProperty]
     public partial string? PlannedOutputPath { get; set; }
 
-    [ObservableProperty]
-    public partial string PlannedOutputFileName { get; set; } = string.Empty;
+    public string PlannedOutputFileName
+    {
+        get => plannedOutputFileName;
+        set
+        {
+            if (!SetProperty(ref plannedOutputFileName, value))
+            {
+                return;
+            }
+
+            if (isUpdatingPlannedOutputFileName)
+            {
+                return;
+            }
+
+            hasManualOutputFileNameOverride = true;
+            PlannedOutputPath = BuildPlannedOutputPath();
+        }
+    }
 
     [ObservableProperty]
     public partial string MediaSummaryText { get; set; } = "メディア情報はまだありません";
@@ -554,17 +572,6 @@ public partial class MainPageViewModel : ObservableObject
     {
         UpdatePlannedOutputPath();
         OpenOutputDirectoryCommand.NotifyCanExecuteChanged();
-    }
-
-    partial void OnPlannedOutputFileNameChanged(string value)
-    {
-        if (isUpdatingPlannedOutputFileName)
-        {
-            return;
-        }
-
-        hasManualOutputFileNameOverride = true;
-        PlannedOutputPath = BuildPlannedOutputPath();
     }
 
     partial void OnPreviewSourceChanged(MediaSource? value)

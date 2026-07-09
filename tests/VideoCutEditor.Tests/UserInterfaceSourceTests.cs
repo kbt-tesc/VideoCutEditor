@@ -154,7 +154,10 @@ public sealed class UserInterfaceSourceTests
         Assert.Contains("ShowInfoButton_Click", codeBehind);
         Assert.Contains("SettingsDialog.XamlRoot = XamlRoot;", codeBehind);
         Assert.Contains("InfoDialog.XamlRoot = XamlRoot;", codeBehind);
-        Assert.Contains("public partial string PlannedOutputFileName", viewModel);
+        Assert.Contains("private string plannedOutputFileName = string.Empty;", viewModel);
+        Assert.Contains("public string PlannedOutputFileName", viewModel);
+        Assert.Contains("SetProperty(ref plannedOutputFileName, value)", viewModel);
+        Assert.DoesNotContain("public partial string PlannedOutputFileName", viewModel);
         Assert.Contains("BuildPlannedOutputPath()", viewModel);
         Assert.Contains("Path.GetInvalidFileNameChars()", viewModel);
     }
