@@ -90,6 +90,30 @@ public sealed class UserInterfaceSourceTests
         Assert.Contains("Height = isMajorTick ? TimelineMajorTickHeight : TimelineMinorTickHeight", codeBehind);
     }
 
+    [Fact]
+    public void Timeline_zoom_and_jump_controls_preserve_expected_anchor_positions()
+    {
+        string xaml = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "src", "VideoCutEditor", "MainPage.xaml"));
+        string codeBehind = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "src", "VideoCutEditor", "MainPage.xaml.cs"));
+
+        Assert.Contains("AutomationProperties.AutomationId=\"LocatePlayheadButton\"", xaml);
+        Assert.Contains("AutomationProperties.Name=\"現在の再生位置へ移動\"", xaml);
+        Assert.Contains("Click=\"LocatePlayheadButton_Click\"", xaml);
+        Assert.Contains("AutomationProperties.AutomationId=\"TimelineZoomOutButton\"", xaml);
+        Assert.Contains("AutomationProperties.AutomationId=\"TimelineZoomInButton\"", xaml);
+        Assert.Contains("Click=\"TimelineZoomOutButton_Click\"", xaml);
+        Assert.Contains("Click=\"TimelineZoomInButton_Click\"", xaml);
+        Assert.Contains("LocatePlayheadButton_Click", codeBehind);
+        Assert.Contains("TimelineZoomOutButton_Click", codeBehind);
+        Assert.Contains("TimelineZoomInButton_Click", codeBehind);
+        Assert.Contains("CenterTimelineOnPlayhead", codeBehind);
+        Assert.Contains("AdjustTimelineZoomAroundPlayhead", codeBehind);
+        Assert.Contains("AdjustTimelineZoomAroundPointer", codeBehind);
+        Assert.Contains("double anchorSeconds = XToSeconds(pointerPoint.Position.X);", codeBehind);
+        Assert.Contains("double viewportX = pointerPoint.Position.X - TimelineScrollViewer.HorizontalOffset;", codeBehind);
+        Assert.Contains("ScrollTimelineToAnchor(anchorSeconds, viewportX);", codeBehind);
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

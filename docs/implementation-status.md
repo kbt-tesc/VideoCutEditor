@@ -138,6 +138,11 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
   - Increased the timeline ruler height so time labels sit above tick lines instead of sharing the same vertical space.
   - Added finer minor tick lines between labeled major ticks.
   - Made labeled major tick lines longer than minor tick lines.
+- `ui: add anchored timeline navigation controls`
+  - Added a playback-toolbar button that scrolls the timeline/waveform to the current playhead position.
+  - Added zoom-in and zoom-out buttons beside the timeline zoom slider.
+  - Changed Ctrl + mouse wheel zoom to preserve the waveform time under the mouse cursor.
+  - Changed zoom button behavior to keep the current playhead position centered after zooming.
 
 ## Implemented Capabilities
 
@@ -185,13 +190,20 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 - Timeline drag seeking and 1px start/end marker lines.
 - Timeline zoom supports 0.01x slider steps and Ctrl + mouse wheel adjustment over the waveform/timeline area.
 - Timeline ruler shows minor ticks plus longer labeled major ticks with labels above the lines.
+- Timeline navigation includes a playhead locate button, zoom-in/zoom-out buttons, cursor-anchored Ctrl + mouse wheel zoom, and playhead-centered button zoom.
 
 ## Current Verification Baseline
 
 Most recent successful checks:
 
 - `dotnet test VideoCutEditor.slnx`
-  - 116 tests passed.
+  - 117 tests passed.
+- `dotnet test VideoCutEditor.slnx --filter UserInterfaceSourceTests`
+  - 6 tests passed after first confirming failure for the missing playhead locate button, zoom buttons, cursor-anchored wheel zoom, and playhead-centered zoom button behavior.
+- `dotnet build src\VideoCutEditor\VideoCutEditor.csproj -c Release -p:Platform=x64 -p:WindowsPackageType=None`
+  - Build succeeded with 0 warnings and 0 errors after adding anchored timeline navigation controls.
+- `dotnet build src\VideoCutEditor\VideoCutEditor.csproj -p:Platform=x64 -p:WindowsPackageType=None`
+  - Build was blocked because the running debug app process `VideoCutEditor (38320)` locked `bin\x64\Debug\net10.0-windows10.0.26100.0\win-x64\VideoCutEditor.exe`; Release build was used for compile validation without closing the user's running app.
 - `dotnet test VideoCutEditor.slnx --filter UserInterfaceSourceTests`
   - 5 tests passed after first confirming failure for the missing expanded ruler, minor tick divisions, longer major ticks, and labels above tick lines.
 - `dotnet build src\VideoCutEditor\VideoCutEditor.csproj -p:Platform=x64 -p:WindowsPackageType=None`

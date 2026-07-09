@@ -126,6 +126,7 @@
                                 <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
@@ -139,6 +140,15 @@
 
                             <Button
                                 Grid.Column="1"
+                                AutomationProperties.AutomationId="LocatePlayheadButton"
+                                AutomationProperties.Name="現在の再生位置へ移動"
+                                Click="LocatePlayheadButton_Click"
+                                ToolTipService.ToolTip="下の波形を現在の再生位置へ移動">
+                                <FontIcon FontSize="16" Glyph="&#xE81E;" />
+                            </Button>
+
+                            <Button
+                                Grid.Column="2"
                                 AutomationProperties.AutomationId="MarkStartButton"
                                 AutomationProperties.Name="現在位置を開始地点にする"
                                 Command="{x:Bind ViewModel.MarkStartCommand}"
@@ -147,7 +157,7 @@
                             </Button>
 
                             <Button
-                                Grid.Column="2"
+                                Grid.Column="3"
                                 AutomationProperties.AutomationId="MarkEndButton"
                                 AutomationProperties.Name="現在位置を終了地点にする"
                                 Command="{x:Bind ViewModel.MarkEndCommand}"
@@ -156,13 +166,13 @@
                             </Button>
 
                             <TextBlock
-                                Grid.Column="3"
+                                Grid.Column="4"
                                 VerticalAlignment="Center"
                                 Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                 Text="{x:Bind ViewModel.PositionText, Mode=OneWay}" />
 
                             <TextBlock
-                                Grid.Column="4"
+                                Grid.Column="5"
                                 VerticalAlignment="Center"
                                 Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                 Text="{x:Bind ViewModel.DurationText, Mode=OneWay}" />
@@ -274,7 +284,9 @@
                         <Grid Grid.Row="3" ColumnSpacing="12">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="*" />
@@ -284,9 +296,17 @@
                             <TextBlock
                                 VerticalAlignment="Center"
                                 Text="ズーム" />
+                            <Button
+                                Grid.Column="1"
+                                AutomationProperties.AutomationId="TimelineZoomOutButton"
+                                AutomationProperties.Name="タイムラインを縮小"
+                                Click="TimelineZoomOutButton_Click"
+                                ToolTipService.ToolTip="再生位置を維持してタイムラインを縮小">
+                                <FontIcon FontSize="16" Glyph="&#xE71F;" />
+                            </Button>
                             <Slider
                                 x:Name="TimelineZoomSlider"
-                                Grid.Column="1"
+                                Grid.Column="2"
                                 AutomationProperties.AutomationId="TimelineZoomSlider"
                                 Maximum="8"
                                 Minimum="1"
@@ -295,18 +315,26 @@
                                 StepFrequency="0.01"
                                 Value="1"
                                 ValueChanged="TimelineZoomSlider_ValueChanged" />
+                            <Button
+                                Grid.Column="3"
+                                AutomationProperties.AutomationId="TimelineZoomInButton"
+                                AutomationProperties.Name="タイムラインを拡大"
+                                Click="TimelineZoomInButton_Click"
+                                ToolTipService.ToolTip="再生位置を維持してタイムラインを拡大">
+                                <FontIcon FontSize="16" Glyph="&#xE8A3;" />
+                            </Button>
                             <TextBlock
-                                Grid.Column="2"
+                                Grid.Column="4"
                                 MinWidth="44"
                                 VerticalAlignment="Center"
                                 Text="{x:Bind ViewModel.TimelineZoomText, Mode=OneWay}" />
                             <TextBlock
-                                Grid.Column="3"
+                                Grid.Column="5"
                                 VerticalAlignment="Center"
                                 Text="速度" />
                             <ComboBox
                                 x:Name="PlaybackRateComboBox"
-                                Grid.Column="4"
+                                Grid.Column="6"
                                 AutomationProperties.AutomationId="PlaybackRateComboBox"
                                 SelectedIndex="3"
                                 SelectionChanged="PlaybackRateComboBox_SelectionChanged">
@@ -316,7 +344,7 @@
                                 <ComboBoxItem Content="1x" />
                             </ComboBox>
                             <TextBlock
-                                Grid.Column="5"
+                                Grid.Column="7"
                                 MinWidth="44"
                                 VerticalAlignment="Center"
                                 Text="{x:Bind ViewModel.PlaybackRateText, Mode=OneWay}" />

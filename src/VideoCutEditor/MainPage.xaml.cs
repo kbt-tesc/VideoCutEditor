@@ -203,6 +203,24 @@ public sealed partial class MainPage : Page
         EditorRoot.Focus(Microsoft.UI.Xaml.FocusState.Programmatic);
     }
 
+    private void LocatePlayheadButton_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
+    {
+        CenterTimelineOnPlayhead();
+        EditorRoot.Focus(Microsoft.UI.Xaml.FocusState.Programmatic);
+    }
+
+    private void TimelineZoomOutButton_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
+    {
+        AdjustTimelineZoomAroundPlayhead(-TimelineZoomStep);
+        EditorRoot.Focus(Microsoft.UI.Xaml.FocusState.Programmatic);
+    }
+
+    private void TimelineZoomInButton_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
+    {
+        AdjustTimelineZoomAroundPlayhead(TimelineZoomStep);
+        EditorRoot.Focus(Microsoft.UI.Xaml.FocusState.Programmatic);
+    }
+
     private void TimelineCanvas_PointerPressed(object sender, PointerRoutedEventArgs e)
     {
         if (!TrySeekTimelineToPointer(e))
@@ -256,13 +274,16 @@ public sealed partial class MainPage : Page
             return;
         }
 
-        int delta = e.GetCurrentPoint(TimelineCanvas).Properties.MouseWheelDelta;
+        var pointerPoint = e.GetCurrentPoint(TimelineCanvas);
+        int delta = pointerPoint.Properties.MouseWheelDelta;
         if (delta == 0)
         {
             return;
         }
 
-        AdjustTimelineZoom(delta > 0 ? TimelineZoomStep : -TimelineZoomStep);
+        double anchorSeconds = XToSeconds(pointerPoint.Position.X);
+        double viewportX = pointerPoint.Position.X - TimelineScrollViewer.HorizontalOffset;
+        AdjustTimelineZoomAroundPointer(delta > 0 ? TimelineZoomStep : -TimelineZoomStep, anchorSeconds, viewportX);
         e.Handled = true;
     }
 
@@ -296,6 +317,11 @@ public sealed partial class MainPage : Page
 
     private void AdjustTimelineZoom(double delta)
     {
+        AdjustTimelineZoomAroundPlayhead(delta);
+    }
+
+    private void AdjustTimelineZoomAroundPlayhead(double delta)
+    {
         SetTimelineZoom(ViewModel.TimelineZoom + delta);
         if (Math.Abs(TimelineZoomSlider.Value - ViewModel.TimelineZoom) > double.Epsilon)
         {
@@ -303,7 +329,19 @@ public sealed partial class MainPage : Page
         }
 
         UpdateTimelineVisuals();
-        EnsurePlayheadVisible();
+        CenterTimelineOnPlayhead();
+    }
+
+    private void AdjustTimelineZoomAroundPointer(double delta, double anchorSeconds, double viewportX)
+    {
+        SetTimelineZoom(ViewModel.TimelineZoom + delta);
+        if (Math.Abs(TimelineZoomSlider.Value - ViewModel.TimelineZoom) > double.Epsilon)
+        {
+            TimelineZoomSlider.Value = ViewModel.TimelineZoom;
+        }
+
+        UpdateTimelineVisuals();
+        ScrollTimelineToAnchor(anchorSeconds, viewportX);
     }
 
     private void SetTimelineZoom(double value)
@@ -546,6 +584,30 @@ public sealed partial class MainPage : Page
         {
             TimelineScrollViewer.ChangeView(Math.Min(TimelineScrollViewer.ScrollableWidth, playheadX - TimelineScrollViewer.ViewportWidth + margin), null, null, disableAnimation: true);
         }
+    }
+
+    private void CenterTimelineOnPlayhead()
+    {
+        if (ViewModel.DurationSeconds <= 0 || TimelineScrollViewer.ViewportWidth <= 0)
+        {
+            return;
+        }
+
+        ScrollTimelineToAnchor(ViewModel.PositionSeconds, TimelineScrollViewer.ViewportWidth / 2);
+    }
+
+    private void ScrollTimelineToAnchor(double anchorSeconds, double viewportX)
+    {
+        if (ViewModel.DurationSeconds <= 0 || TimelineScrollViewer.ViewportWidth <= 0)
+        {
+            return;
+        }
+
+        TimelineScrollViewer.UpdateLayout();
+        double targetX = SecondsToX(anchorSeconds);
+        double maxOffset = Math.Max(0, TimelineScrollViewer.ScrollableWidth);
+        double targetOffset = Math.Clamp(targetX - viewportX, 0, maxOffset);
+        TimelineScrollViewer.ChangeView(targetOffset, null, null, disableAnimation: true);
     }
 
     private double SecondsToX(double seconds)
