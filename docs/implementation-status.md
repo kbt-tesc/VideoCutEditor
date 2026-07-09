@@ -143,6 +143,10 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
   - Added zoom-in and zoom-out buttons beside the timeline zoom slider.
   - Changed Ctrl + mouse wheel zoom to preserve the waveform time under the mouse cursor.
   - Changed zoom button behavior to keep the current playhead position centered after zooming.
+- `ui: sync play pause icon with playback`
+  - Named the play/pause icon and updated it from the media player's current playback state.
+  - Switched the button glyph to pause while playback is active and back to play when it is not.
+  - Updated the button tooltip between Japanese play and pause labels.
 
 ## Implemented Capabilities
 
@@ -191,15 +195,20 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 - Timeline zoom supports 0.01x slider steps and Ctrl + mouse wheel adjustment over the waveform/timeline area.
 - Timeline ruler shows minor ticks plus longer labeled major ticks with labels above the lines.
 - Timeline navigation includes a playhead locate button, zoom-in/zoom-out buttons, cursor-anchored Ctrl + mouse wheel zoom, and playhead-centered button zoom.
+- Play/pause button icon follows playback state.
 
 ## Current Verification Baseline
 
 Most recent successful checks:
 
 - `dotnet test VideoCutEditor.slnx`
-  - 117 tests passed.
+  - 118 tests passed.
+- `dotnet test VideoCutEditor.slnx --filter Play_pause_button_icon_tracks_playback_state`
+  - 1 test passed after first confirming failure while the play/pause button used a fixed play glyph.
+- `dotnet build src\VideoCutEditor\VideoCutEditor.csproj -c Release -p:Platform=x64 -p:WindowsPackageType=None`
+  - Build succeeded with 0 warnings and 0 errors after syncing the play/pause icon with playback state.
 - `dotnet test VideoCutEditor.slnx --filter UserInterfaceSourceTests`
-  - 6 tests passed after first confirming failure for the missing playhead locate button, zoom buttons, cursor-anchored wheel zoom, and playhead-centered zoom button behavior.
+  - 7 tests passed after first confirming failures for the missing playhead locate button, zoom buttons, cursor-anchored wheel zoom, playhead-centered zoom button behavior, and play/pause state icon switching.
 - `dotnet build src\VideoCutEditor\VideoCutEditor.csproj -c Release -p:Platform=x64 -p:WindowsPackageType=None`
   - Build succeeded with 0 warnings and 0 errors after adding anchored timeline navigation controls.
 - `dotnet build src\VideoCutEditor\VideoCutEditor.csproj -p:Platform=x64 -p:WindowsPackageType=None`

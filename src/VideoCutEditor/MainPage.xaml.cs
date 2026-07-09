@@ -73,6 +73,7 @@ public sealed partial class MainPage : Page
         AppLogger.Info("Timeline controls configured");
         PreviewPlayer.MediaPlayer.MediaOpened += PreviewPlayerMediaOpened;
         PreviewPlayer.MediaPlayer.MediaFailed += PreviewPlayerMediaFailed;
+        PreviewPlayer.MediaPlayer.CurrentStateChanged += PreviewPlayerCurrentStateChanged;
         playbackTimer = DispatcherQueue.CreateTimer();
         playbackTimer.Interval = TimeSpan.FromMilliseconds(100);
         playbackTimer.Tick += PlaybackTimerTick;
@@ -98,6 +99,7 @@ public sealed partial class MainPage : Page
         playbackTimer.Stop();
         waveformCancellation?.Cancel();
         ViewModel.PropertyChanged -= ViewModelPropertyChanged;
+        PreviewPlayer.MediaPlayer.CurrentStateChanged -= PreviewPlayerCurrentStateChanged;
         PreviewPlayer.MediaPlayer.Pause();
     }
 
@@ -200,7 +202,20 @@ public sealed partial class MainPage : Page
             PreviewPlayer.MediaPlayer.Play();
         }
 
+        UpdatePlayPauseButtonState();
         EditorRoot.Focus(Microsoft.UI.Xaml.FocusState.Programmatic);
+    }
+
+    private void PreviewPlayerCurrentStateChanged(MediaPlayer sender, object args)
+    {
+        DispatcherQueue.TryEnqueue(UpdatePlayPauseButtonState);
+    }
+
+    private void UpdatePlayPauseButtonState()
+    {
+        bool isPlaying = PreviewPlayer.MediaPlayer.PlaybackSession.PlaybackState == MediaPlaybackState.Playing;
+        PlayPauseIcon.Glyph = isPlaying ? "\uE769" : "\uE768";
+        ToolTipService.SetToolTip(PlayPauseButton, isPlaying ? "一時停止" : "再生");
     }
 
     private void LocatePlayheadButton_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)

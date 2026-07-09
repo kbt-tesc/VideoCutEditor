@@ -132,10 +132,14 @@
                             </Grid.ColumnDefinitions>
 
                             <Button
+                                x:Name="PlayPauseButton"
                                 AutomationProperties.AutomationId="PlayPauseButton"
                                 Click="PlayPauseButton_Click"
                                 ToolTipService.ToolTip="再生または一時停止">
-                                <FontIcon FontSize="16" Glyph="&#xE768;" />
+                                <FontIcon
+                                    x:Name="PlayPauseIcon"
+                                    FontSize="16"
+                                    Glyph="&#xE768;" />
                             </Button>
 
                             <Button

@@ -114,6 +114,22 @@ public sealed class UserInterfaceSourceTests
         Assert.Contains("ScrollTimelineToAnchor(anchorSeconds, viewportX);", codeBehind);
     }
 
+    [Fact]
+    public void Play_pause_button_icon_tracks_playback_state()
+    {
+        string xaml = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "src", "VideoCutEditor", "MainPage.xaml"));
+        string codeBehind = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "src", "VideoCutEditor", "MainPage.xaml.cs"));
+
+        Assert.Contains("x:Name=\"PlayPauseIcon\"", xaml);
+        Assert.Contains("Glyph=\"&#xE768;\"", xaml);
+        Assert.Contains("PreviewPlayer.MediaPlayer.CurrentStateChanged += PreviewPlayerCurrentStateChanged;", codeBehind);
+        Assert.Contains("PreviewPlayer.MediaPlayer.CurrentStateChanged -= PreviewPlayerCurrentStateChanged;", codeBehind);
+        Assert.Contains("PreviewPlayerCurrentStateChanged", codeBehind);
+        Assert.Contains("UpdatePlayPauseButtonState", codeBehind);
+        Assert.Contains("PlayPauseIcon.Glyph = isPlaying ? \"\\uE769\" : \"\\uE768\";", codeBehind);
+        Assert.Contains("ToolTipService.SetToolTip(PlayPauseButton, isPlaying ? \"一時停止\" : \"再生\");", codeBehind);
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
