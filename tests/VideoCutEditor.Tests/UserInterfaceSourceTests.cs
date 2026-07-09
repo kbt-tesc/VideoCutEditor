@@ -34,6 +34,21 @@ public sealed class UserInterfaceSourceTests
         Assert.DoesNotContain("Estimated size unavailable", viewModel);
     }
 
+    [Fact]
+    public void View_model_recovers_from_picker_com_failures()
+    {
+        string viewModel = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "src", "VideoCutEditor", "ViewModels", "MainPageViewModel.cs"));
+
+        Assert.Contains("using System.Runtime.InteropServices;", viewModel);
+        Assert.True(Regex.Matches(viewModel, "catch \\(COMException exception\\)").Count >= 3);
+        Assert.Contains("動画ファイルの選択を完了できませんでした", viewModel);
+        Assert.Contains("出力フォルダーの選択を完了できませんでした", viewModel);
+        Assert.Contains("実行ファイルの選択を完了できませんでした", viewModel);
+        Assert.Contains("AppLogger.Error(\"Video picker failed\"", viewModel);
+        Assert.Contains("AppLogger.Error(\"Output folder picker failed\"", viewModel);
+        Assert.Contains("AppLogger.Error(\"Executable picker failed\"", viewModel);
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

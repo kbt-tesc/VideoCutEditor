@@ -89,6 +89,7 @@ Show clear recoverable errors for:
 - Missing ffmpeg path
 - Missing ffprobe path
 - Invalid output directory
+- File, folder, or executable picker failure
 - ffprobe metadata read failure
 - Unsupported or unavailable encoder
 - Audio normalization requested for media without an audio stream

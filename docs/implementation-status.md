@@ -126,6 +126,10 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
   - Added `docs/project-file-notes.md` to preserve the confirmed VS Code/C# Dev Kit project-file behavior.
   - Recorded that `.slnx` remains the only solution file, classic `.sln` and app-level global usings did not fix the warnings, and the `DesignTimeBuild`-only core reference is the confirmed fallback.
   - Linked the memo from README and Codex workflow guidance.
+- `fix: recover from picker COM failures`
+  - Caught `COMException` from video, output-folder, and ffmpeg/ffprobe executable pickers so Explorer/file-picker failures do not crash the app.
+  - Added Japanese status messages and diagnostic logs for picker failures.
+  - Added source-level UI coverage for picker failure handling.
 
 ## Implemented Capabilities
 
@@ -167,6 +171,7 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 - VS Code/C# Dev Kit language-service opens `VideoCutEditor.slnx`, the repo-standard solution.
 - VS Code/Roslyn LSP design-time fallback reference for `VideoCutEditor.Core` diagnostics.
 - Project-file guidance memo for `.slnx`, `.vscode/settings.json`, and design-time diagnostic fallback handling.
+- Recoverable file/folder/executable picker failure handling.
 - Japanese app-generated UI status/notice text for the main editor.
 - Output-folder open button.
 - Timeline drag seeking and 1px start/end marker lines.
@@ -176,13 +181,15 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 Most recent successful checks:
 
 - `dotnet test VideoCutEditor.slnx`
-  - 113 tests passed.
+  - 114 tests passed.
+- `dotnet test VideoCutEditor.slnx --filter View_model_recovers_from_picker_com_failures`
+  - 1 test passed after first confirming failure while picker `COMException` was not handled.
+- `dotnet build src\VideoCutEditor\VideoCutEditor.csproj -p:Platform=x64 -p:WindowsPackageType=None`
+  - Build succeeded with 0 warnings and 0 errors after adding picker failure handling.
 - `dotnet test VideoCutEditor.slnx --filter VsCodeDebugConfigurationTests`
   - 5 tests passed after first confirming failure for the missing design-time `VideoCutEditor.Core` reference fallback.
-- `dotnet build src\VideoCutEditor\VideoCutEditor.csproj -p:Platform=x64 -p:WindowsPackageType=None`
-  - Build succeeded with 0 warnings and 0 errors after adding the design-time reference fallback.
 - `dotnet test VideoCutEditor.slnx --filter UserInterfaceSourceTests`
-  - 2 tests passed after first confirming failures for the missing output-folder open button, drag handlers, 1px marker contract, handled keyboard hook, and Japanese message contract.
+  - 3 tests passed after first confirming failures for the missing output-folder open button, drag handlers, 1px marker contract, handled keyboard hook, Japanese message contract, and picker COM failure handling.
 - Direct launch smoke of `src\VideoCutEditor\bin\x64\Debug\net10.0-windows10.0.26100.0\win-x64\VideoCutEditor.exe` after the unpackaged Debug build
   - The app remained running after 5 seconds, so the previous immediate `REGDB_E_CLASSNOTREG` failure was not reproduced; the smoke-test process was then stopped.
 - `dotnet test VideoCutEditor.slnx --filter VerificationMediaScriptTests`

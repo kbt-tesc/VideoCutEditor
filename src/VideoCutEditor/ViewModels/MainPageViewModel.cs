@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using VideoCutEditor.Core.Models;
@@ -245,8 +246,18 @@ public partial class MainPageViewModel : ObservableObject
         picker.FileTypeFilter.Add(".avi");
         picker.FileTypeFilter.Add(".webm");
 
-        WinRT.Interop.InitializeWithWindow.Initialize(picker, App.WindowHandle);
-        Windows.Storage.StorageFile? file = await picker.PickSingleFileAsync();
+        Windows.Storage.StorageFile? file;
+        try
+        {
+            WinRT.Interop.InitializeWithWindow.Initialize(picker, App.WindowHandle);
+            file = await picker.PickSingleFileAsync();
+        }
+        catch (COMException exception)
+        {
+            StatusMessage = "動画ファイルの選択を完了できませんでした";
+            AppLogger.Error("Video picker failed", exception);
+            return;
+        }
 
         if (file is null)
         {
@@ -300,8 +311,18 @@ public partial class MainPageViewModel : ObservableObject
         };
         picker.FileTypeFilter.Add("*");
 
-        WinRT.Interop.InitializeWithWindow.Initialize(picker, App.WindowHandle);
-        Windows.Storage.StorageFolder? folder = await picker.PickSingleFolderAsync();
+        Windows.Storage.StorageFolder? folder;
+        try
+        {
+            WinRT.Interop.InitializeWithWindow.Initialize(picker, App.WindowHandle);
+            folder = await picker.PickSingleFolderAsync();
+        }
+        catch (COMException exception)
+        {
+            StatusMessage = "出力フォルダーの選択を完了できませんでした";
+            AppLogger.Error("Output folder picker failed", exception);
+            return;
+        }
 
         if (folder is null)
         {
@@ -983,7 +1004,7 @@ public partial class MainPageViewModel : ObservableObject
             : $"{bytes / megaByte:0.#} MB";
     }
 
-    private static async Task<string?> PickExecutableAsync(string commitButtonText)
+    private async Task<string?> PickExecutableAsync(string commitButtonText)
     {
         var picker = new FileOpenPicker
         {
@@ -992,8 +1013,18 @@ public partial class MainPageViewModel : ObservableObject
         };
         picker.FileTypeFilter.Add(".exe");
 
-        WinRT.Interop.InitializeWithWindow.Initialize(picker, App.WindowHandle);
-        Windows.Storage.StorageFile? file = await picker.PickSingleFileAsync();
+        Windows.Storage.StorageFile? file;
+        try
+        {
+            WinRT.Interop.InitializeWithWindow.Initialize(picker, App.WindowHandle);
+            file = await picker.PickSingleFileAsync();
+        }
+        catch (COMException exception)
+        {
+            StatusMessage = "実行ファイルの選択を完了できませんでした";
+            AppLogger.Error("Executable picker failed", exception);
+            return null;
+        }
 
         return file?.Path;
     }
