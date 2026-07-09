@@ -29,7 +29,7 @@ dotnet build src/VideoCutEditor/VideoCutEditor.csproj -p:Platform=x64
 
 ## Debug In VS Code
 
-Open the repository root, then choose `VideoCutEditor: Debug x64` from Run and Debug before pressing F5. VS Code is pinned to `VideoCutEditor.sln` through `.vscode/settings.json` so the C# language service can resolve the app, core, and test project references reliably. `VideoCutEditor.slnx` remains the repo-standard solution for .NET CLI workflows, while the classic `.sln` is kept as a VS Code compatibility solution. This configuration runs the `build VideoCutEditor x64` task first, builds with `WindowsPackageType=None`, and launches the x64 Debug output directly so VS Code can attach breakpoints. The C# Dev Kit generated profile is kept as a fallback, but it can choose a mismatched platform folder on some machines.
+Open the repository root, then choose `VideoCutEditor: Debug x64` from Run and Debug before pressing F5. VS Code is pinned to `VideoCutEditor.slnx` through `.vscode/settings.json` so the C# language service opens the repo-standard solution. The WinUI app project also exposes a design-time-only `VideoCutEditor.Core` reference to keep Roslyn LSP diagnostics aligned with the normal project reference. This configuration runs the `build VideoCutEditor x64` task first, builds with `WindowsPackageType=None`, and launches the x64 Debug output directly so VS Code can attach breakpoints. The C# Dev Kit generated profile is kept as a fallback, but it can choose a mismatched platform folder on some machines.
 
 If the build reports that `VideoCutEditor.exe` is locked, close the previous debugged app instance and press F5 again.
 

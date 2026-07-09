@@ -114,11 +114,14 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
   - Reduced the start/end timeline marker lines to 1px.
   - Fixed `[` and `]` keyboard shortcuts by handling key events even when child controls mark them handled.
   - Added drag tracking on the timeline so the playhead follows pointer movement while dragging.
-- `chore: add VS Code compatibility solution`
-  - Added `VideoCutEditor.sln` alongside the repo-standard `VideoCutEditor.slnx` because VS Code/C# Dev Kit still reported false DocumentCompilerSemantic errors for `VideoCutEditor.Core` references when pinned directly to `.slnx`.
-  - Pinned `.vscode/settings.json` to `VideoCutEditor.sln` for editor diagnostics.
-  - Set the WinUI app's classic-solution `Any CPU` mapping to x64 so default solution builds do not conflict with the x64 runtime identifier.
-  - Added tests that lock the VS Code default solution, classic solution project list, x64 mapping guardrail, and `.slnx` project list.
+- `chore: remove unnecessary VS Code classic solution fallback`
+  - Removed `VideoCutEditor.sln` after user feedback showed Problems did not change when the classic solution was introduced.
+  - Restored `.vscode/settings.json` to `VideoCutEditor.slnx`, keeping `.slnx` as the single solution file for CLI and VS Code workflows.
+  - Updated tests to reject reintroducing the classic `.sln` unless a future regression justifies it.
+- `chore: add VS Code design-time core reference fallback`
+  - Added a `DesignTimeBuild`-only `VideoCutEditor.Core` reference in the WinUI app project to help Roslyn LSP resolve core symbols when VS Code diagnostics miss the normal `ProjectReference`.
+  - User feedback confirmed Problems still existed after the global-usings experiment and disappeared after the design-time reference fallback, so the committed fix keeps the focused project-file fallback only.
+  - Added tests that lock the design-time reference fallback.
 
 ## Implemented Capabilities
 
@@ -157,7 +160,8 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 - Verification sample media generator for repeatable local manual checks.
 - VS Code F5 configuration for x64 Debug breakpoint debugging.
 - VS Code F5 direct debugging uses the unpackaged entry point while packaged debug launch remains covered by `BuildAndRun.ps1` / `winapp run`.
-- VS Code/C# Dev Kit language-service project reference resolution through `VideoCutEditor.sln`, while `VideoCutEditor.slnx` remains the repo-standard CLI solution.
+- VS Code/C# Dev Kit language-service opens `VideoCutEditor.slnx`, the repo-standard solution.
+- VS Code/Roslyn LSP design-time fallback reference for `VideoCutEditor.Core` diagnostics.
 - Japanese app-generated UI status/notice text for the main editor.
 - Output-folder open button.
 - Timeline drag seeking and 1px start/end marker lines.
@@ -167,15 +171,13 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 Most recent successful checks:
 
 - `dotnet test VideoCutEditor.slnx`
-  - 112 tests passed.
+  - 113 tests passed.
 - `dotnet test VideoCutEditor.slnx --filter VsCodeDebugConfigurationTests`
-  - 4 tests passed after first confirming failure for missing `VideoCutEditor.sln`.
-- `dotnet build VideoCutEditor.sln -c Release`
-  - Build succeeded through the VS Code compatibility solution.
+  - 5 tests passed after first confirming failure for the missing design-time `VideoCutEditor.Core` reference fallback.
+- `dotnet build src\VideoCutEditor\VideoCutEditor.csproj -p:Platform=x64 -p:WindowsPackageType=None`
+  - Build succeeded with 0 warnings and 0 errors after adding the design-time reference fallback.
 - `dotnet test VideoCutEditor.slnx --filter UserInterfaceSourceTests`
   - 2 tests passed after first confirming failures for the missing output-folder open button, drag handlers, 1px marker contract, handled keyboard hook, and Japanese message contract.
-- `dotnet build src\VideoCutEditor\VideoCutEditor.csproj -p:Platform=x64 -p:WindowsPackageType=None`
-  - Build succeeded for the VS Code F5 direct-debug configuration.
 - Direct launch smoke of `src\VideoCutEditor\bin\x64\Debug\net10.0-windows10.0.26100.0\win-x64\VideoCutEditor.exe` after the unpackaged Debug build
   - The app remained running after 5 seconds, so the previous immediate `REGDB_E_CLASSNOTREG` failure was not reproduced; the smoke-test process was then stopped.
 - `dotnet test VideoCutEditor.slnx --filter VerificationMediaScriptTests`
@@ -211,7 +213,7 @@ When resuming in a new session, rerun the relevant subset before making assumpti
 - Portable x64 publish, x86 publish, arm64 publish, artifact validation, and published x64 EXE startup smoke testing now succeed. Signing, MSIX packaging, installer validation, distribution packaging, and x86/arm64 runtime startup on matching devices still need verification.
 - UI tests currently cover presence and defaults more than full user workflows with real picker interactions and export completion.
 - VS Code F5 now has an explicit x64 unpackaged launch path, but the user should manually confirm breakpoint attachment from VS Code because automated tests can only validate the configuration files and build output.
-- VS Code DocumentCompilerSemantic warnings for `VideoCutEditor.Core` references should be resolved by the pinned classic `.sln` compatibility solution, but existing VS Code sessions may need `Developer: Reload Window` or a C# language server restart to clear stale diagnostics. `dotnet build VideoCutEditor.sln` in Debug can fail while a VS Code debug session is running because the app locks `VideoCutEditor.Core.dll`; close the running app/debug adapter before rechecking Debug solution builds.
+- VS Code DocumentCompilerSemantic warnings for `VideoCutEditor.Core` references should be resolved by the `DesignTimeBuild`-only core reference fallback while VS Code remains pinned to `VideoCutEditor.slnx`. Existing VS Code sessions may need `Developer: Reload Window` or a C# language server restart to clear stale diagnostics.
 - The `[` and `]` shortcut fix is covered by source-level UI contract tests and should still be manually confirmed in the running app with a loaded preview.
 - Timeline drag seeking is covered by source-level UI contract tests and should still be manually confirmed visually with real media.
 

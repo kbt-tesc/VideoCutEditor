@@ -67,6 +67,19 @@
   </ItemGroup>
 
   <!--
+    C# Dev Kit / Roslyn LSP can load the project while still reporting false
+    DocumentCompilerSemantic errors for ProjectReference namespaces. Keep this
+    design-time-only reference out of real builds, but available to editor
+    diagnostics after the normal project restore/build has produced ref assets.
+  -->
+  <ItemGroup Condition="'$(DesignTimeBuild)' == 'true'">
+    <Reference Include="VideoCutEditor.Core">
+      <HintPath>..\VideoCutEditor.Core\obj\$(Configuration)\net10.0\ref\VideoCutEditor.Core.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <!--
     Defining the "HasPackageAndPublishMenuAddedByProject" property here allows the Solution
     Explorer "Package and Publish" context menu entry to be enabled for this project even if
     the Windows App SDK Nuget package has not yet been restored.

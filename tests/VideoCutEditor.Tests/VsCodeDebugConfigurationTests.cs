@@ -37,25 +37,20 @@ public sealed class VsCodeDebugConfigurationTests
     }
 
     [Fact]
-    public void VsCode_settings_pin_classic_solution_for_language_service()
+    public void VsCode_settings_pin_slnx_solution_for_language_service()
     {
         string repositoryRoot = FindRepositoryRoot();
         using JsonDocument settingsJson = ReadJsonWithComments(Path.Combine(repositoryRoot, ".vscode", "settings.json"));
 
-        Assert.Equal("VideoCutEditor.sln", settingsJson.RootElement.GetProperty("dotnet.defaultSolution").GetString());
+        Assert.Equal("VideoCutEditor.slnx", settingsJson.RootElement.GetProperty("dotnet.defaultSolution").GetString());
     }
 
     [Fact]
-    public void Classic_solution_includes_app_core_and_test_projects()
+    public void Classic_solution_is_not_required_for_vs_code_diagnostics()
     {
         string repositoryRoot = FindRepositoryRoot();
-        string solution = File.ReadAllText(Path.Combine(repositoryRoot, "VideoCutEditor.sln"));
 
-        Assert.Contains(@"src\VideoCutEditor\VideoCutEditor.csproj", solution);
-        Assert.Contains(@"src\VideoCutEditor.Core\VideoCutEditor.Core.csproj", solution);
-        Assert.Contains(@"tests\VideoCutEditor.Tests\VideoCutEditor.Tests.csproj", solution);
-        Assert.DoesNotContain("Debug|Any CPU.ActiveCfg = Debug|x86", solution);
-        Assert.DoesNotContain("Release|Any CPU.ActiveCfg = Release|x86", solution);
+        Assert.False(File.Exists(Path.Combine(repositoryRoot, "VideoCutEditor.sln")));
     }
 
     [Fact]
@@ -67,6 +62,18 @@ public sealed class VsCodeDebugConfigurationTests
         Assert.Contains(@"src/VideoCutEditor/VideoCutEditor.csproj", solution);
         Assert.Contains(@"src/VideoCutEditor.Core/VideoCutEditor.Core.csproj", solution);
         Assert.Contains(@"tests/VideoCutEditor.Tests/VideoCutEditor.Tests.csproj", solution);
+    }
+
+    [Fact]
+    public void App_project_exposes_core_reference_during_vs_code_design_time_builds()
+    {
+        string repositoryRoot = FindRepositoryRoot();
+        string project = File.ReadAllText(Path.Combine(repositoryRoot, "src", "VideoCutEditor", "VideoCutEditor.csproj"));
+
+        Assert.Contains("$(DesignTimeBuild)' == 'true'", project);
+        Assert.Contains("<Reference Include=\"VideoCutEditor.Core\"", project);
+        Assert.Contains(@"..\VideoCutEditor.Core\obj\$(Configuration)\net10.0\ref\VideoCutEditor.Core.dll", project);
+        Assert.Contains("<Private>false</Private>", project);
     }
 
     private static JsonDocument ReadJsonWithComments(string path)
