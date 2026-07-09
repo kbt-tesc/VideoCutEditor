@@ -23,6 +23,7 @@ public sealed partial class MainPage : Page
     private const int LeftBracketVirtualKey = 219;
     private const int RightBracketVirtualKey = 221;
     private const double TimelineZoomStep = 0.01;
+    private const double TimelineWheelZoomStep = 0.10;
     private const double TimelineZoomMinimum = 1.0;
     private const double TimelineZoomMaximum = 8.0;
     private const int TimelineMinorTickDivisions = 5;
@@ -314,7 +315,7 @@ public sealed partial class MainPage : Page
 
         double anchorSeconds = XToSeconds(pointerPoint.Position.X);
         double viewportX = pointerPoint.Position.X - TimelineScrollViewer.HorizontalOffset;
-        AdjustTimelineZoomAroundPointer(delta > 0 ? TimelineZoomStep : -TimelineZoomStep, anchorSeconds, viewportX);
+        AdjustTimelineZoomAroundPointer(delta > 0 ? TimelineWheelZoomStep : -TimelineWheelZoomStep, anchorSeconds, viewportX);
         e.Handled = true;
     }
 

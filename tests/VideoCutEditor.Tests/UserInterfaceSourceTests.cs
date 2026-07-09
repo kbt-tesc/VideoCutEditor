@@ -50,7 +50,7 @@ public sealed class UserInterfaceSourceTests
     }
 
     [Fact]
-    public void Timeline_zoom_uses_hundredth_steps_and_ctrl_wheel()
+    public void Timeline_zoom_uses_hundredth_steps_and_tenth_step_ctrl_wheel()
     {
         string xaml = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "src", "VideoCutEditor", "MainPage.xaml"));
         string codeBehind = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "src", "VideoCutEditor", "MainPage.xaml.cs"));
@@ -62,9 +62,11 @@ public sealed class UserInterfaceSourceTests
         Assert.Contains("PointerWheelChanged=\"TimelineCanvas_PointerWheelChanged\"", xaml);
         Assert.Contains("TimelineZoomText => $\"{TimelineZoom:0.00}x\"", viewModel);
         Assert.Contains("private const double TimelineZoomStep = 0.01;", codeBehind);
+        Assert.Contains("private const double TimelineWheelZoomStep = 0.10;", codeBehind);
         Assert.Contains("TimelineCanvas_PointerWheelChanged", codeBehind);
         Assert.Contains("VirtualKey.Control", codeBehind);
         Assert.Contains("MouseWheelDelta", codeBehind);
+        Assert.Contains("delta > 0 ? TimelineWheelZoomStep : -TimelineWheelZoomStep", codeBehind);
         Assert.Contains("AdjustTimelineZoom", codeBehind);
         Assert.Contains("Math.Round", codeBehind);
     }

@@ -156,6 +156,9 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 - `fix: avoid generated partial property diagnostic for output filename`
   - Changed `PlannedOutputFileName` from a CommunityToolkit-generated partial property to a hand-written property using `SetProperty`.
   - This avoids VS Code/Roslyn design-time diagnostics (`CS9248`, `CS8050`, `CS0759`) while preserving the editable output filename behavior.
+- `ui: adjust wheel timeline zoom step`
+  - Kept the timeline slider and zoom buttons on `0.01x` steps.
+  - Changed Ctrl + mouse wheel timeline zoom to `0.10x` steps for more usable wheel interaction.
 
 ## Implemented Capabilities
 
@@ -201,7 +204,7 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 - Japanese app-generated UI status/notice text for the main editor.
 - Output-folder open button.
 - Timeline drag seeking and 1px start/end marker lines.
-- Timeline zoom supports 0.01x slider steps and Ctrl + mouse wheel adjustment over the waveform/timeline area.
+- Timeline zoom supports 0.01x slider/button steps and 0.10x Ctrl + mouse wheel adjustment over the waveform/timeline area.
 - Timeline ruler shows minor ticks plus longer labeled major ticks with labels above the lines.
 - Timeline navigation includes a playhead locate button, zoom-in/zoom-out buttons, cursor-anchored Ctrl + mouse wheel zoom, and playhead-centered button zoom.
 - Play/pause button icon follows playback state.
@@ -216,6 +219,10 @@ Most recent successful checks:
 
 - `dotnet test VideoCutEditor.slnx`
   - 119 tests passed.
+- `dotnet test VideoCutEditor.slnx --filter Timeline_zoom_uses_hundredth_steps_and_tenth_step_ctrl_wheel`
+  - 1 test passed after first confirming failure while Ctrl + mouse wheel still used the `0.01x` zoom step.
+- `dotnet build src\VideoCutEditor\VideoCutEditor.csproj -c Release -p:Platform=x64 -p:WindowsPackageType=None`
+  - Build succeeded with 0 warnings and 0 errors after changing wheel zoom to `0.10x`.
 - `dotnet test VideoCutEditor.slnx --filter Settings_output_filename_and_info_surfaces_are_separated`
   - 1 test passed after changing `PlannedOutputFileName` to a hand-written `SetProperty` property and locking that it is no longer a partial generated property.
 - `dotnet build src\VideoCutEditor\VideoCutEditor.csproj -c Release -p:Platform=x64 -p:WindowsPackageType=None`
