@@ -147,6 +147,12 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
   - Named the play/pause icon and updated it from the media player's current playback state.
   - Switched the button glyph to pause while playback is active and back to play when it is not.
   - Updated the button tooltip between Japanese play and pause labels.
+- `ui: separate settings and info surfaces`
+  - Moved ffmpeg, ffprobe, and output-folder path controls into a settings dialog.
+  - Added an editable output file name TextBox to the main export surface while keeping the full planned path read-only.
+  - Moved the output-folder open button beside the main planned output controls.
+  - Moved encoder information, media information, and export logs into an INFO dialog with an internal ScrollViewer.
+  - Updated the UI smoke element list to follow the main surface after the settings/INFO split.
 
 ## Implemented Capabilities
 
@@ -196,13 +202,22 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 - Timeline ruler shows minor ticks plus longer labeled major ticks with labels above the lines.
 - Timeline navigation includes a playhead locate button, zoom-in/zoom-out buttons, cursor-anchored Ctrl + mouse wheel zoom, and playhead-centered button zoom.
 - Play/pause button icon follows playback state.
+- Settings dialog owns ffmpeg, ffprobe, and output-folder configuration.
+- Main export surface supports editing the output file name before export.
+- INFO dialog shows encoder information, media information, and export logs without growing the main editor layout.
 
 ## Current Verification Baseline
 
 Most recent successful checks:
 
 - `dotnet test VideoCutEditor.slnx`
-  - 118 tests passed.
+  - 119 tests passed.
+- `dotnet test VideoCutEditor.slnx --filter Settings_output_filename_and_info_surfaces_are_separated`
+  - 1 test passed after first confirming failure while the settings/INFO split and editable output filename were missing.
+- `dotnet test VideoCutEditor.slnx --filter UserInterfaceSourceTests`
+  - 8 tests passed after adding the settings/INFO split source contract.
+- `dotnet build src\VideoCutEditor\VideoCutEditor.csproj -c Release -p:Platform=x64 -p:WindowsPackageType=None`
+  - Build succeeded with 0 warnings and 0 errors after separating settings and INFO surfaces.
 - `dotnet test VideoCutEditor.slnx --filter Play_pause_button_icon_tracks_playback_state`
   - 1 test passed after first confirming failure while the play/pause button used a fixed play glyph.
 - `dotnet build src\VideoCutEditor\VideoCutEditor.csproj -c Release -p:Platform=x64 -p:WindowsPackageType=None`

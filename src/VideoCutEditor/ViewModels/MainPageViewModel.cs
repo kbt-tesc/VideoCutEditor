@@ -27,7 +27,9 @@ public partial class MainPageViewModel : ObservableObject
     private bool isUpdatingRangeText;
     private bool isUpdatingSuggestedBitrate;
     private bool isUpdatingFadeDuration;
+    private bool isUpdatingPlannedOutputFileName;
     private bool hasManualVideoBitrateOverride;
+    private bool hasManualOutputFileNameOverride;
 
     [ObservableProperty]
     public partial string? SelectedSourcePath { get; set; }
@@ -37,6 +39,9 @@ public partial class MainPageViewModel : ObservableObject
 
     [ObservableProperty]
     public partial string? PlannedOutputPath { get; set; }
+
+    [ObservableProperty]
+    public partial string PlannedOutputFileName { get; set; } = string.Empty;
 
     [ObservableProperty]
     public partial string MediaSummaryText { get; set; } = "メディア情報はまだありません";
@@ -283,6 +288,7 @@ public partial class MainPageViewModel : ObservableObject
         RangeEndSeconds = 0;
         FrameStepSeconds = 1.0 / 30.0;
         SetRangeTextWithoutParsing(TimeSpan.Zero, TimeSpan.Zero);
+        hasManualOutputFileNameOverride = false;
         UpdatePlannedOutputPath();
 
         await ProbeSelectedMediaAsync(file.Path);
@@ -445,7 +451,7 @@ public partial class MainPageViewModel : ObservableObject
         UpdatePlannedOutputPath();
         if (string.IsNullOrWhiteSpace(PlannedOutputPath))
         {
-            StatusMessage = "出力先パスを作成できませんでした";
+            StatusMessage = "有効な出力ファイル名を入力してください";
             return;
         }
 
@@ -548,6 +554,17 @@ public partial class MainPageViewModel : ObservableObject
     {
         UpdatePlannedOutputPath();
         OpenOutputDirectoryCommand.NotifyCanExecuteChanged();
+    }
+
+    partial void OnPlannedOutputFileNameChanged(string value)
+    {
+        if (isUpdatingPlannedOutputFileName)
+        {
+            return;
+        }
+
+        hasManualOutputFileNameOverride = true;
+        PlannedOutputPath = BuildPlannedOutputPath();
     }
 
     partial void OnPreviewSourceChanged(MediaSource? value)
@@ -726,10 +743,53 @@ public partial class MainPageViewModel : ObservableObject
         if (string.IsNullOrWhiteSpace(SelectedSourcePath) || string.IsNullOrWhiteSpace(OutputDirectory))
         {
             PlannedOutputPath = null;
+            SetPlannedOutputFileNameWithoutManual(string.Empty);
             return;
         }
 
-        PlannedOutputPath = outputPathService.CreateAvailableCutPath(SelectedSourcePath, OutputDirectory);
+        if (!hasManualOutputFileNameOverride || string.IsNullOrWhiteSpace(PlannedOutputFileName))
+        {
+            PlannedOutputPath = outputPathService.CreateAvailableCutPath(SelectedSourcePath, OutputDirectory);
+            SetPlannedOutputFileNameWithoutManual(Path.GetFileName(PlannedOutputPath));
+            return;
+        }
+
+        PlannedOutputPath = BuildPlannedOutputPath();
+    }
+
+    private string? BuildPlannedOutputPath()
+    {
+        if (string.IsNullOrWhiteSpace(OutputDirectory) || string.IsNullOrWhiteSpace(PlannedOutputFileName))
+        {
+            return null;
+        }
+
+        string fileName = PlannedOutputFileName.Trim();
+        if (fileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+        {
+            return null;
+        }
+
+        if (string.IsNullOrEmpty(Path.GetExtension(fileName)) && !string.IsNullOrWhiteSpace(SelectedSourcePath))
+        {
+            fileName += Path.GetExtension(SelectedSourcePath);
+            SetPlannedOutputFileNameWithoutManual(fileName);
+        }
+
+        return Path.Combine(OutputDirectory, fileName);
+    }
+
+    private void SetPlannedOutputFileNameWithoutManual(string fileName)
+    {
+        isUpdatingPlannedOutputFileName = true;
+        try
+        {
+            PlannedOutputFileName = fileName;
+        }
+        finally
+        {
+            isUpdatingPlannedOutputFileName = false;
+        }
     }
 
     private ExportMode CurrentExportMode => SelectedExportModeIndex switch

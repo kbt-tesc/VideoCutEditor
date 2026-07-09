@@ -236,6 +236,22 @@ public sealed partial class MainPage : Page
         EditorRoot.Focus(Microsoft.UI.Xaml.FocusState.Programmatic);
     }
 
+    private async void OpenSettingsButton_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
+    {
+        SettingsDialog.XamlRoot = XamlRoot;
+        SettingsDialog.Style = Microsoft.UI.Xaml.Application.Current.Resources["DefaultContentDialogStyle"] as Microsoft.UI.Xaml.Style;
+        await SettingsDialog.ShowAsync();
+        EditorRoot.Focus(Microsoft.UI.Xaml.FocusState.Programmatic);
+    }
+
+    private async void ShowInfoButton_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
+    {
+        InfoDialog.XamlRoot = XamlRoot;
+        InfoDialog.Style = Microsoft.UI.Xaml.Application.Current.Resources["DefaultContentDialogStyle"] as Microsoft.UI.Xaml.Style;
+        await InfoDialog.ShowAsync();
+        EditorRoot.Focus(Microsoft.UI.Xaml.FocusState.Programmatic);
+    }
+
     private void TimelineCanvas_PointerPressed(object sender, PointerRoutedEventArgs e)
     {
         if (!TrySeekTimelineToPointer(e))
