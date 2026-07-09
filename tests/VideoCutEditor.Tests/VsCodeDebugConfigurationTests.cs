@@ -36,6 +36,26 @@ public sealed class VsCodeDebugConfigurationTests
         Assert.Contains("-p:WindowsPackageType=None", arguments);
     }
 
+    [Fact]
+    public void VsCode_settings_pin_slnx_solution_for_language_service()
+    {
+        string repositoryRoot = FindRepositoryRoot();
+        using JsonDocument settingsJson = ReadJsonWithComments(Path.Combine(repositoryRoot, ".vscode", "settings.json"));
+
+        Assert.Equal("VideoCutEditor.slnx", settingsJson.RootElement.GetProperty("dotnet.defaultSolution").GetString());
+    }
+
+    [Fact]
+    public void Slnx_solution_includes_app_core_and_test_projects()
+    {
+        string repositoryRoot = FindRepositoryRoot();
+        string solution = File.ReadAllText(Path.Combine(repositoryRoot, "VideoCutEditor.slnx"));
+
+        Assert.Contains(@"src/VideoCutEditor/VideoCutEditor.csproj", solution);
+        Assert.Contains(@"src/VideoCutEditor.Core/VideoCutEditor.Core.csproj", solution);
+        Assert.Contains(@"tests/VideoCutEditor.Tests/VideoCutEditor.Tests.csproj", solution);
+    }
+
     private static JsonDocument ReadJsonWithComments(string path)
     {
         return JsonDocument.Parse(

@@ -62,6 +62,8 @@ Use `tests/ui-tests.ps1` with `winapp ui` for WinUI surface behavior:
 
 For VS Code breakpoint debugging, keep `.vscode/launch.json` and `.vscode/tasks.json` aligned so F5 uses the `VideoCutEditor: Debug x64` launch configuration and the `build VideoCutEditor x64` pre-launch task. The task must build with `-p:Platform=x64` and `-p:WindowsPackageType=None`, then launch the x64 Debug output directly. This uses the app's custom unpackaged entry point for breakpoint debugging and avoids C# Dev Kit generating mixed paths such as `bin\ARM64\...\win-x64` on machines where host architecture detection does not match the desired debug RID. Use `BuildAndRun.ps1` or `winapp run` when validating normal packaged WinUI launch behavior and debug-output logs.
 
+Use `VideoCutEditor.slnx` as the repo's standard solution file. Keep `.vscode/settings.json` pinned to `VideoCutEditor.slnx` with `dotnet.defaultSolution` so VS Code/C# Dev Kit opens the same solution as the CLI and can resolve project references such as `VideoCutEditor.Core`. If VS Code still reports stale DocumentCompilerSemantic warnings after these files change, reload the VS Code window or restart the C# language server before assuming the code is broken.
+
 Use manual tests for environment-dependent behavior:
 
 - Windows preview playback
