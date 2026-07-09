@@ -100,6 +100,10 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
   - Added `scripts/New-SampleMedia.ps1` to generate short local ffmpeg sample videos for manual waveform, no-audio, fade, and audio-normalization checks.
   - Added dry-run unit coverage so the script's representative output set is locked without requiring ffmpeg during the unit test.
   - Smoke-tested actual generation with the PATH-discovered winget ffmpeg into a temporary directory.
+- `chore: add VS Code x64 debug configuration`
+  - Added a repository VS Code launch configuration named `VideoCutEditor: Debug x64`.
+  - Added a matching pre-launch task that builds `src\VideoCutEditor\VideoCutEditor.csproj` with `-p:Platform=x64`.
+  - Kept the C# Dev Kit generated launch profile as a fallback and locked the expected VS Code configuration with a unit test.
 
 ## Implemented Capabilities
 
@@ -136,13 +140,16 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 - Automated portable publish artifact validation for single-file shape and external ffmpeg/ffprobe policy.
 - All-platform portable publish script for x64, x86, and arm64.
 - Verification sample media generator for repeatable local manual checks.
+- VS Code F5 configuration for x64 Debug breakpoint debugging.
 
 ## Current Verification Baseline
 
 Most recent successful checks:
 
 - `dotnet test VideoCutEditor.slnx`
-  - 106 tests passed.
+  - 107 tests passed.
+- `dotnet test VideoCutEditor.slnx --filter VsCodeDebugConfigurationTests`
+  - 1 test passed after first confirming the test failed while `.vscode\tasks.json` was missing.
 - `dotnet test VideoCutEditor.slnx --filter VerificationMediaScriptTests`
   - 1 test passed after first confirming the test failed before `scripts/New-SampleMedia.ps1` existed.
 - `powershell -ExecutionPolicy Bypass -File scripts\New-SampleMedia.ps1 -OutputDirectory "$env:TEMP\VideoCutEditor-SampleMedia-Smoke" -DurationSeconds 1 -Force`
@@ -173,6 +180,7 @@ When resuming in a new session, rerun the relevant subset before making assumpti
 - Preview-unavailable fallback behavior needs more manual and/or UI coverage.
 - Portable x64 publish, x86 publish, arm64 publish, artifact validation, and published x64 EXE startup smoke testing now succeed. Signing, MSIX packaging, installer validation, distribution packaging, and x86/arm64 runtime startup on matching devices still need verification.
 - UI tests currently cover presence and defaults more than full user workflows with real picker interactions and export completion.
+- VS Code F5 now has an explicit x64 launch path, but the user should manually confirm breakpoint attachment from VS Code because automated tests can only validate the configuration files and build output.
 
 ## Recommended Next Slices
 

@@ -1,0 +1,23 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "VideoCutEditor: Debug x64",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build VideoCutEditor x64",
+            "program": "${workspaceFolder}\\src\\VideoCutEditor\\bin\\x64\\Debug\\net10.0-windows10.0.26100.0\\win-x64\\VideoCutEditor.exe",
+            "args": [],
+            "cwd": "${workspaceFolder}\\src\\VideoCutEditor",
+            "stopAtEntry": false,
+            "console": "internalConsole"
+        },
+        {
+            "name": "C#: VideoCutEditor (C# Dev Kit profile)",
+            "type": "dotnet",
+            "request": "launch",
+            "projectPath": "${workspaceFolder}\\src\\VideoCutEditor\\VideoCutEditor.csproj",
+            "launchConfigurationId": "TargetFramework=;VideoCutEditor (Unpackaged)"
+        }
+    ]
+}

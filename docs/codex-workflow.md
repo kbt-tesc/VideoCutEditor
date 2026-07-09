@@ -60,6 +60,8 @@ Use `tests/ui-tests.ps1` with `winapp ui` for WinUI surface behavior:
 - screenshots are captured for visual inspection
 - extend this script before or alongside user-facing UI changes
 
+For VS Code breakpoint debugging, keep `.vscode/launch.json` and `.vscode/tasks.json` aligned so F5 uses the `VideoCutEditor: Debug x64` launch configuration and the `build VideoCutEditor x64` pre-launch task. The explicit x64 task avoids C# Dev Kit generating mixed paths such as `bin\ARM64\...\win-x64` on machines where host architecture detection does not match the desired debug RID.
+
 Use manual tests for environment-dependent behavior:
 
 - Windows preview playback
