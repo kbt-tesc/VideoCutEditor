@@ -164,6 +164,9 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
   - Added a contextual `HDRをSDRに変換` Re-encode checkbox for HDR media, defaulting it to checked when HDR media is opened.
   - Added HDR informational notices: Fast copy keeps HDR unchanged, while Re-encode can tone-map to SDR.
   - Added Re-encode `zscale`/`tonemap` video filter generation and filter-chain combination with video fades.
+- `fix: avoid generated partial property diagnostic for HDR SDR toggle`
+  - Changed `ConvertHdrToSdrEnabled` from a CommunityToolkit-generated partial property to a hand-written `SetProperty` property.
+  - This follows the output filename fix pattern and avoids VS Code/Roslyn design-time diagnostics (`CS9248`, `CS0759`) while preserving the HDR notice refresh behavior.
 
 ## Implemented Capabilities
 
@@ -218,6 +221,7 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 - Main export surface supports editing the output file name before export.
 - INFO dialog shows encoder information, media information, and export logs without growing the main editor layout.
 - Editable output filename uses a hand-written view-model property to avoid source-generator design-time diagnostics in VS Code.
+- Editable output filename and HDR to SDR toggle state use hand-written view-model properties to avoid source-generator design-time diagnostics in VS Code.
 - HDR media shows a Japanese INFO notice; Fast copy preserves HDR, while Re-encode exposes a default-checked SDR conversion option.
 
 ## Current Verification Baseline
@@ -226,6 +230,10 @@ Most recent successful checks:
 
 - `dotnet test VideoCutEditor.slnx`
   - 124 tests passed.
+- `dotnet test VideoCutEditor.slnx --filter Hdr_to_sdr_option_is_contextual_and_defaulted_for_hdr_media`
+  - 1 test passed after changing `ConvertHdrToSdrEnabled` to a hand-written `SetProperty` property and locking that it is no longer a partial generated property.
+- `dotnet build src\VideoCutEditor\VideoCutEditor.csproj -c Release -p:Platform=x64 -p:WindowsPackageType=None`
+  - Build succeeded with 0 warnings and 0 errors after replacing the generated partial HDR to SDR toggle property.
 - `dotnet test VideoCutEditor.slnx --filter "Hdr|hdr|ConvertHdr|ParseJson_detects_hlg_hdr_video_streams|SaveAsync_persists_configured_tool_paths_and_output_directory"`
   - 6 tests passed after first confirming the HDR metadata/settings/planner/UI behaviors were missing.
 - `dotnet build src\VideoCutEditor\VideoCutEditor.csproj -c Release -p:Platform=x64 -p:WindowsPackageType=None`

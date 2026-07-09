@@ -174,6 +174,10 @@ public sealed class UserInterfaceSourceTests
         Assert.Contains("HDRをSDRに変換", xaml);
         Assert.Contains("IsHdrToSdrOptionVisible", viewModel);
         Assert.Contains("ConvertHdrToSdrEnabled", viewModel);
+        Assert.Contains("private bool convertHdrToSdrEnabled;", viewModel);
+        Assert.Contains("public bool ConvertHdrToSdrEnabled", viewModel);
+        Assert.Contains("SetProperty(ref convertHdrToSdrEnabled, value)", viewModel);
+        Assert.DoesNotContain("public partial bool ConvertHdrToSdrEnabled", viewModel);
         Assert.Contains("HasHdrVideoStream", viewModel);
         Assert.Contains("ConvertHdrToSdrEnabled = HasHdrVideoStream(info);", viewModel);
         Assert.Contains("HDR動画です。Fast copyではHDRのまま書き出します", viewModel);

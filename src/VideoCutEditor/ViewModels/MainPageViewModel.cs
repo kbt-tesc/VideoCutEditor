@@ -31,6 +31,7 @@ public partial class MainPageViewModel : ObservableObject
     private bool hasManualVideoBitrateOverride;
     private bool hasManualOutputFileNameOverride;
     private string plannedOutputFileName = string.Empty;
+    private bool convertHdrToSdrEnabled;
 
     [ObservableProperty]
     public partial string? SelectedSourcePath { get; set; }
@@ -160,8 +161,17 @@ public partial class MainPageViewModel : ObservableObject
     [ObservableProperty]
     public partial bool NormalizeAudioEnabled { get; set; }
 
-    [ObservableProperty]
-    public partial bool ConvertHdrToSdrEnabled { get; set; }
+    public bool ConvertHdrToSdrEnabled
+    {
+        get => convertHdrToSdrEnabled;
+        set
+        {
+            if (SetProperty(ref convertHdrToSdrEnabled, value))
+            {
+                OnPropertyChanged(nameof(ExportNoticeText));
+            }
+        }
+    }
 
     [ObservableProperty]
     public partial string AdditionalFfmpegArgumentsText { get; set; } = string.Empty;
@@ -683,11 +693,6 @@ public partial class MainPageViewModel : ObservableObject
     }
 
     partial void OnNormalizeAudioEnabledChanged(bool value)
-    {
-        OnPropertyChanged(nameof(ExportNoticeText));
-    }
-
-    partial void OnConvertHdrToSdrEnabledChanged(bool value)
     {
         OnPropertyChanged(nameof(ExportNoticeText));
     }
