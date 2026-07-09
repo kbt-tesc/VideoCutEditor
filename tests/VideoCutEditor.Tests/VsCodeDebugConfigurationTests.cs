@@ -37,16 +37,29 @@ public sealed class VsCodeDebugConfigurationTests
     }
 
     [Fact]
-    public void VsCode_settings_pin_slnx_solution_for_language_service()
+    public void VsCode_settings_pin_classic_solution_for_language_service()
     {
         string repositoryRoot = FindRepositoryRoot();
         using JsonDocument settingsJson = ReadJsonWithComments(Path.Combine(repositoryRoot, ".vscode", "settings.json"));
 
-        Assert.Equal("VideoCutEditor.slnx", settingsJson.RootElement.GetProperty("dotnet.defaultSolution").GetString());
+        Assert.Equal("VideoCutEditor.sln", settingsJson.RootElement.GetProperty("dotnet.defaultSolution").GetString());
     }
 
     [Fact]
-    public void Slnx_solution_includes_app_core_and_test_projects()
+    public void Classic_solution_includes_app_core_and_test_projects()
+    {
+        string repositoryRoot = FindRepositoryRoot();
+        string solution = File.ReadAllText(Path.Combine(repositoryRoot, "VideoCutEditor.sln"));
+
+        Assert.Contains(@"src\VideoCutEditor\VideoCutEditor.csproj", solution);
+        Assert.Contains(@"src\VideoCutEditor.Core\VideoCutEditor.Core.csproj", solution);
+        Assert.Contains(@"tests\VideoCutEditor.Tests\VideoCutEditor.Tests.csproj", solution);
+        Assert.DoesNotContain("Debug|Any CPU.ActiveCfg = Debug|x86", solution);
+        Assert.DoesNotContain("Release|Any CPU.ActiveCfg = Release|x86", solution);
+    }
+
+    [Fact]
+    public void Slnx_solution_remains_the_repo_standard_solution()
     {
         string repositoryRoot = FindRepositoryRoot();
         string solution = File.ReadAllText(Path.Combine(repositoryRoot, "VideoCutEditor.slnx"));
