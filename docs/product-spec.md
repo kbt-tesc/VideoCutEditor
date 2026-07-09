@@ -37,6 +37,7 @@ Only one keep range is supported per export.
   - Fast copy
   - Re-encode
   - Normalize audio option
+  - HDR to SDR conversion option, shown only for HDR media in Re-encode mode
   - Fade controls
   - Codec and encoder controls
   - Bitrate, target size, or quality controls
@@ -50,6 +51,7 @@ Only one keep range is supported per export.
 - Show ffmpeg progress, current status, log output, and a cancel button during export.
 - The first export implementation supports Fast copy with progress/log display and cancellation.
 - Re-encode mode supports codec family, encoder preference, bitrate-based export controls, target-size export controls, and clip-edge fade controls.
+- When ffprobe identifies the selected video as HDR, show an informational notice. In Fast copy mode the notice explains that the video will remain HDR because no video re-encode occurs. In Re-encode mode show an `HDRをSDRに変換` checkbox only for HDR media, checked by default for newly opened HDR media.
 - Normalize audio is a setting available in both Fast copy and Re-encode. It uses two-pass loudness normalization to `-14 LUFS`, re-encodes audio to AAC, preserves video according to the selected mode where practical, and reports a clear error when probed media has no audio stream.
 - Re-encode mode includes an advanced additional ffmpeg arguments field. The app parses the field into explicit process arguments, supports quoted values with spaces, rejects app-managed options such as input, range, codec, filter, and output-control arguments, catches obvious syntax mistakes such as bare values and missing values for common value-taking options, and shows a recoverable error.
 - Quality mode uses a single numeric quality value where lower values mean higher quality and output size is not predicted.
@@ -75,6 +77,7 @@ The first screen should be the usable editor, not a landing page or marketing sc
 - Stream-copy cuts may not be frame-accurate because they depend on keyframes. The UI should make that tradeoff clear.
 - Enabling any fade forces the export through Re-encode even when the visible export mode is Fast copy, because ffmpeg filters require decoding and encoding.
 - The normalize audio option analyzes audio loudness before the final export, then applies an audio filter and therefore re-encodes audio. In Fast copy mode it should not re-encode video when video stream copy is possible; in Re-encode mode it combines with the selected video encode settings.
+- HDR to SDR conversion requires video filtering and is available only in Re-encode mode. Fast copy exports preserve HDR video unchanged and only show an informational notice.
 
 ## Settings
 
@@ -86,6 +89,7 @@ Persist these settings in the user's AppData folder:
 - Last-used export mode
 - Last-used codec, encoder, rate control mode, and related encode settings
 - Last-used normalize audio setting
+- Last-used HDR to SDR conversion setting
 - Last-used additional ffmpeg arguments
 
 The app should try configured paths first, then PATH discovery as a fallback.

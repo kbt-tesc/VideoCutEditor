@@ -499,6 +499,122 @@ public sealed class ReencodeExportPlannerTests
     }
 
     [Fact]
+    public void CreatePlan_adds_hdr_to_sdr_video_filter_for_hdr_media_when_enabled()
+    {
+        string outputDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(outputDirectory);
+
+        try
+        {
+            var capabilities = new FfmpegCapabilities(new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "libx264",
+            });
+            var planner = new ReencodeExportPlanner(capabilities);
+            string outputPath = Path.Combine(outputDirectory, "clip_cut.mp4");
+            var request = new ExportRequest(
+                @"C:\video\hdr.mp4",
+                outputPath,
+                new ClipRange(TimeSpan.Zero, TimeSpan.FromSeconds(10)),
+                new AppSettings
+                {
+                    FfmpegPath = @"C:\tools\ffmpeg.exe",
+                    LastExportMode = ExportMode.Reencode,
+                    LastCodecFamily = CodecFamily.H264,
+                    LastEncoderKind = EncoderKind.Software,
+                    LastVideoBitrateKbps = 2500,
+                    ConvertHdrToSdr = true,
+                },
+                new MediaInfo(
+                    @"C:\video\hdr.mp4",
+                    TimeSpan.FromSeconds(10),
+                    "mov,mp4,m4a,3gp,3g2,mj2",
+                    2_500_000,
+                    [
+                        new MediaStreamInfo(
+                            0,
+                            "video",
+                            "hevc",
+                            2_500_000,
+                            Width: 3840,
+                            Height: 2160,
+                            FrameRate: 30,
+                            ColorSpace: "bt2020nc",
+                            ColorTransfer: "smpte2084",
+                            ColorPrimaries: "bt2020"),
+                    ]));
+
+            ExportPlan plan = planner.CreatePlan(request);
+
+            Assert.Contains("-vf", plan.Arguments);
+            Assert.Contains("zscale=t=linear:npl=100,format=gbrpf32le,tonemap=tonemap=hable:desat=0,zscale=p=bt709:t=bt709:m=bt709:r=tv,format=yuv420p", plan.Arguments);
+        }
+        finally
+        {
+            Directory.Delete(outputDirectory, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void CreatePlan_combines_hdr_to_sdr_and_video_fade_filters()
+    {
+        string outputDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(outputDirectory);
+
+        try
+        {
+            var capabilities = new FfmpegCapabilities(new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "libx264",
+            });
+            var planner = new ReencodeExportPlanner(capabilities);
+            string outputPath = Path.Combine(outputDirectory, "clip_cut.mp4");
+            var request = new ExportRequest(
+                @"C:\video\hdr.mp4",
+                outputPath,
+                new ClipRange(TimeSpan.Zero, TimeSpan.FromSeconds(10)),
+                new AppSettings
+                {
+                    FfmpegPath = @"C:\tools\ffmpeg.exe",
+                    LastExportMode = ExportMode.Reencode,
+                    LastCodecFamily = CodecFamily.H264,
+                    LastEncoderKind = EncoderKind.Software,
+                    LastVideoBitrateKbps = 2500,
+                    ConvertHdrToSdr = true,
+                    Fade = new FadeSettings
+                    {
+                        VideoFadeIn = true,
+                        VideoFadeOut = true,
+                        DurationSeconds = 1,
+                    },
+                },
+                new MediaInfo(
+                    @"C:\video\hdr.mp4",
+                    TimeSpan.FromSeconds(10),
+                    "mov,mp4,m4a,3gp,3g2,mj2",
+                    2_500_000,
+                    [
+                        new MediaStreamInfo(
+                            0,
+                            "video",
+                            "hevc",
+                            2_500_000,
+                            ColorTransfer: "arib-std-b67"),
+                    ]));
+
+            ExportPlan plan = planner.CreatePlan(request);
+
+            Assert.Contains(
+                "zscale=t=linear:npl=100,format=gbrpf32le,tonemap=tonemap=hable:desat=0,zscale=p=bt709:t=bt709:m=bt709:r=tv,format=yuv420p,fade=t=in:st=0:d=1,fade=t=out:st=9:d=1",
+                plan.Arguments);
+        }
+        finally
+        {
+            Directory.Delete(outputDirectory, recursive: true);
+        }
+    }
+
+    [Fact]
     public void CreatePlan_rejects_audio_normalization_when_media_has_no_audio_stream()
     {
         var capabilities = new FfmpegCapabilities(new HashSet<string>(StringComparer.OrdinalIgnoreCase)

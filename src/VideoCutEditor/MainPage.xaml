@@ -412,6 +412,12 @@
                                 </ComboBox>
                             </Grid>
 
+                            <CheckBox
+                                AutomationProperties.AutomationId="ConvertHdrToSdrCheckBox"
+                                Content="HDRをSDRに変換"
+                                IsChecked="{x:Bind ViewModel.ConvertHdrToSdrEnabled, Mode=TwoWay}"
+                                Visibility="{x:Bind local:MainPage.BoolToVisibility(ViewModel.IsHdrToSdrOptionVisible), Mode=OneWay}" />
+
                             <ComboBox
                                 AutomationProperties.AutomationId="BitrateModeComboBox"
                                 Header="レート制御"

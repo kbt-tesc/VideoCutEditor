@@ -159,6 +159,11 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 - `ui: adjust wheel timeline zoom step`
   - Kept the timeline slider and zoom buttons on `0.01x` steps.
   - Changed Ctrl + mouse wheel timeline zoom to `0.10x` steps for more usable wheel interaction.
+- `feat: add HDR to SDR re-encode option`
+  - Added ffprobe parsing for video color metadata and HDR detection for HDR10/PQ (`smpte2084`) and HLG (`arib-std-b67`) transfer characteristics.
+  - Added a contextual `HDRをSDRに変換` Re-encode checkbox for HDR media, defaulting it to checked when HDR media is opened.
+  - Added HDR informational notices: Fast copy keeps HDR unchanged, while Re-encode can tone-map to SDR.
+  - Added Re-encode `zscale`/`tonemap` video filter generation and filter-chain combination with video fades.
 
 ## Implemented Capabilities
 
@@ -176,6 +181,7 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 - Fast copy export planning and execution.
 - Direct Fast copy/Re-encode mode selection without a drop-down.
 - Re-encode export planning and execution for bitrate, target-size, and quality-based video encoding.
+- HDR media detection from ffprobe color transfer metadata, with Re-encode-only HDR to SDR tone mapping.
 - Re-encode advanced additional ffmpeg arguments with quote-aware argument parsing, app-managed option validation, and obvious syntax-mistake validation.
 - Two-pass audio normalization option with fixed `-14 LUFS` loudnorm and AAC audio re-encode in both Fast copy and Re-encode.
 - Target-size mode that derives Re-encode video bitrate from desired output size.
@@ -212,13 +218,18 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 - Main export surface supports editing the output file name before export.
 - INFO dialog shows encoder information, media information, and export logs without growing the main editor layout.
 - Editable output filename uses a hand-written view-model property to avoid source-generator design-time diagnostics in VS Code.
+- HDR media shows a Japanese INFO notice; Fast copy preserves HDR, while Re-encode exposes a default-checked SDR conversion option.
 
 ## Current Verification Baseline
 
 Most recent successful checks:
 
 - `dotnet test VideoCutEditor.slnx`
-  - 119 tests passed.
+  - 124 tests passed.
+- `dotnet test VideoCutEditor.slnx --filter "Hdr|hdr|ConvertHdr|ParseJson_detects_hlg_hdr_video_streams|SaveAsync_persists_configured_tool_paths_and_output_directory"`
+  - 6 tests passed after first confirming the HDR metadata/settings/planner/UI behaviors were missing.
+- `dotnet build src\VideoCutEditor\VideoCutEditor.csproj -c Release -p:Platform=x64 -p:WindowsPackageType=None`
+  - Build succeeded with 0 warnings and 0 errors after adding the contextual HDR to SDR UI and planner support.
 - `dotnet test VideoCutEditor.slnx --filter Timeline_zoom_uses_hundredth_steps_and_tenth_step_ctrl_wheel`
   - 1 test passed after first confirming failure while Ctrl + mouse wheel still used the `0.01x` zoom step.
 - `dotnet build src\VideoCutEditor\VideoCutEditor.csproj -c Release -p:Platform=x64 -p:WindowsPackageType=None`
@@ -287,6 +298,7 @@ When resuming in a new session, rerun the relevant subset before making assumpti
 - Advanced ffmpeg arguments are implemented for Re-encode mode only. They are quote-parsed, reject app-managed options, catch obvious syntax mistakes, and are passed as argument-list entries. Full ffmpeg option compatibility validation is intentionally not implemented because support varies by ffmpeg build, encoder, and muxer.
 - Audio normalization now uses fixed-target two-pass loudnorm. Configurable loudness/true peak/LRA values are intentionally not implemented.
 - Audio normalization is covered for generated audio/video media and fake-process two-pass argument replacement; the sample generator can produce quiet and no-audio inputs for manual checks, but representative real media and no-audio UI error handling still need manual verification.
+- HDR to SDR conversion is covered at ffprobe parsing, settings, planner, Fast copy non-conversion, and source-level UI contract layers. It still needs manual verification with representative HDR10/PQ and HLG media on the user's ffmpeg build, especially because the initial implementation relies on ffmpeg `zscale` and `tonemap` filter availability.
 - Quality mode is covered for generated software-encoded media; NVEnc quality-mode execution still needs manual hardware-backed verification.
 - Real media export should still be manually verified for Fast copy and Re-encode on local sample files.
 - NVEnc behavior should be manually verified on hardware and ffmpeg builds that expose NVEnc.

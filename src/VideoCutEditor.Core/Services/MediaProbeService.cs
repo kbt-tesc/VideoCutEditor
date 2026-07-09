@@ -126,6 +126,9 @@ public sealed class MediaProbeService : IMediaProbeService
         int? sampleRate = GetInt(stream, "sample_rate");
         int? channels = GetInt(stream, "channels");
         string? channelLayout = GetString(stream, "channel_layout");
+        string? colorSpace = GetString(stream, "color_space");
+        string? colorTransfer = GetString(stream, "color_transfer");
+        string? colorPrimaries = GetString(stream, "color_primaries");
 
         return new MediaStreamInfo(
             index,
@@ -137,7 +140,10 @@ public sealed class MediaProbeService : IMediaProbeService
             frameRate,
             sampleRate,
             channels,
-            channelLayout);
+            channelLayout,
+            colorSpace,
+            colorTransfer,
+            colorPrimaries);
     }
 
     private static TimeSpan GetStreamDuration(JsonElement root, int streamIndex)

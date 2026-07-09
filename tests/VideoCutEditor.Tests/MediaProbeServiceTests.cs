@@ -17,6 +17,9 @@ public sealed class MediaProbeServiceTests
                   "width": 1920,
                   "height": 1080,
                   "avg_frame_rate": "30000/1001",
+                  "color_space": "bt2020nc",
+                  "color_transfer": "smpte2084",
+                  "color_primaries": "bt2020",
                   "bit_rate": "4500000"
                 },
                 {
@@ -49,6 +52,10 @@ public sealed class MediaProbeServiceTests
         Assert.Equal(1920, video.Width);
         Assert.Equal(1080, video.Height);
         Assert.Equal(29.970, video.FrameRate!.Value, precision: 3);
+        Assert.Equal("bt2020nc", video.ColorSpace);
+        Assert.Equal("smpte2084", video.ColorTransfer);
+        Assert.Equal("bt2020", video.ColorPrimaries);
+        Assert.True(video.IsHighDynamicRange);
         Assert.Equal(4_500_000, video.Bitrate);
 
         var audio = Assert.Single(info.Streams, stream => stream.CodecType == "audio");
@@ -57,6 +64,31 @@ public sealed class MediaProbeServiceTests
         Assert.Equal(2, audio.Channels);
         Assert.Equal("stereo", audio.ChannelLayout);
         Assert.Equal(192_000, audio.Bitrate);
+    }
+
+    [Fact]
+    public void ParseJson_detects_hlg_hdr_video_streams()
+    {
+        const string json = """
+            {
+              "streams": [
+                {
+                  "index": 0,
+                  "codec_name": "hevc",
+                  "codec_type": "video",
+                  "color_transfer": "arib-std-b67",
+                  "color_primaries": "bt2020"
+                }
+              ],
+              "format": {
+                "duration": "3.000000"
+              }
+            }
+            """;
+
+        var info = MediaProbeService.ParseJson(@"C:\video\hdr.mov", json);
+
+        Assert.True(info.Streams[0].IsHighDynamicRange);
     }
 
     [Fact]

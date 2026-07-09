@@ -164,6 +164,22 @@ public sealed class UserInterfaceSourceTests
         Assert.Contains("Path.GetInvalidFileNameChars()", viewModel);
     }
 
+    [Fact]
+    public void Hdr_to_sdr_option_is_contextual_and_defaulted_for_hdr_media()
+    {
+        string xaml = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "src", "VideoCutEditor", "MainPage.xaml"));
+        string viewModel = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "src", "VideoCutEditor", "ViewModels", "MainPageViewModel.cs"));
+
+        Assert.Contains("AutomationProperties.AutomationId=\"ConvertHdrToSdrCheckBox\"", xaml);
+        Assert.Contains("HDRをSDRに変換", xaml);
+        Assert.Contains("IsHdrToSdrOptionVisible", viewModel);
+        Assert.Contains("ConvertHdrToSdrEnabled", viewModel);
+        Assert.Contains("HasHdrVideoStream", viewModel);
+        Assert.Contains("ConvertHdrToSdrEnabled = HasHdrVideoStream(info);", viewModel);
+        Assert.Contains("HDR動画です。Fast copyではHDRのまま書き出します", viewModel);
+        Assert.Contains("ConvertHdrToSdr = CurrentExportMode == ExportMode.Reencode && IsHdrToSdrOptionVisible && ConvertHdrToSdrEnabled", viewModel);
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

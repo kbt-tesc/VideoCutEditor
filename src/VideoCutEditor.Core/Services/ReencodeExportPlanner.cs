@@ -9,6 +9,7 @@ public sealed class ReencodeExportPlanner : IExportPlanner
     private const int DefaultQualityValue = 23;
     private const int MinQualityValue = 0;
     private const int MaxQualityValue = 51;
+    private const string HdrToSdrVideoFilter = "zscale=t=linear:npl=100,format=gbrpf32le,tonemap=tonemap=hable:desat=0,zscale=p=bt709:t=bt709:m=bt709:r=tv,format=yuv420p";
 
     private readonly FfmpegCapabilities capabilities;
 
@@ -64,6 +65,7 @@ public sealed class ReencodeExportPlanner : IExportPlanner
         AddFilterArguments(
             arguments,
             request.Settings,
+            request.MediaInfo,
             request.Range.Duration,
             AudioNormalizationArguments.MayHaveAudioStream(request.MediaInfo));
 
@@ -104,14 +106,16 @@ public sealed class ReencodeExportPlanner : IExportPlanner
     private static void AddFilterArguments(
         List<string> arguments,
         AppSettings settings,
+        MediaInfo? mediaInfo,
         TimeSpan clipDuration,
         bool mediaHasAudioStream)
     {
         FadeSettings fade = settings.Fade;
         bool hasFade = fade.HasAnyFade && clipDuration > TimeSpan.Zero;
+        bool hasHdrToSdr = settings.ConvertHdrToSdr && HasHdrVideoStream(mediaInfo);
         bool hasAudioProcessing = settings.NormalizeAudio || hasFade;
 
-        if (!hasAudioProcessing)
+        if (!hasAudioProcessing && !hasHdrToSdr)
         {
             return;
         }
@@ -120,11 +124,22 @@ public sealed class ReencodeExportPlanner : IExportPlanner
             ? TruncateToTwoDecimals(Math.Clamp(fade.DurationSeconds, 0, clipDuration.TotalSeconds))
             : 0;
 
+        var videoFilters = new List<string>(capacity: 2);
+        if (hasHdrToSdr)
+        {
+            videoFilters.Add(HdrToSdrVideoFilter);
+        }
+
         if (durationSeconds > 0
-            && BuildFadeFilter("fade", fade.VideoFadeIn, fade.VideoFadeOut, durationSeconds, clipDuration) is { Length: > 0 } videoFilter)
+            && BuildFadeFilter("fade", fade.VideoFadeIn, fade.VideoFadeOut, durationSeconds, clipDuration) is { Length: > 0 } videoFadeFilter)
+        {
+            videoFilters.Add(videoFadeFilter);
+        }
+
+        if (videoFilters.Count > 0)
         {
             arguments.Add("-vf");
-            arguments.Add(videoFilter);
+            arguments.Add(string.Join(",", videoFilters));
         }
 
         if (!mediaHasAudioStream)
@@ -157,6 +172,9 @@ public sealed class ReencodeExportPlanner : IExportPlanner
 
     private static bool IsNvencEncoder(string videoEncoder) =>
         videoEncoder.EndsWith("_nvenc", StringComparison.OrdinalIgnoreCase);
+
+    private static bool HasHdrVideoStream(MediaInfo? mediaInfo) =>
+        mediaInfo?.Streams.Any(stream => stream.IsHighDynamicRange) == true;
 
     private static int NormalizeQualityValue(int? qualityValue) =>
         Math.Clamp(qualityValue.GetValueOrDefault(DefaultQualityValue), MinQualityValue, MaxQualityValue);

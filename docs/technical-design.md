@@ -29,12 +29,15 @@ Use ffprobe to collect:
 - Container format
 - Stream list
 - Video codec, dimensions, frame rate, bitrate
+- Video color metadata (`color_space`, `color_transfer`, `color_primaries`) for HDR detection
 - Audio codec, channel layout, sample rate, bitrate
 - Existing metadata where practical
 
 If ffprobe cannot return a source bitrate, fall back to stream-level bitrate or a resolution-based default for UI initialization.
 
 The initial media probing implementation runs `ffprobe -v error -show_format -show_streams -print_format json <source>` through `ProcessStartInfo.ArgumentList`, parses format and stream metadata in testable code, and uses the primary video stream frame rate for one-frame keyboard stepping when available.
+
+HDR detection treats a video stream as HDR when ffprobe reports `color_transfer=smpte2084` (HDR10/PQ) or `color_transfer=arib-std-b67` (HLG). `color_space` and `color_primaries` are retained for display/debugging and future refinement, but transfer characteristics drive the current HDR decision to avoid treating BT.2020 SDR as HDR.
 
 ## Export Modes
 
@@ -93,6 +96,18 @@ Expose a simple settings surface:
 Additional ffmpeg arguments are stored as a user-entered string for Re-encode mode, parsed into an argument list with whitespace splitting and quote handling, validated against app-managed options, and appended after generated encode/filter/metadata/timestamp options but before the output path. The app must continue passing ffmpeg arguments through `ProcessStartInfo.ArgumentList`; it must not concatenate the advanced field into a shell command. Malformed quotes, blocked options, bare values that are not attached to an option, and missing values for common value-taking options fail before process launch with a recoverable error. The validator intentionally avoids complete ffmpeg option compatibility validation because option support varies by ffmpeg build, encoder, and muxer.
 
 Blocked additional options include app-managed input/range/output-control options (`-i`, `-ss`, `-t`, `-to`, `-y`, `-n`, `-nostdin`, `-map`, `-map_metadata`, `-avoid_negative_ts`) and generated codec/rate/filter options (`-c`, `-codec`, `-c:v`, `-codec:v`, `-c:a`, `-codec:a`, `-b:v`, `-crf`, `-cq`, `-vf`, `-filter:v`, `-af`, `-filter:a`). Future work can add more nuanced option validation if the advanced field expands beyond Re-encode tuning.
+
+## HDR To SDR Conversion
+
+HDR to SDR conversion is a Re-encode-only video filter option. Fast Copy never applies this conversion because stream copy must not decode or re-encode video; when HDR media is selected in Fast Copy mode, the UI only shows an informational notice that the output will remain HDR.
+
+When Re-encode mode is selected for HDR media, the WinUI shell shows an `HDRをSDRに変換` checkbox and defaults it to checked for the newly opened HDR media. The setting is included in `AppSettings` so command planning remains testable and settings JSON can round-trip it, but the UI only applies it when the current export mode is Re-encode and the current probed media has an HDR video stream.
+
+The initial conversion filter is appended to the generated `-vf` chain before clip-edge fade filters:
+
+`zscale=t=linear:npl=100,format=gbrpf32le,tonemap=tonemap=hable:desat=0,zscale=p=bt709:t=bt709:m=bt709:r=tv,format=yuv420p`
+
+This produces BT.709 SDR output suitable for common SDR displays. The first implementation relies on the user's ffmpeg build having the required `zscale` and `tonemap` filters; if export fails because those filters are unavailable, the existing ffmpeg failure path surfaces the stderr log. Future work can add explicit filter capability detection and tone-mapping presets if real media verification shows a need.
 
 ## Bitrate And Predicted Size
 

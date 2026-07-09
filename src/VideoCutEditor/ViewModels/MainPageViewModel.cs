@@ -161,6 +161,9 @@ public partial class MainPageViewModel : ObservableObject
     public partial bool NormalizeAudioEnabled { get; set; }
 
     [ObservableProperty]
+    public partial bool ConvertHdrToSdrEnabled { get; set; }
+
+    [ObservableProperty]
     public partial string AdditionalFfmpegArgumentsText { get; set; } = string.Empty;
 
     [ObservableProperty]
@@ -194,13 +197,19 @@ public partial class MainPageViewModel : ObservableObject
 
     public double TimelineContentWidth => Math.Max(TimelineViewportWidth, 1) * TimelineZoom;
 
-    public string ExportNoticeText => HasActiveFadeEnabled
-        ? "フェードを使うため、フィルター処理が必要になり Re-encode で書き出します。"
-        : NormalizeAudioEnabled
-            ? "音量正規化は -14 LUFS を目標にし、音声を再エンコードします。"
-            : CurrentExportMode == ExportMode.Reencode
-                ? "Re-encode は選択したコーデックとレート制御設定で書き出します。"
-                : "Fast copy は可能な限りストリームを保持しますが、カット位置は近いキーフレームに揃う場合があります。";
+    public string ExportNoticeText => CurrentMediaInfo is not null && HasHdrVideoStream(CurrentMediaInfo)
+        ? CurrentExportMode == ExportMode.FastCopy
+            ? "HDR動画です。Fast copyではHDRのまま書き出します。SDRに変換する場合は Re-encode を選んでください。"
+            : ConvertHdrToSdrEnabled
+                ? "HDR動画です。Re-encode でSDRへ変換して書き出します。"
+                : "HDR動画です。HDRのまま Re-encode します。"
+        : HasActiveFadeEnabled
+            ? "フェードを使うため、フィルター処理が必要になり Re-encode で書き出します。"
+            : NormalizeAudioEnabled
+                ? "音量正規化は -14 LUFS を目標にし、音声を再エンコードします。"
+                : CurrentExportMode == ExportMode.Reencode
+                    ? "Re-encode は選択したコーデックとレート制御設定で書き出します。"
+                    : "Fast copy は可能な限りストリームを保持しますが、カット位置は近いキーフレームに揃う場合があります。";
 
     public bool IsBitrateMode => CurrentBitrateMode == BitrateMode.Bitrate;
 
@@ -209,6 +218,11 @@ public partial class MainPageViewModel : ObservableObject
     public bool IsQualityMode => CurrentBitrateMode == BitrateMode.Quality;
 
     public bool IsReencodeSettingsVisible => CurrentExportMode == ExportMode.Reencode;
+
+    public bool IsHdrToSdrOptionVisible =>
+        CurrentExportMode == ExportMode.Reencode
+        && CurrentMediaInfo is not null
+        && HasHdrVideoStream(CurrentMediaInfo);
 
     public MainPageViewModel()
         : this(
@@ -654,6 +668,7 @@ public partial class MainPageViewModel : ObservableObject
     partial void OnSelectedExportModeIndexChanged(int value)
     {
         OnPropertyChanged(nameof(IsReencodeSettingsVisible));
+        OnPropertyChanged(nameof(IsHdrToSdrOptionVisible));
         OnPropertyChanged(nameof(ExportNoticeText));
         UpdatePredictedOutputSizeText();
     }
@@ -668,6 +683,11 @@ public partial class MainPageViewModel : ObservableObject
     }
 
     partial void OnNormalizeAudioEnabledChanged(bool value)
+    {
+        OnPropertyChanged(nameof(ExportNoticeText));
+    }
+
+    partial void OnConvertHdrToSdrEnabledChanged(bool value)
     {
         OnPropertyChanged(nameof(ExportNoticeText));
     }
@@ -848,6 +868,7 @@ public partial class MainPageViewModel : ObservableObject
         LastTargetSizeMegabytes = GetTargetSizeMegabytes(),
         LastQualityValue = GetQualityValue(),
         NormalizeAudio = NormalizeAudioEnabled,
+        ConvertHdrToSdr = CurrentExportMode == ExportMode.Reencode && IsHdrToSdrOptionVisible && ConvertHdrToSdrEnabled,
         AdditionalFfmpegArguments = string.IsNullOrWhiteSpace(AdditionalFfmpegArgumentsText)
             ? null
             : AdditionalFfmpegArgumentsText,
@@ -898,6 +919,7 @@ public partial class MainPageViewModel : ObservableObject
         TargetSizeMegabytes = settings.LastTargetSizeMegabytes.GetValueOrDefault(100);
         QualityValue = settings.LastQualityValue.GetValueOrDefault(23);
         NormalizeAudioEnabled = settings.NormalizeAudio || settings.LastExportMode == ExportMode.AudioNormalize;
+        ConvertHdrToSdrEnabled = settings.ConvertHdrToSdr;
         AdditionalFfmpegArgumentsText = settings.AdditionalFfmpegArguments ?? string.Empty;
         VideoFadeInEnabled = settings.Fade.VideoFadeIn;
         VideoFadeOutEnabled = settings.Fade.VideoFadeOut;
@@ -1235,7 +1257,14 @@ public partial class MainPageViewModel : ObservableObject
         {
             FrameStepSeconds = 1.0 / videoStream.FrameRate.Value;
         }
+
+        ConvertHdrToSdrEnabled = HasHdrVideoStream(info);
+        OnPropertyChanged(nameof(IsHdrToSdrOptionVisible));
+        OnPropertyChanged(nameof(ExportNoticeText));
     }
+
+    private static bool HasHdrVideoStream(MediaInfo info) =>
+        info.Streams.Any(stream => stream.IsHighDynamicRange);
 
     private static string CreateMediaSummary(MediaInfo info)
     {

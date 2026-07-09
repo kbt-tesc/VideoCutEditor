@@ -158,6 +158,48 @@ public sealed class FastCopyExportPlannerTests
     }
 
     [Fact]
+    public void CreatePlan_ignores_hdr_to_sdr_setting_because_fast_copy_does_not_reencode_video()
+    {
+        string outputDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(outputDirectory);
+
+        try
+        {
+            var planner = new FastCopyExportPlanner();
+            string outputPath = Path.Combine(outputDirectory, "clip_cut.mp4");
+            var request = new ExportRequest(
+                @"C:\video\hdr.mp4",
+                outputPath,
+                new ClipRange(TimeSpan.Zero, TimeSpan.FromSeconds(10)),
+                new AppSettings
+                {
+                    FfmpegPath = @"C:\tools\ffmpeg.exe",
+                    LastExportMode = ExportMode.FastCopy,
+                    ConvertHdrToSdr = true,
+                },
+                new MediaInfo(
+                    @"C:\video\hdr.mp4",
+                    TimeSpan.FromSeconds(30),
+                    "mov,mp4,m4a,3gp,3g2,mj2",
+                    3_000_000,
+                    [
+                        new MediaStreamInfo(0, "video", "hevc", 2_500_000, ColorTransfer: "smpte2084"),
+                    ]));
+
+            ExportPlan plan = planner.CreatePlan(request);
+
+            Assert.DoesNotContain("-vf", plan.Arguments);
+            Assert.DoesNotContain("zscale", plan.Arguments);
+            Assert.Contains("-c", plan.Arguments);
+            Assert.Contains("copy", plan.Arguments);
+        }
+        finally
+        {
+            Directory.Delete(outputDirectory, recursive: true);
+        }
+    }
+
+    [Fact]
     public void CreatePlan_rejects_audio_normalization_when_media_has_no_audio_stream()
     {
         var planner = new FastCopyExportPlanner();
