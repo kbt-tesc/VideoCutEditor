@@ -69,6 +69,27 @@ public sealed class UserInterfaceSourceTests
         Assert.Contains("Math.Round", codeBehind);
     }
 
+    [Fact]
+    public void Timeline_ruler_uses_minor_ticks_and_labels_above_major_ticks()
+    {
+        string xaml = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "src", "VideoCutEditor", "MainPage.xaml"));
+        string codeBehind = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "src", "VideoCutEditor", "MainPage.xaml.cs"));
+
+        Assert.Contains("Height=\"188\"", xaml);
+        Assert.Contains("Height=\"180\"", xaml);
+        Assert.Contains("x:Name=\"TimelineRulerBand\"", xaml);
+        Assert.Matches(new Regex("x:Name=\"TimelineRulerBand\"[\\s\\S]*?Height=\"44\"", RegexOptions.None, TimeSpan.FromSeconds(1)), xaml);
+        Assert.Matches(new Regex("x:Name=\"TimelineTicksCanvas\"[\\s\\S]*?Height=\"44\"", RegexOptions.None, TimeSpan.FromSeconds(1)), xaml);
+        Assert.Contains("TimelineMinorTickDivisions", codeBehind);
+        Assert.Contains("TimelineMajorTickTop", codeBehind);
+        Assert.Contains("TimelineMinorTickTop", codeBehind);
+        Assert.Contains("bool isMajorTick", codeBehind);
+        Assert.Contains("if (!isMajorTick)", codeBehind);
+        Assert.Contains("continue;", codeBehind);
+        Assert.Contains("Canvas.SetTop(label, TimelineLabelTop)", codeBehind);
+        Assert.Contains("Height = isMajorTick ? TimelineMajorTickHeight : TimelineMinorTickHeight", codeBehind);
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

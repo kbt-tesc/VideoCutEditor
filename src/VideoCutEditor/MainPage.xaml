@@ -177,7 +177,7 @@
                             <ScrollViewer
                                 x:Name="TimelineScrollViewer"
                                 AutomationProperties.AutomationId="TimelineScrollViewer"
-                                Height="156"
+                                Height="188"
                                 HorizontalScrollBarVisibility="Auto"
                                 HorizontalScrollMode="Enabled"
                                 SizeChanged="TimelineScrollViewer_SizeChanged"
@@ -187,7 +187,7 @@
                                 <Canvas
                                     x:Name="TimelineCanvas"
                                     Width="{x:Bind ViewModel.TimelineContentWidth, Mode=OneWay}"
-                                    Height="148"
+                                    Height="180"
                                     Background="Transparent"
                                     PointerCanceled="TimelineCanvas_PointerCanceled"
                                     PointerMoved="TimelineCanvas_PointerMoved"
@@ -197,57 +197,57 @@
                                     <Rectangle
                                         x:Name="TimelineBackground"
                                         Width="{x:Bind ViewModel.TimelineContentWidth, Mode=OneWay}"
-                                        Height="148"
+                                        Height="180"
                                         Fill="{ThemeResource LayerFillColorDefaultBrush}" />
                                     <Rectangle
                                         x:Name="TimelineRulerBand"
                                         Width="{x:Bind ViewModel.TimelineContentWidth, Mode=OneWay}"
-                                        Height="28"
+                                        Height="44"
                                         Fill="{ThemeResource LayerOnAcrylicFillColorDefaultBrush}" />
                                     <Canvas
                                         x:Name="TimelineTicksCanvas"
                                         Width="{x:Bind ViewModel.TimelineContentWidth, Mode=OneWay}"
-                                        Height="28" />
+                                        Height="44" />
                                     <Rectangle
                                         Width="{x:Bind ViewModel.TimelineContentWidth, Mode=OneWay}"
                                         Height="1"
-                                        Canvas.Top="28"
+                                        Canvas.Top="44"
                                         Fill="{ThemeResource DividerStrokeColorDefaultBrush}" />
                                     <Image
                                         x:Name="WaveformImage"
                                         AutomationProperties.AutomationId="WaveformImage"
                                         Width="{x:Bind ViewModel.TimelineContentWidth, Mode=OneWay}"
                                         Height="88"
-                                        Canvas.Top="40"
+                                        Canvas.Top="56"
                                         Opacity="0.95"
                                         Stretch="Fill" />
                                     <Rectangle
                                         x:Name="WaveformCenterLine"
                                         Width="{x:Bind ViewModel.TimelineContentWidth, Mode=OneWay}"
                                         Height="1"
-                                        Canvas.Top="84"
+                                        Canvas.Top="100"
                                         Fill="{ThemeResource DividerStrokeColorDefaultBrush}" />
                                     <Rectangle
                                         x:Name="SelectedRangeFill"
-                                        Height="104"
-                                        Canvas.Top="32"
+                                        Height="120"
+                                        Canvas.Top="48"
                                         Fill="{ThemeResource SystemFillColorAttentionBackgroundBrush}" />
                                     <Rectangle
                                         x:Name="RangeStartMarker"
                                         Width="1"
-                                        Height="120"
-                                        Canvas.Top="28"
+                                        Height="136"
+                                        Canvas.Top="44"
                                         Fill="{ThemeResource AccentFillColorDefaultBrush}" />
                                     <Rectangle
                                         x:Name="RangeEndMarker"
                                         Width="1"
-                                        Height="120"
-                                        Canvas.Top="28"
+                                        Height="136"
+                                        Canvas.Top="44"
                                         Fill="{ThemeResource AccentFillColorDefaultBrush}" />
                                     <Rectangle
                                         x:Name="PlayheadMarker"
                                         Width="2"
-                                        Height="140"
+                                        Height="172"
                                         Canvas.Top="4"
                                         Fill="{ThemeResource TextFillColorPrimaryBrush}" />
                                 </Canvas>

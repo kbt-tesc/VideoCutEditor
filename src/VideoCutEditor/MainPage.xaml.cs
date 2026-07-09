@@ -25,6 +25,13 @@ public sealed partial class MainPage : Page
     private const double TimelineZoomStep = 0.01;
     private const double TimelineZoomMinimum = 1.0;
     private const double TimelineZoomMaximum = 8.0;
+    private const int TimelineMinorTickDivisions = 5;
+    private const double TimelineLabelTop = 4;
+    private const double TimelineLabelWidth = 64;
+    private const double TimelineMajorTickTop = 24;
+    private const double TimelineMajorTickHeight = 20;
+    private const double TimelineMinorTickTop = 34;
+    private const double TimelineMinorTickHeight = 10;
 
     private static readonly HashSet<string> SupportedVideoExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -479,32 +486,42 @@ public sealed partial class MainPage : Page
             return;
         }
 
-        double targetTickSpacing = 120;
-        double secondsPerTick = PickTickInterval(ViewModel.DurationSeconds / Math.Max(1, width / targetTickSpacing));
+        double targetMajorTickSpacing = 120;
+        double secondsPerMajorTick = PickTickInterval(ViewModel.DurationSeconds / Math.Max(1, width / targetMajorTickSpacing));
+        double secondsPerMinorTick = secondsPerMajorTick / TimelineMinorTickDivisions;
+        int tickIndex = 0;
 
-        for (double second = 0; second <= ViewModel.DurationSeconds + 0.001; second += secondsPerTick)
+        for (double second = 0; second <= ViewModel.DurationSeconds + 0.001; second += secondsPerMinorTick, tickIndex++)
         {
             double x = SecondsToX(second);
+            bool isMajorTick = tickIndex % TimelineMinorTickDivisions == 0;
             var tick = new Rectangle
             {
                 Width = 1,
-                Height = second % (secondsPerTick * 5) < 0.001 ? 20 : 12,
+                Height = isMajorTick ? TimelineMajorTickHeight : TimelineMinorTickHeight,
                 Fill = Microsoft.UI.Xaml.Application.Current.Resources["TextFillColorSecondaryBrush"] as Microsoft.UI.Xaml.Media.Brush,
             };
 
             Canvas.SetLeft(tick, x);
-            Canvas.SetTop(tick, 4);
+            Canvas.SetTop(tick, isMajorTick ? TimelineMajorTickTop : TimelineMinorTickTop);
             TimelineTicksCanvas.Children.Add(tick);
+
+            if (!isMajorTick)
+            {
+                continue;
+            }
 
             var label = new TextBlock
             {
                 Text = FormatTimelineLabel(TimeSpan.FromSeconds(second)),
+                Width = TimelineLabelWidth,
                 Style = Microsoft.UI.Xaml.Application.Current.Resources["CaptionTextBlockStyle"] as Microsoft.UI.Xaml.Style,
                 Foreground = Microsoft.UI.Xaml.Application.Current.Resources["TextFillColorSecondaryBrush"] as Microsoft.UI.Xaml.Media.Brush,
+                TextAlignment = Microsoft.UI.Xaml.TextAlignment.Center,
             };
 
-            Canvas.SetLeft(label, Math.Min(Math.Max(0, x + 4), Math.Max(0, width - 64)));
-            Canvas.SetTop(label, 4);
+            Canvas.SetLeft(label, Math.Min(Math.Max(0, x - (TimelineLabelWidth / 2)), Math.Max(0, width - TimelineLabelWidth)));
+            Canvas.SetTop(label, TimelineLabelTop);
             TimelineTicksCanvas.Children.Add(label);
         }
     }

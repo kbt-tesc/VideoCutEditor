@@ -134,6 +134,10 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
   - Changed timeline zoom display and slider increments from coarse `1.0x` / whole-step behavior to `0.01x` precision.
   - Added Ctrl + mouse wheel handling over the timeline/waveform area, using the same `0.01x` zoom step.
   - Kept timeline zoom clamped to the existing 1.00x to 8.00x range.
+- `ui: refine timeline ruler ticks`
+  - Increased the timeline ruler height so time labels sit above tick lines instead of sharing the same vertical space.
+  - Added finer minor tick lines between labeled major ticks.
+  - Made labeled major tick lines longer than minor tick lines.
 
 ## Implemented Capabilities
 
@@ -180,13 +184,18 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 - Output-folder open button.
 - Timeline drag seeking and 1px start/end marker lines.
 - Timeline zoom supports 0.01x slider steps and Ctrl + mouse wheel adjustment over the waveform/timeline area.
+- Timeline ruler shows minor ticks plus longer labeled major ticks with labels above the lines.
 
 ## Current Verification Baseline
 
 Most recent successful checks:
 
 - `dotnet test VideoCutEditor.slnx`
-  - 115 tests passed.
+  - 116 tests passed.
+- `dotnet test VideoCutEditor.slnx --filter UserInterfaceSourceTests`
+  - 5 tests passed after first confirming failure for the missing expanded ruler, minor tick divisions, longer major ticks, and labels above tick lines.
+- `dotnet build src\VideoCutEditor\VideoCutEditor.csproj -p:Platform=x64 -p:WindowsPackageType=None`
+  - Build succeeded with 0 warnings and 0 errors after refining the timeline ruler.
 - `dotnet test VideoCutEditor.slnx --filter Timeline_zoom_uses_hundredth_steps_and_ctrl_wheel`
   - 1 test passed after first confirming failure while timeline zoom was whole-step only and lacked Ctrl + mouse wheel handling.
 - `dotnet build src\VideoCutEditor\VideoCutEditor.csproj -p:Platform=x64 -p:WindowsPackageType=None`
