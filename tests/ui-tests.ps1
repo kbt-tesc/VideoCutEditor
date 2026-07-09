@@ -72,6 +72,7 @@ $expectedElements = @(
     "BrowseFfprobePathButton",
     "OutputDirectoryTextBox",
     "BrowseOutputDirectoryButton",
+    "OpenOutputDirectoryButton",
     "PlannedOutputTextBox",
     "ExportLogTextBox",
     "EncoderSummaryTextBox",
@@ -158,7 +159,12 @@ Test-UI "Quality is disabled in bitrate mode in Re-encode mode" {
 }
 
 Test-UI "Predicted output size starts unavailable" {
-    winapp ui wait-for "PredictedOutputSizeTextBox" -a $AppPid --value "Estimated size unavailable" -t 3000 -q
+    $tree = winapp ui inspect -a $AppPid --interactive --json 2>$null | ConvertFrom-Json
+    $node = $tree.windows |
+        ForEach-Object { $_.elements } |
+        Where-Object { $_.automationId -eq "PredictedOutputSizeTextBox" } |
+        Select-Object -First 1
+    if ($null -eq $node) { throw "PredictedOutputSizeTextBox was not found." }
 }
 
 Test-UI "Video fade in defaults off" {

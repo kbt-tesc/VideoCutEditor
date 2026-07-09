@@ -108,6 +108,12 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
   - Updated the VS Code x64 pre-launch task to include `-p:WindowsPackageType=None` so direct F5 debugging uses the custom unpackaged `Program.Main`.
   - Documented that normal packaged WinUI launch validation should still use `BuildAndRun.ps1` or `winapp run`.
   - Recorded that stale debugged app instances can lock `VideoCutEditor.exe` and must be closed before rebuilding.
+- `ui: refine Japanese messages and timeline controls`
+  - Localized app-generated status, warning, information, and primary editor labels for Japanese users while keeping technical ffmpeg details available in logs.
+  - Added an output-folder open button next to the output folder picker.
+  - Reduced the start/end timeline marker lines to 1px.
+  - Fixed `[` and `]` keyboard shortcuts by handling key events even when child controls mark them handled.
+  - Added drag tracking on the timeline so the playhead follows pointer movement while dragging.
 
 ## Implemented Capabilities
 
@@ -146,13 +152,18 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 - Verification sample media generator for repeatable local manual checks.
 - VS Code F5 configuration for x64 Debug breakpoint debugging.
 - VS Code F5 direct debugging uses the unpackaged entry point while packaged debug launch remains covered by `BuildAndRun.ps1` / `winapp run`.
+- Japanese app-generated UI status/notice text for the main editor.
+- Output-folder open button.
+- Timeline drag seeking and 1px start/end marker lines.
 
 ## Current Verification Baseline
 
 Most recent successful checks:
 
 - `dotnet test VideoCutEditor.slnx`
-  - 107 tests passed.
+  - 109 tests passed.
+- `dotnet test VideoCutEditor.slnx --filter UserInterfaceSourceTests`
+  - 2 tests passed after first confirming failures for the missing output-folder open button, drag handlers, 1px marker contract, handled keyboard hook, and Japanese message contract.
 - `dotnet test VideoCutEditor.slnx --filter VsCodeDebugConfigurationTests`
   - 1 test passed after first confirming the test failed while the VS Code task lacked `-p:WindowsPackageType=None`.
 - `dotnet build src\VideoCutEditor\VideoCutEditor.csproj -p:Platform=x64 -p:WindowsPackageType=None`
@@ -165,6 +176,8 @@ Most recent successful checks:
   - Generated `video-with-audio.mp4`, `video-only.mp4`, and `quiet-audio.mp4` successfully with the winget-provided ffmpeg found on PATH.
 - `dotnet build src/VideoCutEditor/VideoCutEditor.csproj -p:Platform=x64`
   - Build succeeded.
+- `powershell -ExecutionPolicy Bypass -File tests\ui-tests.ps1 -AppPid <pid>`
+  - 56 UI tests passed for packaged Debug launch after adding `OpenOutputDirectoryButton` coverage.
 - `powershell -ExecutionPolicy Bypass -File scripts\Publish-Portable.ps1 -Platform x64 -Configuration Release`
   - Publish succeeded, artifact validation passed, and `VideoCutEditor.exe` was produced under `src\VideoCutEditor\bin\Release\net10.0-windows10.0.26100.0\win-x64\publish`.
 - `powershell -ExecutionPolicy Bypass -File scripts\Publish-AllPortable.ps1 -Platforms x86,arm64 -Configuration Release`
@@ -190,6 +203,8 @@ When resuming in a new session, rerun the relevant subset before making assumpti
 - Portable x64 publish, x86 publish, arm64 publish, artifact validation, and published x64 EXE startup smoke testing now succeed. Signing, MSIX packaging, installer validation, distribution packaging, and x86/arm64 runtime startup on matching devices still need verification.
 - UI tests currently cover presence and defaults more than full user workflows with real picker interactions and export completion.
 - VS Code F5 now has an explicit x64 unpackaged launch path, but the user should manually confirm breakpoint attachment from VS Code because automated tests can only validate the configuration files and build output.
+- The `[` and `]` shortcut fix is covered by source-level UI contract tests and should still be manually confirmed in the running app with a loaded preview.
+- Timeline drag seeking is covered by source-level UI contract tests and should still be manually confirmed visually with real media.
 
 ## Recommended Next Slices
 

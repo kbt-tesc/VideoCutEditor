@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Diagnostics;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using VideoCutEditor.Core.Models;
@@ -18,6 +19,7 @@ public partial class MainPageViewModel : ObservableObject
     private readonly IMediaProbeService mediaProbeService;
     private readonly IFfmpegCapabilityService ffmpegCapabilityService;
     private readonly BitrateSuggestionService bitrateSuggestionService;
+    private readonly Func<string, bool> outputDirectoryLauncher;
     private CancellationTokenSource? mediaProbeCancellation;
     private CancellationTokenSource? exportCancellation;
     private FfmpegCapabilities currentCapabilities = new(new HashSet<string>(StringComparer.OrdinalIgnoreCase));
@@ -30,16 +32,16 @@ public partial class MainPageViewModel : ObservableObject
     public partial string? SelectedSourcePath { get; set; }
 
     [ObservableProperty]
-    public partial string SelectedFileName { get; set; } = "No video selected";
+    public partial string SelectedFileName { get; set; } = "動画が選択されていません";
 
     [ObservableProperty]
     public partial string? PlannedOutputPath { get; set; }
 
     [ObservableProperty]
-    public partial string MediaSummaryText { get; set; } = "No media loaded";
+    public partial string MediaSummaryText { get; set; } = "メディア情報はまだありません";
 
     [ObservableProperty]
-    public partial string EncoderSummaryText { get; set; } = "Encoder capabilities not detected";
+    public partial string EncoderSummaryText { get; set; } = "エンコーダー情報はまだ検出されていません";
 
     [ObservableProperty]
     public partial MediaInfo? CurrentMediaInfo { get; set; }
@@ -60,7 +62,7 @@ public partial class MainPageViewModel : ObservableObject
     public partial string? OutputDirectory { get; set; }
 
     [ObservableProperty]
-    public partial string StatusMessage { get; set; } = "Ready";
+    public partial string StatusMessage { get; set; } = "準備完了";
 
     [ObservableProperty]
     public partial string RangeStartText { get; set; } = "00:00:00";
@@ -102,7 +104,7 @@ public partial class MainPageViewModel : ObservableObject
     public partial bool IsExportProgressIndeterminate { get; set; }
 
     [ObservableProperty]
-    public partial string ExportLogText { get; set; } = "No export log yet.";
+    public partial string ExportLogText { get; set; } = "書き出しログはまだありません。";
 
     [ObservableProperty]
     public partial bool HasExportLog { get; set; }
@@ -129,7 +131,7 @@ public partial class MainPageViewModel : ObservableObject
     public partial double QualityValue { get; set; } = 23;
 
     [ObservableProperty]
-    public partial string PredictedOutputSizeText { get; set; } = "Estimated size unavailable";
+    public partial string PredictedOutputSizeText { get; set; } = "推定サイズはまだ計算できません";
 
     [ObservableProperty]
     public partial bool NormalizeAudioEnabled { get; set; }
@@ -169,12 +171,12 @@ public partial class MainPageViewModel : ObservableObject
     public double TimelineContentWidth => Math.Max(TimelineViewportWidth, 1) * TimelineZoom;
 
     public string ExportNoticeText => HasActiveFadeEnabled
-        ? "Fades force Re-encode because filters are enabled."
+        ? "フェードを使うため、フィルター処理が必要になり Re-encode で書き出します。"
         : NormalizeAudioEnabled
-            ? "Normalize audio targets -14 LUFS and re-encodes audio."
+            ? "音量正規化は -14 LUFS を目標にし、音声を再エンコードします。"
             : CurrentExportMode == ExportMode.Reencode
-                ? "Re-encode uses the selected codec and rate control settings."
-                : "Fast copy preserves streams where practical, but cuts can align to nearby keyframes.";
+                ? "Re-encode は選択したコーデックとレート制御設定で書き出します。"
+                : "Fast copy は可能な限りストリームを保持しますが、カット位置は近いキーフレームに揃う場合があります。";
 
     public bool IsBitrateMode => CurrentBitrateMode == BitrateMode.Bitrate;
 
@@ -202,7 +204,8 @@ public partial class MainPageViewModel : ObservableObject
         IFfmpegRunner? ffmpegRunner = null,
         IMediaProbeService? mediaProbeService = null,
         IFfmpegCapabilityService? ffmpegCapabilityService = null,
-        BitrateSuggestionService? bitrateSuggestionService = null)
+        BitrateSuggestionService? bitrateSuggestionService = null,
+        Func<string, bool>? outputDirectoryLauncher = null)
     {
         this.settingsService = settingsService;
         this.outputPathService = outputPathService;
@@ -211,6 +214,7 @@ public partial class MainPageViewModel : ObservableObject
         this.mediaProbeService = mediaProbeService ?? new MediaProbeService();
         this.ffmpegCapabilityService = ffmpegCapabilityService ?? new FfmpegCapabilityService();
         this.bitrateSuggestionService = bitrateSuggestionService ?? new BitrateSuggestionService();
+        this.outputDirectoryLauncher = outputDirectoryLauncher ?? OpenDirectoryInShell;
     }
 
     public async Task InitializeAsync()
@@ -259,8 +263,8 @@ public partial class MainPageViewModel : ObservableObject
         SelectedSourcePath = file.Path;
         SelectedFileName = file.Name;
         PreviewSource = MediaSource.CreateFromStorageFile(file);
-        StatusMessage = "Video selected; probing media...";
-        MediaSummaryText = "Probing media...";
+        StatusMessage = "動画を選択しました。メディア情報を読み取っています...";
+        MediaSummaryText = "メディア情報を読み取っています...";
         CurrentMediaInfo = null;
         PositionSeconds = 0;
         DurationSeconds = 0;
@@ -305,42 +309,66 @@ public partial class MainPageViewModel : ObservableObject
         }
 
         OutputDirectory = folder.Path;
-        StatusMessage = "Output folder selected";
+        StatusMessage = "出力フォルダーを選択しました";
         UpdatePlannedOutputPath();
     }
+
+    [RelayCommand(CanExecute = nameof(CanOpenOutputDirectory))]
+    private void OpenOutputDirectory()
+    {
+        if (!CanOpenOutputDirectory())
+        {
+            StatusMessage = "有効な出力フォルダーを選択してください";
+            return;
+        }
+
+        try
+        {
+            StatusMessage = outputDirectoryLauncher(OutputDirectory!)
+                ? "出力フォルダーを開きました"
+                : "出力フォルダーを開けませんでした";
+        }
+        catch (Exception exception)
+        {
+            StatusMessage = $"出力フォルダーを開けませんでした: {exception.Message}";
+        }
+    }
+
+    private bool CanOpenOutputDirectory() =>
+        !string.IsNullOrWhiteSpace(OutputDirectory) && Directory.Exists(OutputDirectory);
 
     [RelayCommand]
     private async Task BrowseFfmpegPathAsync()
     {
-        string? path = await PickExecutableAsync("Select ffmpeg.exe");
+        string? path = await PickExecutableAsync("ffmpeg.exe を選択");
         if (path is null)
         {
             return;
         }
 
         FfmpegPath = path;
-        StatusMessage = "ffmpeg selected";
+        StatusMessage = "ffmpeg を選択しました";
         await DetectEncoderCapabilitiesAsync();
     }
 
     [RelayCommand]
     private async Task BrowseFfprobePathAsync()
     {
-        string? path = await PickExecutableAsync("Select ffprobe.exe");
+        string? path = await PickExecutableAsync("ffprobe.exe を選択");
         if (path is null)
         {
             return;
         }
 
         FfprobePath = path;
-        StatusMessage = "ffprobe selected";
+        StatusMessage = "ffprobe を選択しました";
     }
 
     [RelayCommand]
     private async Task SaveSettingsAsync()
     {
         await settingsService.SaveAsync(CreateCurrentSettings());
-        StatusMessage = "Settings saved";
+        StatusMessage = "設定を保存しました";
     }
 
     [RelayCommand]
@@ -355,19 +383,19 @@ public partial class MainPageViewModel : ObservableObject
 
         if (string.IsNullOrWhiteSpace(SelectedSourcePath) || !File.Exists(SelectedSourcePath))
         {
-            StatusMessage = "Open a video before exporting";
+            StatusMessage = "書き出し前に動画を開いてください";
             return;
         }
 
         if (string.IsNullOrWhiteSpace(FfmpegPath) || !File.Exists(FfmpegPath))
         {
-            StatusMessage = "Choose a valid ffmpeg.exe before exporting";
+            StatusMessage = "書き出し前に有効な ffmpeg.exe を選択してください";
             return;
         }
 
         if (string.IsNullOrWhiteSpace(OutputDirectory) || !Directory.Exists(OutputDirectory))
         {
-            StatusMessage = "Choose a valid output folder before exporting";
+            StatusMessage = "書き出し前に有効な出力フォルダーを選択してください";
             return;
         }
 
@@ -377,7 +405,7 @@ public partial class MainPageViewModel : ObservableObject
 
         if (!range.IsValid)
         {
-            StatusMessage = "Set an end time later than the start time";
+            StatusMessage = "終了時刻は開始時刻より後にしてください";
             return;
         }
 
@@ -388,15 +416,15 @@ public partial class MainPageViewModel : ObservableObject
             && exportVideoBitrateKbps is null)
         {
             StatusMessage = CurrentBitrateMode == BitrateMode.TargetSize
-                ? "Set a valid target size"
-                : "Set a valid video bitrate";
+                ? "有効な目標サイズを入力してください"
+                : "有効な映像ビットレートを入力してください";
             return;
         }
 
         UpdatePlannedOutputPath();
         if (string.IsNullOrWhiteSpace(PlannedOutputPath))
         {
-            StatusMessage = "Could not create an output path";
+            StatusMessage = "出力先パスを作成できませんでした";
             return;
         }
 
@@ -404,9 +432,9 @@ public partial class MainPageViewModel : ObservableObject
         exportCancellation = new CancellationTokenSource();
         ExportProgressValue = 0;
         IsExportProgressIndeterminate = true;
-        ExportLogText = "Starting export...";
+        ExportLogText = "書き出しを開始しています...";
         HasExportLog = true;
-        StatusMessage = "Exporting...";
+        StatusMessage = "書き出し中...";
 
         try
         {
@@ -425,7 +453,7 @@ public partial class MainPageViewModel : ObservableObject
 
                 if (exportProgress.Position is { } position)
                 {
-                    StatusMessage = $"Exporting {FormatTime(position)}";
+                    StatusMessage = $"書き出し中 {FormatTime(position)}";
                     if (range.Duration.TotalSeconds > 0)
                     {
                         IsExportProgressIndeterminate = false;
@@ -441,8 +469,8 @@ public partial class MainPageViewModel : ObservableObject
 
             ExportResult result = await ffmpegRunner.RunAsync(plan, progress, exportCancellation.Token);
             StatusMessage = result.Succeeded
-                ? $"Export complete: {Path.GetFileName(plan.FinalOutputPath)}"
-                : result.ErrorMessage ?? "Export failed";
+                ? $"書き出しが完了しました: {Path.GetFileName(plan.FinalOutputPath)}"
+                : result.ErrorMessage ?? "書き出しに失敗しました";
             ExportProgressValue = result.Succeeded ? 1 : ExportProgressValue;
             IsExportProgressIndeterminate = false;
 
@@ -474,8 +502,8 @@ public partial class MainPageViewModel : ObservableObject
             return;
         }
 
-        StatusMessage = "Canceling export...";
-        AppendExportLog("Cancel requested.");
+        StatusMessage = "書き出しをキャンセルしています...";
+        AppendExportLog("キャンセルを要求しました。");
         exportCancellation.Cancel();
     }
 
@@ -484,7 +512,7 @@ public partial class MainPageViewModel : ObservableObject
     {
         RangeStartSeconds = ClampToDuration(PositionSeconds);
         SetRangeTextWithoutParsing(TimeSpan.FromSeconds(RangeStartSeconds), TimeSpan.FromSeconds(RangeEndSeconds));
-        StatusMessage = "Start set";
+        StatusMessage = "開始地点を設定しました";
     }
 
     [RelayCommand]
@@ -492,12 +520,13 @@ public partial class MainPageViewModel : ObservableObject
     {
         RangeEndSeconds = ClampToDuration(PositionSeconds);
         SetRangeTextWithoutParsing(TimeSpan.FromSeconds(RangeStartSeconds), TimeSpan.FromSeconds(RangeEndSeconds));
-        StatusMessage = "End set";
+        StatusMessage = "終了地点を設定しました";
     }
 
     partial void OnOutputDirectoryChanged(string? value)
     {
         UpdatePlannedOutputPath();
+        OpenOutputDirectoryCommand.NotifyCanExecuteChanged();
     }
 
     partial void OnPreviewSourceChanged(MediaSource? value)
@@ -918,13 +947,13 @@ public partial class MainPageViewModel : ObservableObject
         int? videoBitrateKbps = GetEffectiveVideoBitrateKbps(range);
         if (CurrentMediaInfo is null || videoBitrateKbps is null)
         {
-            PredictedOutputSizeText = "Estimated size unavailable";
+            PredictedOutputSizeText = "推定サイズはまだ計算できません";
             return;
         }
 
         if (!range.IsValid)
         {
-            PredictedOutputSizeText = "Estimated size unavailable";
+            PredictedOutputSizeText = "推定サイズはまだ計算できません";
             return;
         }
 
@@ -933,7 +962,7 @@ public partial class MainPageViewModel : ObservableObject
             videoBitrateKbps.Value,
             audioBitrate,
             range.Duration);
-        PredictedOutputSizeText = $"Estimated size: {FormatBytes(bytes)}";
+        PredictedOutputSizeText = $"推定サイズ: {FormatBytes(bytes)}";
     }
 
     private long? GetPrimaryAudioBitrate()
@@ -973,11 +1002,21 @@ public partial class MainPageViewModel : ObservableObject
     {
         return (paths.FfmpegPath, paths.FfprobePath) switch
         {
-            ({ Length: > 0 }, { Length: > 0 }) => "ffmpeg and ffprobe detected",
-            ({ Length: > 0 }, _) => "ffmpeg detected; ffprobe missing",
-            (_, { Length: > 0 }) => "ffprobe detected; ffmpeg missing",
-            _ => "Ready",
+            ({ Length: > 0 }, { Length: > 0 }) => "ffmpeg と ffprobe を検出しました",
+            ({ Length: > 0 }, _) => "ffmpeg を検出しました。ffprobe が見つかりません",
+            (_, { Length: > 0 }) => "ffprobe を検出しました。ffmpeg が見つかりません",
+            _ => "準備完了",
         };
+    }
+
+    private static bool OpenDirectoryInShell(string path)
+    {
+        Process.Start(new ProcessStartInfo
+        {
+            FileName = path,
+            UseShellExecute = true,
+        });
+        return true;
     }
 
     private double ClampToDuration(double seconds)
@@ -1050,8 +1089,8 @@ public partial class MainPageViewModel : ObservableObject
     {
         if (string.IsNullOrWhiteSpace(FfprobePath) || !File.Exists(FfprobePath))
         {
-            MediaSummaryText = "Media info unavailable: ffprobe is missing";
-            StatusMessage = "Video selected; ffprobe missing";
+            MediaSummaryText = "メディア情報を取得できません: ffprobe が見つかりません";
+            StatusMessage = "動画を選択しました。ffprobe が見つかりません";
             return;
         }
 
@@ -1072,7 +1111,7 @@ public partial class MainPageViewModel : ObservableObject
             UpdateTargetSizeDerivedBitrate();
             UpdatePredictedOutputSizeText();
             MediaSummaryText = CreateMediaSummary(info);
-            StatusMessage = "Video selected";
+            StatusMessage = "動画を選択しました";
             AppLogger.Info($"ffprobe metadata loaded: {MediaSummaryText.Replace(Environment.NewLine, " | ")}");
         }
         catch (OperationCanceledException)
@@ -1080,8 +1119,8 @@ public partial class MainPageViewModel : ObservableObject
         }
         catch (Exception exception)
         {
-            MediaSummaryText = $"Media info unavailable: {exception.Message}";
-            StatusMessage = "ffprobe metadata unavailable";
+            MediaSummaryText = $"メディア情報を取得できません: {exception.Message}";
+            StatusMessage = "ffprobe のメタデータを取得できません";
             AppLogger.Error("ffprobe metadata unavailable", exception);
         }
     }
@@ -1107,16 +1146,16 @@ public partial class MainPageViewModel : ObservableObject
 
         string duration = FormatTime(info.Duration);
         string videoText = video is null
-            ? "Video: none"
-            : $"Video: {CreateVideoDescription(video)}";
+            ? "映像: なし"
+            : $"映像: {CreateVideoDescription(video)}";
         string audioText = audio is null
-            ? "Audio: none"
-            : $"Audio: {CreateAudioDescription(audio)}";
+            ? "音声: なし"
+            : $"音声: {CreateAudioDescription(audio)}";
         string bitrateText = info.Bitrate is { } bitrate
-            ? $"Bitrate: {FormatBitrate(bitrate)}"
-            : "Bitrate: unknown";
+            ? $"ビットレート: {FormatBitrate(bitrate)}"
+            : "ビットレート: 不明";
 
-        return $"Duration: {duration}{Environment.NewLine}{videoText}{Environment.NewLine}{audioText}{Environment.NewLine}{bitrateText}";
+        return $"長さ: {duration}{Environment.NewLine}{videoText}{Environment.NewLine}{audioText}{Environment.NewLine}{bitrateText}";
     }
 
     private static string CreateVideoDescription(MediaStreamInfo stream)
@@ -1124,22 +1163,22 @@ public partial class MainPageViewModel : ObservableObject
         string codec = stream.CodecName ?? "unknown";
         string size = stream is { Width: > 0, Height: > 0 }
             ? $"{stream.Width}x{stream.Height}"
-            : "unknown size";
+            : "サイズ不明";
         string fps = stream.FrameRate is { } frameRate
             ? $"{frameRate:0.###} fps"
-            : "unknown fps";
+            : "fps 不明";
 
         return $"{codec}, {size}, {fps}";
     }
 
     private static string CreateAudioDescription(MediaStreamInfo stream)
     {
-        string codec = stream.CodecName ?? "unknown";
+        string codec = stream.CodecName ?? "不明";
         string channels = stream.ChannelLayout
-            ?? (stream.Channels is { } channelCount ? $"{channelCount} ch" : "unknown channels");
+            ?? (stream.Channels is { } channelCount ? $"{channelCount} ch" : "チャンネル不明");
         string sampleRate = stream.SampleRate is { } rate
             ? $"{rate / 1000.0:0.#} kHz"
-            : "unknown sample rate";
+            : "サンプルレート不明";
 
         return $"{codec}, {channels}, {sampleRate}";
     }
@@ -1156,7 +1195,7 @@ public partial class MainPageViewModel : ObservableObject
         if (string.IsNullOrWhiteSpace(FfmpegPath) || !File.Exists(FfmpegPath))
         {
             currentCapabilities = new FfmpegCapabilities(new HashSet<string>(StringComparer.OrdinalIgnoreCase));
-            EncoderSummaryText = "Encoder capabilities unavailable: ffmpeg is missing";
+            EncoderSummaryText = "エンコーダー情報を取得できません: ffmpeg が見つかりません";
             return;
         }
 
@@ -1170,7 +1209,7 @@ public partial class MainPageViewModel : ObservableObject
         catch (Exception exception)
         {
             currentCapabilities = new FfmpegCapabilities(new HashSet<string>(StringComparer.OrdinalIgnoreCase));
-            EncoderSummaryText = $"Encoder capabilities unavailable: {exception.Message}";
+            EncoderSummaryText = $"エンコーダー情報を取得できません: {exception.Message}";
             AppLogger.Error("Encoder capability detection failed", exception);
         }
     }
@@ -1190,9 +1229,9 @@ public partial class MainPageViewModel : ObservableObject
         string label)
     {
         string? autoEncoder = capabilities.ChooseVideoEncoder(codecFamily, EncoderKind.Auto);
-        string nvenc = capabilities.SupportsNvenc(codecFamily) ? "NVEnc available" : "NVEnc unavailable";
+        string nvenc = capabilities.SupportsNvenc(codecFamily) ? "NVEnc 利用可能" : "NVEnc 利用不可";
         return autoEncoder is null
-            ? $"{label}: no supported encoder detected ({nvenc})"
+            ? $"{label}: 対応エンコーダーが見つかりません ({nvenc})"
             : $"{label}: {autoEncoder} ({nvenc})";
     }
 
@@ -1204,7 +1243,7 @@ public partial class MainPageViewModel : ObservableObject
         }
 
         string timestampedLine = $"[{DateTimeOffset.Now:HH:mm:ss}] {line.Trim()}";
-        if (string.IsNullOrWhiteSpace(ExportLogText) || ExportLogText == "No export log yet.")
+        if (string.IsNullOrWhiteSpace(ExportLogText) || ExportLogText == "書き出しログはまだありません。")
         {
             ExportLogText = timestampedLine;
         }

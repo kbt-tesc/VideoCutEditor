@@ -33,7 +33,6 @@
         DragOver="EditorRoot_DragOver"
         Drop="EditorRoot_Drop"
         IsTabStop="True"
-        KeyDown="EditorRoot_KeyDown"
         Padding="24"
         RowSpacing="16">
         <Grid.RowDefinitions>
@@ -52,10 +51,10 @@
             <Button
                 AutomationProperties.AutomationId="OpenVideoButton"
                 Command="{x:Bind ViewModel.OpenVideoCommand}"
-                ToolTipService.ToolTip="Open video">
+                ToolTipService.ToolTip="動画を開く">
                 <StackPanel Orientation="Horizontal" Spacing="8">
                     <FontIcon FontSize="16" Glyph="&#xE8E5;" />
-                    <TextBlock Text="Open" />
+                    <TextBlock Text="開く" />
                 </StackPanel>
             </Button>
 
@@ -103,7 +102,7 @@
                             HorizontalAlignment="Center"
                             VerticalAlignment="Center"
                             Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                            Text="Preview"
+                            Text="プレビュー"
                             Visibility="{x:Bind local:MainPage.BoolToVisibility(ViewModel.IsPreviewPlaceholderVisible), Mode=OneWay}" />
                     </Grid>
                 </Border>
@@ -134,25 +133,25 @@
                             <Button
                                 AutomationProperties.AutomationId="PlayPauseButton"
                                 Click="PlayPauseButton_Click"
-                                ToolTipService.ToolTip="Play or pause">
+                                ToolTipService.ToolTip="再生または一時停止">
                                 <FontIcon FontSize="16" Glyph="&#xE768;" />
                             </Button>
 
                             <Button
                                 Grid.Column="1"
                                 AutomationProperties.AutomationId="MarkStartButton"
-                                AutomationProperties.Name="Set start to current position"
+                                AutomationProperties.Name="現在位置を開始地点にする"
                                 Command="{x:Bind ViewModel.MarkStartCommand}"
-                                ToolTipService.ToolTip="Set start to current position">
+                                ToolTipService.ToolTip="現在位置を開始地点にする">
                                 <TextBlock Text="[" />
                             </Button>
 
                             <Button
                                 Grid.Column="2"
                                 AutomationProperties.AutomationId="MarkEndButton"
-                                AutomationProperties.Name="Set end to current position"
+                                AutomationProperties.Name="現在位置を終了地点にする"
                                 Command="{x:Bind ViewModel.MarkEndCommand}"
-                                ToolTipService.ToolTip="Set end to current position">
+                                ToolTipService.ToolTip="現在位置を終了地点にする">
                                 <TextBlock Text="]" />
                             </Button>
 
@@ -190,7 +189,10 @@
                                     Width="{x:Bind ViewModel.TimelineContentWidth, Mode=OneWay}"
                                     Height="148"
                                     Background="Transparent"
-                                    PointerPressed="TimelineCanvas_PointerPressed">
+                                    PointerCanceled="TimelineCanvas_PointerCanceled"
+                                    PointerMoved="TimelineCanvas_PointerMoved"
+                                    PointerPressed="TimelineCanvas_PointerPressed"
+                                    PointerReleased="TimelineCanvas_PointerReleased">
                                     <Rectangle
                                         x:Name="TimelineBackground"
                                         Width="{x:Bind ViewModel.TimelineContentWidth, Mode=OneWay}"
@@ -231,13 +233,13 @@
                                         Fill="{ThemeResource SystemFillColorAttentionBackgroundBrush}" />
                                     <Rectangle
                                         x:Name="RangeStartMarker"
-                                        Width="4"
+                                        Width="1"
                                         Height="120"
                                         Canvas.Top="28"
                                         Fill="{ThemeResource AccentFillColorDefaultBrush}" />
                                     <Rectangle
                                         x:Name="RangeEndMarker"
-                                        Width="4"
+                                        Width="1"
                                         Height="120"
                                         Canvas.Top="28"
                                         Fill="{ThemeResource AccentFillColorDefaultBrush}" />
@@ -259,12 +261,12 @@
 
                             <TextBox
                                 AutomationProperties.AutomationId="RangeStartTextBox"
-                                Header="Start"
+                                Header="開始"
                                 Text="{x:Bind ViewModel.RangeStartText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                             <TextBox
                                 Grid.Column="1"
                                 AutomationProperties.AutomationId="RangeEndTextBox"
-                                Header="End"
+                                Header="終了"
                                 Text="{x:Bind ViewModel.RangeEndText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                         </Grid>
 
@@ -280,7 +282,7 @@
 
                             <TextBlock
                                 VerticalAlignment="Center"
-                                Text="Zoom" />
+                                Text="ズーム" />
                             <Slider
                                 x:Name="TimelineZoomSlider"
                                 Grid.Column="1"
@@ -298,7 +300,7 @@
                             <TextBlock
                                 Grid.Column="3"
                                 VerticalAlignment="Center"
-                                Text="Speed" />
+                                Text="速度" />
                             <ComboBox
                                 x:Name="PlaybackRateComboBox"
                                 Grid.Column="4"
@@ -328,11 +330,11 @@
 
                 <ScrollViewer>
                     <StackPanel Margin="0,0,24,0" Spacing="16">
-                        <TextBlock Text="Export" Style="{StaticResource SubtitleTextBlockStyle}" />
+                        <TextBlock Text="書き出し" Style="{StaticResource SubtitleTextBlockStyle}" />
 
                         <RadioButtons
                             AutomationProperties.AutomationId="ExportModeRadioButtons"
-                            Header="Mode"
+                            Header="モード"
                             MaxColumns="2"
                             SelectedIndex="{x:Bind ViewModel.SelectedExportModeIndex, Mode=TwoWay}">
                             <x:String>Fast copy</x:String>
@@ -341,7 +343,7 @@
 
                         <CheckBox
                             AutomationProperties.AutomationId="NormalizeAudioCheckBox"
-                            Content="Normalize audio (-14 LUFS)"
+                            Content="音量を正規化 (-14 LUFS)"
                             IsChecked="{x:Bind ViewModel.NormalizeAudioEnabled, Mode=TwoWay}" />
 
                         <StackPanel
@@ -355,7 +357,7 @@
 
                                 <ComboBox
                                     AutomationProperties.AutomationId="CodecFamilyComboBox"
-                                    Header="Codec"
+                                    Header="コーデック"
                                     HorizontalAlignment="Stretch"
                                     SelectedIndex="{x:Bind ViewModel.SelectedCodecFamilyIndex, Mode=TwoWay}">
                                     <ComboBoxItem Content="H.264" />
@@ -366,7 +368,7 @@
                                 <ComboBox
                                     Grid.Column="1"
                                     AutomationProperties.AutomationId="EncoderKindComboBox"
-                                    Header="Encoder"
+                                    Header="エンコーダー"
                                     HorizontalAlignment="Stretch"
                                     SelectedIndex="{x:Bind ViewModel.SelectedEncoderKindIndex, Mode=TwoWay}">
                                     <ComboBoxItem Content="Auto" />
@@ -377,7 +379,7 @@
 
                             <ComboBox
                                 AutomationProperties.AutomationId="BitrateModeComboBox"
-                                Header="Rate control"
+                                Header="レート制御"
                                 HorizontalAlignment="Stretch"
                                 SelectedIndex="{x:Bind ViewModel.SelectedBitrateModeIndex, Mode=TwoWay}">
                                 <ComboBoxItem Content="Video bitrate" />
@@ -387,14 +389,14 @@
 
                             <TextBox
                                 AutomationProperties.AutomationId="VideoBitrateTextBox"
-                                Header="Video bitrate (kbps)"
+                                Header="映像ビットレート (kbps)"
                                 IsEnabled="{x:Bind ViewModel.IsBitrateMode, Mode=OneWay}"
                                 InputScope="Number"
                                 Text="{x:Bind ViewModel.VideoBitrateText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
 
                             <NumberBox
                                 AutomationProperties.AutomationId="TargetSizeNumberBox"
-                                Header="Target size (MB)"
+                                Header="目標サイズ (MB)"
                                 IsEnabled="{x:Bind ViewModel.IsTargetSizeMode, Mode=OneWay}"
                                 LargeChange="10"
                                 Maximum="1048576"
@@ -406,7 +408,7 @@
 
                             <NumberBox
                                 AutomationProperties.AutomationId="QualityNumberBox"
-                                Header="Quality (lower is better)"
+                                Header="品質 (小さいほど高品質)"
                                 IsEnabled="{x:Bind ViewModel.IsQualityMode, Mode=OneWay}"
                                 LargeChange="5"
                                 Maximum="51"
@@ -418,12 +420,12 @@
 
                             <TextBox
                                 AutomationProperties.AutomationId="PredictedOutputSizeTextBox"
-                                Header="Predicted output size"
+                                Header="推定出力サイズ"
                                 IsReadOnly="True"
                                 Text="{x:Bind ViewModel.PredictedOutputSizeText, Mode=OneWay}" />
 
                             <StackPanel Spacing="8">
-                                <TextBlock Text="Fades" Style="{StaticResource BodyStrongTextBlockStyle}" />
+                                <TextBlock Text="フェード" Style="{StaticResource BodyStrongTextBlockStyle}" />
 
                                 <Grid ColumnSpacing="8" RowSpacing="4">
                                     <Grid.RowDefinitions>
@@ -437,29 +439,29 @@
 
                                     <CheckBox
                                         AutomationProperties.AutomationId="VideoFadeInCheckBox"
-                                        Content="Video in"
+                                        Content="映像イン"
                                         IsChecked="{x:Bind ViewModel.VideoFadeInEnabled, Mode=TwoWay}" />
                                     <CheckBox
                                         Grid.Column="1"
                                         AutomationProperties.AutomationId="VideoFadeOutCheckBox"
-                                        Content="Video out"
+                                        Content="映像アウト"
                                         IsChecked="{x:Bind ViewModel.VideoFadeOutEnabled, Mode=TwoWay}" />
                                     <CheckBox
                                         Grid.Row="1"
                                         AutomationProperties.AutomationId="AudioFadeInCheckBox"
-                                        Content="Audio in"
+                                        Content="音声イン"
                                         IsChecked="{x:Bind ViewModel.AudioFadeInEnabled, Mode=TwoWay}" />
                                     <CheckBox
                                         Grid.Row="1"
                                         Grid.Column="1"
                                         AutomationProperties.AutomationId="AudioFadeOutCheckBox"
-                                        Content="Audio out"
+                                        Content="音声アウト"
                                         IsChecked="{x:Bind ViewModel.AudioFadeOutEnabled, Mode=TwoWay}" />
                                 </Grid>
 
                                 <NumberBox
                                     AutomationProperties.AutomationId="FadeDurationNumberBox"
-                                    Header="Fade duration (seconds)"
+                                    Header="フェード時間 (秒)"
                                     LargeChange="0.25"
                                     Maximum="30"
                                     Minimum="0.25"
@@ -471,7 +473,7 @@
 
                             <TextBox
                                 AutomationProperties.AutomationId="AdditionalFfmpegArgumentsTextBox"
-                                Header="Additional ffmpeg arguments"
+                                Header="追加 ffmpeg 引数"
                                 Text="{x:Bind ViewModel.AdditionalFfmpegArgumentsText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                                 TextWrapping="Wrap" />
                         </StackPanel>
@@ -489,10 +491,10 @@
                             <Button
                                 Grid.Column="1"
                                 AutomationProperties.AutomationId="BrowseFfmpegPathButton"
-                                AutomationProperties.Name="Choose ffmpeg executable"
+                                AutomationProperties.Name="ffmpeg.exe を選択"
                                 VerticalAlignment="Bottom"
                                 Command="{x:Bind ViewModel.BrowseFfmpegPathCommand}"
-                                ToolTipService.ToolTip="Choose ffmpeg executable">
+                                ToolTipService.ToolTip="ffmpeg.exe を選択">
                                 <FontIcon FontSize="16" Glyph="&#xE8E5;" />
                             </Button>
                         </Grid>
@@ -510,10 +512,10 @@
                             <Button
                                 Grid.Column="1"
                                 AutomationProperties.AutomationId="BrowseFfprobePathButton"
-                                AutomationProperties.Name="Choose ffprobe executable"
+                                AutomationProperties.Name="ffprobe.exe を選択"
                                 VerticalAlignment="Bottom"
                                 Command="{x:Bind ViewModel.BrowseFfprobePathCommand}"
-                                ToolTipService.ToolTip="Choose ffprobe executable">
+                                ToolTipService.ToolTip="ffprobe.exe を選択">
                                 <FontIcon FontSize="16" Glyph="&#xE8E5;" />
                             </Button>
                         </Grid>
@@ -522,26 +524,36 @@
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
 
                             <TextBox
                                 AutomationProperties.AutomationId="OutputDirectoryTextBox"
-                                Header="Output folder"
+                                Header="出力フォルダー"
                                 Text="{x:Bind ViewModel.OutputDirectory, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                             <Button
                                 Grid.Column="1"
                                 AutomationProperties.AutomationId="BrowseOutputDirectoryButton"
-                                AutomationProperties.Name="Choose output folder"
+                                AutomationProperties.Name="出力フォルダーを選択"
                                 VerticalAlignment="Bottom"
                                 Command="{x:Bind ViewModel.BrowseOutputDirectoryCommand}"
-                                ToolTipService.ToolTip="Choose output folder">
+                                ToolTipService.ToolTip="出力フォルダーを選択">
                                 <FontIcon FontSize="16" Glyph="&#xE8B7;" />
+                            </Button>
+                            <Button
+                                Grid.Column="2"
+                                AutomationProperties.AutomationId="OpenOutputDirectoryButton"
+                                AutomationProperties.Name="出力フォルダーを開く"
+                                VerticalAlignment="Bottom"
+                                Command="{x:Bind ViewModel.OpenOutputDirectoryCommand}"
+                                ToolTipService.ToolTip="出力フォルダーを開く">
+                                <FontIcon FontSize="16" Glyph="&#xE838;" />
                             </Button>
                         </Grid>
 
                         <TextBox
                             AutomationProperties.AutomationId="PlannedOutputTextBox"
-                            Header="Planned output"
+                            Header="出力予定"
                             IsReadOnly="True"
                             Text="{x:Bind ViewModel.PlannedOutputPath, Mode=OneWay}" />
 
@@ -558,7 +570,7 @@
 
                         <TextBox
                             AutomationProperties.AutomationId="ExportLogTextBox"
-                            Header="Export log"
+                            Header="書き出しログ"
                             AcceptsReturn="True"
                             IsReadOnly="True"
                             MinHeight="120"
@@ -567,7 +579,7 @@
 
                         <TextBox
                             AutomationProperties.AutomationId="EncoderSummaryTextBox"
-                            Header="Encoder capabilities"
+                            Header="エンコーダー情報"
                             AcceptsReturn="True"
                             IsReadOnly="True"
                             MinHeight="96"
@@ -576,7 +588,7 @@
 
                         <TextBox
                             AutomationProperties.AutomationId="MediaInfoTextBox"
-                            Header="Media info"
+                            Header="メディア情報"
                             AcceptsReturn="True"
                             IsReadOnly="True"
                             MinHeight="120"
@@ -594,10 +606,10 @@
 
                     <Button
                         AutomationProperties.AutomationId="SaveSettingsButton"
-                        AutomationProperties.Name="Save settings"
+                        AutomationProperties.Name="設定を保存"
                         Width="48"
                         Command="{x:Bind ViewModel.SaveSettingsCommand}"
-                        ToolTipService.ToolTip="Save settings">
+                        ToolTipService.ToolTip="設定を保存">
                         <FontIcon FontSize="16" Glyph="&#xE74E;" />
                     </Button>
 
@@ -609,7 +621,7 @@
                         IsEnabled="{x:Bind ViewModel.IsExporting, Mode=OneWay}">
                         <StackPanel HorizontalAlignment="Center" Orientation="Horizontal" Spacing="8">
                             <FontIcon FontSize="16" Glyph="&#xE711;" />
-                            <TextBlock Text="Cancel" />
+                            <TextBlock Text="キャンセル" />
                         </StackPanel>
                     </Button>
 
@@ -622,7 +634,7 @@
                         Style="{StaticResource AccentButtonStyle}">
                         <StackPanel HorizontalAlignment="Center" Orientation="Horizontal" Spacing="8">
                             <FontIcon FontSize="16" Glyph="&#xE118;" />
-                            <TextBlock Text="Export" />
+                            <TextBlock Text="書き出し" />
                         </StackPanel>
                     </Button>
                 </Grid>

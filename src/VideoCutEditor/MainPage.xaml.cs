@@ -36,6 +36,7 @@ public sealed partial class MainPage : Page
     private readonly WaveformPlanner waveformPlanner = new();
     private readonly IWaveformGenerator waveformGenerator = new WaveformGenerator();
     private CancellationTokenSource? waveformCancellation;
+    private bool isDraggingTimeline;
 
     public MainPageViewModel ViewModel { get; } = new();
 
@@ -54,6 +55,7 @@ public sealed partial class MainPage : Page
             throw;
         }
 
+        EditorRoot.AddHandler(Microsoft.UI.Xaml.UIElement.KeyDownEvent, new KeyEventHandler(EditorRoot_KeyDown), handledEventsToo: true);
         PreviewPlayer.SetMediaPlayer(new MediaPlayer());
         AppLogger.Info("Preview MediaPlayer assigned");
         ViewModel.PropertyChanged += ViewModelPropertyChanged;
@@ -103,7 +105,7 @@ public sealed partial class MainPage : Page
         }
 
         e.AcceptedOperation = DataPackageOperation.Copy;
-        e.DragUIOverride.Caption = "Open video";
+        e.DragUIOverride.Caption = "動画を開く";
         e.DragUIOverride.IsCaptionVisible = true;
         e.DragUIOverride.IsGlyphVisible = true;
     }
@@ -123,7 +125,7 @@ public sealed partial class MainPage : Page
         if (videoFile is null)
         {
             AppLogger.Info("Drop ignored: no supported video file");
-            ViewModel.StatusMessage = "No supported video file dropped";
+            ViewModel.StatusMessage = "対応している動画ファイルがドロップされていません";
             return;
         }
 
@@ -134,7 +136,7 @@ public sealed partial class MainPage : Page
             bool shouldReplace = await ConfirmReplaceVideoAsync(videoFile);
             if (!shouldReplace)
             {
-                ViewModel.StatusMessage = "Open canceled";
+                ViewModel.StatusMessage = "動画の読み込みをキャンセルしました";
                 return;
             }
         }
@@ -193,14 +195,67 @@ public sealed partial class MainPage : Page
 
     private void TimelineCanvas_PointerPressed(object sender, PointerRoutedEventArgs e)
     {
-        if (ViewModel.PreviewSource is null || ViewModel.DurationSeconds <= 0)
+        if (!TrySeekTimelineToPointer(e))
         {
             return;
+        }
+
+        isDraggingTimeline = true;
+        TimelineCanvas.CapturePointer(e.Pointer);
+        e.Handled = true;
+        EditorRoot.Focus(Microsoft.UI.Xaml.FocusState.Programmatic);
+    }
+
+    private void TimelineCanvas_PointerMoved(object sender, PointerRoutedEventArgs e)
+    {
+        if (!isDraggingTimeline)
+        {
+            return;
+        }
+
+        TrySeekTimelineToPointer(e);
+        e.Handled = true;
+    }
+
+    private void TimelineCanvas_PointerReleased(object sender, PointerRoutedEventArgs e)
+    {
+        if (!isDraggingTimeline)
+        {
+            return;
+        }
+
+        TrySeekTimelineToPointer(e);
+        EndTimelineDrag(e);
+    }
+
+    private void TimelineCanvas_PointerCanceled(object sender, PointerRoutedEventArgs e)
+    {
+        if (!isDraggingTimeline)
+        {
+            return;
+        }
+
+        EndTimelineDrag(e);
+    }
+
+    private bool TrySeekTimelineToPointer(PointerRoutedEventArgs e)
+    {
+        if (ViewModel.PreviewSource is null || ViewModel.DurationSeconds <= 0)
+        {
+            return false;
         }
 
         double x = e.GetCurrentPoint(TimelineCanvas).Position.X;
         double seconds = XToSeconds(x);
         SeekTo(TimeSpan.FromSeconds(seconds));
+        return true;
+    }
+
+    private void EndTimelineDrag(PointerRoutedEventArgs e)
+    {
+        isDraggingTimeline = false;
+        TimelineCanvas.ReleasePointerCapture(e.Pointer);
+        e.Handled = true;
         EditorRoot.Focus(Microsoft.UI.Xaml.FocusState.Programmatic);
     }
 
@@ -256,7 +311,7 @@ public sealed partial class MainPage : Page
         AppLogger.Info($"MediaPlayer MediaFailed: {args.Error} {args.ErrorMessage}");
         _ = DispatcherQueue.TryEnqueue(() =>
         {
-            ViewModel.StatusMessage = "Preview unavailable";
+            ViewModel.StatusMessage = "プレビューを利用できません";
         });
     }
 
@@ -313,10 +368,10 @@ public sealed partial class MainPage : Page
         {
             XamlRoot = XamlRoot,
             Style = Microsoft.UI.Xaml.Application.Current.Resources["DefaultContentDialogStyle"] as Microsoft.UI.Xaml.Style,
-            Title = "Open another video?",
-            Content = $"Replace the current video with {videoFile.Name}?",
-            PrimaryButtonText = "Open",
-            CloseButtonText = "Cancel",
+            Title = "別の動画を開きますか？",
+            Content = $"現在の動画を「{videoFile.Name}」に置き換えますか？",
+            PrimaryButtonText = "開く",
+            CloseButtonText = "キャンセル",
             DefaultButton = ContentDialogButton.Primary,
         };
 
