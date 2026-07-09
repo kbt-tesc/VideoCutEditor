@@ -69,6 +69,8 @@ Use manual tests for environment-dependent behavior:
 - NVEnc encoder detection on compatible hardware
 - packaged EXE startup
 
+Use `scripts/New-SampleMedia.ps1` to create repeatable local sample inputs before manual preview/export checks when representative user media is not available. Its default output is `artifacts/verification-media`, which is intentionally ignored by git. It creates short `video-with-audio.mp4`, `video-only.mp4`, and `quiet-audio.mp4` files for waveform, no-audio, fade, and loudness-normalization checks. The script supports `-WhatIf` for dry-run verification and `-FfmpegPath` when PATH discovery is not enough.
+
 Record manual test results, skipped checks, and newly discovered validation needs in `docs/implementation-status.md`.
 
 ## Handling Uncertainty

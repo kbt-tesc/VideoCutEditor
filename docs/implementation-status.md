@@ -96,6 +96,10 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
   - Added `scripts/Publish-AllPortable.ps1` to run the validated portable publish flow for x64, x86, and arm64.
   - Added dry-run coverage for default platform selection and explicit platform selection.
   - Verified x86 and arm64 Release publishes with artifact validation.
+- `chore: add verification sample media script`
+  - Added `scripts/New-SampleMedia.ps1` to generate short local ffmpeg sample videos for manual waveform, no-audio, fade, and audio-normalization checks.
+  - Added dry-run unit coverage so the script's representative output set is locked without requiring ffmpeg during the unit test.
+  - Smoke-tested actual generation with the PATH-discovered winget ffmpeg into a temporary directory.
 
 ## Implemented Capabilities
 
@@ -131,13 +135,18 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 - Self-contained WinUI app builds for both packaged debug launch and portable publish.
 - Automated portable publish artifact validation for single-file shape and external ffmpeg/ffprobe policy.
 - All-platform portable publish script for x64, x86, and arm64.
+- Verification sample media generator for repeatable local manual checks.
 
 ## Current Verification Baseline
 
 Most recent successful checks:
 
 - `dotnet test VideoCutEditor.slnx`
-  - 105 tests passed.
+  - 106 tests passed.
+- `dotnet test VideoCutEditor.slnx --filter VerificationMediaScriptTests`
+  - 1 test passed after first confirming the test failed before `scripts/New-SampleMedia.ps1` existed.
+- `powershell -ExecutionPolicy Bypass -File scripts\New-SampleMedia.ps1 -OutputDirectory "$env:TEMP\VideoCutEditor-SampleMedia-Smoke" -DurationSeconds 1 -Force`
+  - Generated `video-with-audio.mp4`, `video-only.mp4`, and `quiet-audio.mp4` successfully with the winget-provided ffmpeg found on PATH.
 - `dotnet build src/VideoCutEditor/VideoCutEditor.csproj -p:Platform=x64`
   - Build succeeded.
 - `powershell -ExecutionPolicy Bypass -File scripts\Publish-Portable.ps1 -Platform x64 -Configuration Release`
@@ -152,12 +161,12 @@ When resuming in a new session, rerun the relevant subset before making assumpti
 
 ## Known Gaps
 
-- Waveform generation is implemented in code, but should still be manually verified with real videos that have audio streams.
-- Fade controls and fade-triggered Re-encode are covered by generated audio/video integration tests, but should still be manually verified on representative real media.
-- Audio fade behavior for generated video-only inputs is covered; still verify representative real video-only media manually.
+- Waveform generation is implemented in code, and repeatable generated sample media is now available. It should still be manually verified with representative real videos that have audio streams.
+- Fade controls and fade-triggered Re-encode are covered by generated audio/video integration tests and can be exercised with generated sample media, but should still be manually verified on representative real media.
+- Audio fade behavior for generated video-only inputs is covered, and `scripts/New-SampleMedia.ps1` can generate a local `video-only.mp4`; still verify representative real video-only media manually.
 - Advanced ffmpeg arguments are implemented for Re-encode mode only. They are quote-parsed, reject app-managed options, catch obvious syntax mistakes, and are passed as argument-list entries. Full ffmpeg option compatibility validation is intentionally not implemented because support varies by ffmpeg build, encoder, and muxer.
 - Audio normalization now uses fixed-target two-pass loudnorm. Configurable loudness/true peak/LRA values are intentionally not implemented.
-- Audio normalization is covered for generated audio/video media and fake-process two-pass argument replacement; representative real media and no-audio UI error handling still need manual verification.
+- Audio normalization is covered for generated audio/video media and fake-process two-pass argument replacement; the sample generator can produce quiet and no-audio inputs for manual checks, but representative real media and no-audio UI error handling still need manual verification.
 - Quality mode is covered for generated software-encoded media; NVEnc quality-mode execution still needs manual hardware-backed verification.
 - Real media export should still be manually verified for Fast copy and Re-encode on local sample files.
 - NVEnc behavior should be manually verified on hardware and ffmpeg builds that expose NVEnc.
@@ -168,6 +177,7 @@ When resuming in a new session, rerun the relevant subset before making assumpti
 ## Recommended Next Slices
 
 1. Continue end-to-end verification.
+   - Generate local verification inputs with `scripts/New-SampleMedia.ps1` when real sample media is not available.
    - Add scripted picker workflow coverage where reliable.
    - Add manual verification notes for real preview/export/NVEnc/package runs.
 2. Deepen audio normalization verification.
