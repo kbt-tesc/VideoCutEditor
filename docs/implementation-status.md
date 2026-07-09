@@ -130,6 +130,10 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
   - Caught `COMException` from video, output-folder, and ffmpeg/ffprobe executable pickers so Explorer/file-picker failures do not crash the app.
   - Added Japanese status messages and diagnostic logs for picker failures.
   - Added source-level UI coverage for picker failure handling.
+- `ui: refine timeline zoom precision`
+  - Changed timeline zoom display and slider increments from coarse `1.0x` / whole-step behavior to `0.01x` precision.
+  - Added Ctrl + mouse wheel handling over the timeline/waveform area, using the same `0.01x` zoom step.
+  - Kept timeline zoom clamped to the existing 1.00x to 8.00x range.
 
 ## Implemented Capabilities
 
@@ -175,13 +179,18 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 - Japanese app-generated UI status/notice text for the main editor.
 - Output-folder open button.
 - Timeline drag seeking and 1px start/end marker lines.
+- Timeline zoom supports 0.01x slider steps and Ctrl + mouse wheel adjustment over the waveform/timeline area.
 
 ## Current Verification Baseline
 
 Most recent successful checks:
 
 - `dotnet test VideoCutEditor.slnx`
-  - 114 tests passed.
+  - 115 tests passed.
+- `dotnet test VideoCutEditor.slnx --filter Timeline_zoom_uses_hundredth_steps_and_ctrl_wheel`
+  - 1 test passed after first confirming failure while timeline zoom was whole-step only and lacked Ctrl + mouse wheel handling.
+- `dotnet build src\VideoCutEditor\VideoCutEditor.csproj -p:Platform=x64 -p:WindowsPackageType=None`
+  - Build succeeded with 0 warnings and 0 errors after closing the running debug app that had locked `VideoCutEditor.exe`.
 - `dotnet test VideoCutEditor.slnx --filter View_model_recovers_from_picker_com_failures`
   - 1 test passed after first confirming failure while picker `COMException` was not handled.
 - `dotnet build src\VideoCutEditor\VideoCutEditor.csproj -p:Platform=x64 -p:WindowsPackageType=None`
@@ -189,7 +198,7 @@ Most recent successful checks:
 - `dotnet test VideoCutEditor.slnx --filter VsCodeDebugConfigurationTests`
   - 5 tests passed after first confirming failure for the missing design-time `VideoCutEditor.Core` reference fallback.
 - `dotnet test VideoCutEditor.slnx --filter UserInterfaceSourceTests`
-  - 3 tests passed after first confirming failures for the missing output-folder open button, drag handlers, 1px marker contract, handled keyboard hook, Japanese message contract, and picker COM failure handling.
+  - 4 tests passed after first confirming failures for the missing output-folder open button, drag handlers, 1px marker contract, handled keyboard hook, Japanese message contract, picker COM failure handling, and hundredth-step timeline zoom contract.
 - Direct launch smoke of `src\VideoCutEditor\bin\x64\Debug\net10.0-windows10.0.26100.0\win-x64\VideoCutEditor.exe` after the unpackaged Debug build
   - The app remained running after 5 seconds, so the previous immediate `REGDB_E_CLASSNOTREG` failure was not reproduced; the smoke-test process was then stopped.
 - `dotnet test VideoCutEditor.slnx --filter VerificationMediaScriptTests`

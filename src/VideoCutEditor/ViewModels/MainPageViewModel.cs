@@ -165,7 +165,7 @@ public partial class MainPageViewModel : ObservableObject
 
     public string RangeEndDisplayText => FormatTime(TimeSpan.FromSeconds(RangeEndSeconds));
 
-    public string TimelineZoomText => $"{TimelineZoom:0.0}x";
+    public string TimelineZoomText => $"{TimelineZoom:0.00}x";
 
     public string PlaybackRateText => $"{PlaybackRate:0.##}x";
 

@@ -22,6 +22,9 @@ public sealed partial class MainPage : Page
 {
     private const int LeftBracketVirtualKey = 219;
     private const int RightBracketVirtualKey = 221;
+    private const double TimelineZoomStep = 0.01;
+    private const double TimelineZoomMinimum = 1.0;
+    private const double TimelineZoomMaximum = 8.0;
 
     private static readonly HashSet<string> SupportedVideoExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -238,6 +241,24 @@ public sealed partial class MainPage : Page
         EndTimelineDrag(e);
     }
 
+    private void TimelineCanvas_PointerWheelChanged(object sender, PointerRoutedEventArgs e)
+    {
+        if ((Microsoft.UI.Input.InputKeyboardSource.GetKeyStateForCurrentThread(VirtualKey.Control)
+            & Windows.UI.Core.CoreVirtualKeyStates.Down) == 0)
+        {
+            return;
+        }
+
+        int delta = e.GetCurrentPoint(TimelineCanvas).Properties.MouseWheelDelta;
+        if (delta == 0)
+        {
+            return;
+        }
+
+        AdjustTimelineZoom(delta > 0 ? TimelineZoomStep : -TimelineZoomStep);
+        e.Handled = true;
+    }
+
     private bool TrySeekTimelineToPointer(PointerRoutedEventArgs e)
     {
         if (ViewModel.PreviewSource is null || ViewModel.DurationSeconds <= 0)
@@ -261,9 +282,29 @@ public sealed partial class MainPage : Page
 
     private void TimelineZoomSlider_ValueChanged(object sender, Microsoft.UI.Xaml.Controls.Primitives.RangeBaseValueChangedEventArgs e)
     {
-        ViewModel.TimelineZoom = e.NewValue;
+        SetTimelineZoom(e.NewValue);
         UpdateTimelineVisuals();
         EnsurePlayheadVisible();
+    }
+
+    private void AdjustTimelineZoom(double delta)
+    {
+        SetTimelineZoom(ViewModel.TimelineZoom + delta);
+        if (Math.Abs(TimelineZoomSlider.Value - ViewModel.TimelineZoom) > double.Epsilon)
+        {
+            TimelineZoomSlider.Value = ViewModel.TimelineZoom;
+        }
+
+        UpdateTimelineVisuals();
+        EnsurePlayheadVisible();
+    }
+
+    private void SetTimelineZoom(double value)
+    {
+        ViewModel.TimelineZoom = Math.Round(
+            Math.Clamp(value, TimelineZoomMinimum, TimelineZoomMaximum),
+            2,
+            MidpointRounding.AwayFromZero);
     }
 
     private void TimelineScrollViewer_SizeChanged(object sender, Microsoft.UI.Xaml.SizeChangedEventArgs e)

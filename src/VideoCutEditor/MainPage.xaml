@@ -192,7 +192,8 @@
                                     PointerCanceled="TimelineCanvas_PointerCanceled"
                                     PointerMoved="TimelineCanvas_PointerMoved"
                                     PointerPressed="TimelineCanvas_PointerPressed"
-                                    PointerReleased="TimelineCanvas_PointerReleased">
+                                    PointerReleased="TimelineCanvas_PointerReleased"
+                                    PointerWheelChanged="TimelineCanvas_PointerWheelChanged">
                                     <Rectangle
                                         x:Name="TimelineBackground"
                                         Width="{x:Bind ViewModel.TimelineContentWidth, Mode=OneWay}"
@@ -289,7 +290,9 @@
                                 AutomationProperties.AutomationId="TimelineZoomSlider"
                                 Maximum="8"
                                 Minimum="1"
-                                StepFrequency="1"
+                                SmallChange="0.01"
+                                LargeChange="0.10"
+                                StepFrequency="0.01"
                                 Value="1"
                                 ValueChanged="TimelineZoomSlider_ValueChanged" />
                             <TextBlock

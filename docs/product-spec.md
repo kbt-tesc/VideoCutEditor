@@ -24,7 +24,7 @@ Only one keep range is supported per export.
 
 - Show a video preview using Windows standard media playback.
 - Show a custom editor-style timeline below the preview with the current playhead position, start/end markers, timeline zoom controls, and an audio waveform when ffmpeg can generate one.
-- At timeline zoom `1.0x`, the timeline content fills the available parent width. Higher zoom levels expand the content horizontally inside the parent and allow horizontal scrolling.
+- At timeline zoom `1.00x`, the timeline content fills the available parent width. Higher zoom levels expand the content horizontally inside the parent and allow horizontal scrolling. Timeline zoom changes in `0.01x` steps through the zoom slider and through Ctrl + mouse wheel over the timeline/waveform area.
 - Provide direct time inputs for start and end.
 - Allow setting the start marker from the current playhead with `[` and the end marker with `]`, using both on-screen buttons and keyboard shortcuts.
 - Support left/right arrow frame stepping while preview is focused. When ffprobe reports a valid video frame rate, use that frame rate; otherwise fall back to 30 fps.

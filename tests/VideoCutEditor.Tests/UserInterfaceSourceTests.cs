@@ -49,6 +49,26 @@ public sealed class UserInterfaceSourceTests
         Assert.Contains("AppLogger.Error(\"Executable picker failed\"", viewModel);
     }
 
+    [Fact]
+    public void Timeline_zoom_uses_hundredth_steps_and_ctrl_wheel()
+    {
+        string xaml = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "src", "VideoCutEditor", "MainPage.xaml"));
+        string codeBehind = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "src", "VideoCutEditor", "MainPage.xaml.cs"));
+        string viewModel = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "src", "VideoCutEditor", "ViewModels", "MainPageViewModel.cs"));
+
+        Assert.Contains("StepFrequency=\"0.01\"", xaml);
+        Assert.Contains("SmallChange=\"0.01\"", xaml);
+        Assert.Contains("LargeChange=\"0.10\"", xaml);
+        Assert.Contains("PointerWheelChanged=\"TimelineCanvas_PointerWheelChanged\"", xaml);
+        Assert.Contains("TimelineZoomText => $\"{TimelineZoom:0.00}x\"", viewModel);
+        Assert.Contains("private const double TimelineZoomStep = 0.01;", codeBehind);
+        Assert.Contains("TimelineCanvas_PointerWheelChanged", codeBehind);
+        Assert.Contains("VirtualKey.Control", codeBehind);
+        Assert.Contains("MouseWheelDelta", codeBehind);
+        Assert.Contains("AdjustTimelineZoom", codeBehind);
+        Assert.Contains("Math.Round", codeBehind);
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
