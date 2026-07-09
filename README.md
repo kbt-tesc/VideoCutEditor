@@ -29,7 +29,9 @@ dotnet build src/VideoCutEditor/VideoCutEditor.csproj -p:Platform=x64
 
 ## Debug In VS Code
 
-Open the repository root, then choose `VideoCutEditor: Debug x64` from Run and Debug before pressing F5. This configuration runs the `build VideoCutEditor x64` task first and launches the x64 Debug output directly. The C# Dev Kit generated profile is kept as a fallback, but it can choose a mismatched platform folder on some machines.
+Open the repository root, then choose `VideoCutEditor: Debug x64` from Run and Debug before pressing F5. This configuration runs the `build VideoCutEditor x64` task first, builds with `WindowsPackageType=None`, and launches the x64 Debug output directly so VS Code can attach breakpoints. The C# Dev Kit generated profile is kept as a fallback, but it can choose a mismatched platform folder on some machines.
+
+If the build reports that `VideoCutEditor.exe` is locked, close the previous debugged app instance and press F5 again.
 
 ## Publish
 

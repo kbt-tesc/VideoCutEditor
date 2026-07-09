@@ -33,6 +33,7 @@ public sealed class VsCodeDebugConfigurationTests
         string[] arguments = buildTask.GetProperty("args").EnumerateArray().Select(argument => argument.GetString() ?? string.Empty).ToArray();
         Assert.Contains(@"${workspaceFolder}\src\VideoCutEditor\VideoCutEditor.csproj", arguments);
         Assert.Contains("-p:Platform=x64", arguments);
+        Assert.Contains("-p:WindowsPackageType=None", arguments);
     }
 
     private static JsonDocument ReadJsonWithComments(string path)

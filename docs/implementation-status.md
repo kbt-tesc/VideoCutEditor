@@ -104,6 +104,10 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
   - Added a repository VS Code launch configuration named `VideoCutEditor: Debug x64`.
   - Added a matching pre-launch task that builds `src\VideoCutEditor\VideoCutEditor.csproj` with `-p:Platform=x64`.
   - Kept the C# Dev Kit generated launch profile as a fallback and locked the expected VS Code configuration with a unit test.
+- `fix: use unpackaged entry point for VS Code F5`
+  - Updated the VS Code x64 pre-launch task to include `-p:WindowsPackageType=None` so direct F5 debugging uses the custom unpackaged `Program.Main`.
+  - Documented that normal packaged WinUI launch validation should still use `BuildAndRun.ps1` or `winapp run`.
+  - Recorded that stale debugged app instances can lock `VideoCutEditor.exe` and must be closed before rebuilding.
 
 ## Implemented Capabilities
 
@@ -141,6 +145,7 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 - All-platform portable publish script for x64, x86, and arm64.
 - Verification sample media generator for repeatable local manual checks.
 - VS Code F5 configuration for x64 Debug breakpoint debugging.
+- VS Code F5 direct debugging uses the unpackaged entry point while packaged debug launch remains covered by `BuildAndRun.ps1` / `winapp run`.
 
 ## Current Verification Baseline
 
@@ -149,7 +154,11 @@ Most recent successful checks:
 - `dotnet test VideoCutEditor.slnx`
   - 107 tests passed.
 - `dotnet test VideoCutEditor.slnx --filter VsCodeDebugConfigurationTests`
-  - 1 test passed after first confirming the test failed while `.vscode\tasks.json` was missing.
+  - 1 test passed after first confirming the test failed while the VS Code task lacked `-p:WindowsPackageType=None`.
+- `dotnet build src\VideoCutEditor\VideoCutEditor.csproj -p:Platform=x64 -p:WindowsPackageType=None`
+  - Build succeeded for the VS Code F5 direct-debug configuration.
+- Direct launch smoke of `src\VideoCutEditor\bin\x64\Debug\net10.0-windows10.0.26100.0\win-x64\VideoCutEditor.exe` after the unpackaged Debug build
+  - The app remained running after 5 seconds, so the previous immediate `REGDB_E_CLASSNOTREG` failure was not reproduced; the smoke-test process was then stopped.
 - `dotnet test VideoCutEditor.slnx --filter VerificationMediaScriptTests`
   - 1 test passed after first confirming the test failed before `scripts/New-SampleMedia.ps1` existed.
 - `powershell -ExecutionPolicy Bypass -File scripts\New-SampleMedia.ps1 -OutputDirectory "$env:TEMP\VideoCutEditor-SampleMedia-Smoke" -DurationSeconds 1 -Force`
@@ -180,7 +189,7 @@ When resuming in a new session, rerun the relevant subset before making assumpti
 - Preview-unavailable fallback behavior needs more manual and/or UI coverage.
 - Portable x64 publish, x86 publish, arm64 publish, artifact validation, and published x64 EXE startup smoke testing now succeed. Signing, MSIX packaging, installer validation, distribution packaging, and x86/arm64 runtime startup on matching devices still need verification.
 - UI tests currently cover presence and defaults more than full user workflows with real picker interactions and export completion.
-- VS Code F5 now has an explicit x64 launch path, but the user should manually confirm breakpoint attachment from VS Code because automated tests can only validate the configuration files and build output.
+- VS Code F5 now has an explicit x64 unpackaged launch path, but the user should manually confirm breakpoint attachment from VS Code because automated tests can only validate the configuration files and build output.
 
 ## Recommended Next Slices
 
