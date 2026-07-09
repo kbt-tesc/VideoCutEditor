@@ -122,6 +122,10 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
   - Added a `DesignTimeBuild`-only `VideoCutEditor.Core` reference in the WinUI app project to help Roslyn LSP resolve core symbols when VS Code diagnostics miss the normal `ProjectReference`.
   - User feedback confirmed Problems still existed after the global-usings experiment and disappeared after the design-time reference fallback, so the committed fix keeps the focused project-file fallback only.
   - Added tests that lock the design-time reference fallback.
+- `docs: record project-file diagnostics memo`
+  - Added `docs/project-file-notes.md` to preserve the confirmed VS Code/C# Dev Kit project-file behavior.
+  - Recorded that `.slnx` remains the only solution file, classic `.sln` and app-level global usings did not fix the warnings, and the `DesignTimeBuild`-only core reference is the confirmed fallback.
+  - Linked the memo from README and Codex workflow guidance.
 
 ## Implemented Capabilities
 
@@ -162,6 +166,7 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 - VS Code F5 direct debugging uses the unpackaged entry point while packaged debug launch remains covered by `BuildAndRun.ps1` / `winapp run`.
 - VS Code/C# Dev Kit language-service opens `VideoCutEditor.slnx`, the repo-standard solution.
 - VS Code/Roslyn LSP design-time fallback reference for `VideoCutEditor.Core` diagnostics.
+- Project-file guidance memo for `.slnx`, `.vscode/settings.json`, and design-time diagnostic fallback handling.
 - Japanese app-generated UI status/notice text for the main editor.
 - Output-folder open button.
 - Timeline drag seeking and 1px start/end marker lines.

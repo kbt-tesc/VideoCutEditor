@@ -11,6 +11,7 @@ Implementation has started with a small WinUI app skeleton, a testable core libr
 - `docs/technical-design.md` is the architecture and ffmpeg export source of truth.
 - `docs/codex-workflow.md` describes how Codex should work in this repo.
 - `docs/implementation-kickoff.md` is the handoff checklist for the implementation session.
+- `docs/project-file-notes.md` records VS Code/C# Dev Kit project-file decisions, including the design-time reference fallback for `VideoCutEditor.Core` diagnostics.
 
 The repo-local skills in `.agents/skills` include the VideoCutEditor workflow skill and Microsoft WinUI skills from `microsoft/win-dev-skills`.
 

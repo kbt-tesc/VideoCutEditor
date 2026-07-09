@@ -64,6 +64,8 @@ For VS Code breakpoint debugging, keep `.vscode/launch.json` and `.vscode/tasks.
 
 Use `VideoCutEditor.slnx` as the repo's standard solution file for .NET CLI and VS Code workflows. Keep `.vscode/settings.json` pinned to `VideoCutEditor.slnx` with `dotnet.defaultSolution`. The app project also carries a `DesignTimeBuild`-only `VideoCutEditor.Core` reference because the user's VS Code/Roslyn LSP diagnostics continued to miss `ProjectReference` symbols until that fallback was added. Do not add or restore a classic `.sln` for this unless a future tool regression proves it is necessary. If VS Code still reports stale warnings after these files change, reload the VS Code window or restart the C# language server before assuming the code is broken.
 
+For project-file decisions, read `docs/project-file-notes.md` before changing `.slnx`, `.vscode/settings.json`, app `ProjectReference` entries, or the `DesignTimeBuild`-only diagnostic fallback.
+
 Use manual tests for environment-dependent behavior:
 
 - Windows preview playback
