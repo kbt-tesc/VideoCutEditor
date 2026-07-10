@@ -184,6 +184,10 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
   - Set the main HWND as the INFO window's native owner with x64/ARM64 and x86 interop paths while keeping the window non-modal.
   - Extended the WinUI script to verify one owned INFO window, all three information fields, continued main-window interaction, duplicate prevention, close/reopen behavior, and cleanup.
   - Replaced source-text-only claims with runtime UI coverage where WinUI Automation can exercise the behavior.
+- `fix: preserve final export state from late progress events`
+  - Ignore queued runner progress after export success, failure, or cancellation so a stale timestamp cannot replace the final `1.0` completion value or terminal status.
+  - Added executable view-model tests for Fast copy success planning, final progress state, cancellation propagation, and cancellation log output.
+  - Formatted the existing tuple-pattern whitespace in `BitrateSuggestionService` so repository-wide formatting verification is clean.
 
 ## Implemented Capabilities
 
@@ -212,6 +216,7 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 - Fade duration input with 0.25 second steps and two-decimal truncation.
 - NVEnc/software encoder capability detection from `ffmpeg -encoders`.
 - Export progress parsing, log display, cancellation, temporary output path, and final promotion after success.
+- Terminal export state is protected from late queued progress notifications.
 - Output filename collision avoidance.
 - Settings persistence for tool paths, output directory, export mode, normalize audio, codec, encoder, bitrate mode, video bitrate, and additional ffmpeg arguments.
 - Atomic settings replacement, damaged-settings archival, and recoverable startup with defaults.
@@ -249,7 +254,9 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 Most recent successful checks:
 
 - `dotnet test VideoCutEditor.slnx`
-  - 132 core tests and 5 app-layer tests passed after adding settings recovery and the Windows-targeted app test project.
+  - 132 core tests and 7 app-layer tests passed after covering export success, cancellation, and late-progress handling.
+- `dotnet format VideoCutEditor.slnx --verify-no-changes --verbosity minimal`
+  - Formatting verification passed after normalizing the existing tuple-pattern whitespace.
 - `dotnet test VideoCutEditor.slnx --collect:"XPlat Code Coverage"`
   - Core line/branch coverage measured 88.77%/77.73%; `MainPageViewModel` now has 35.19% line and 22.62% branch coverage for its initial high-risk behavior set.
 - `dotnet test tests\VideoCutEditor.Tests\VideoCutEditor.Tests.csproj --no-build --no-restore --filter DetectAsync_reads_installed_ffmpeg_encoders_when_ffmpeg_is_available` with PATH isolated from ffmpeg
@@ -358,8 +365,7 @@ When resuming in a new session, rerun the relevant subset before making assumpti
 - The `[` and `]` shortcut fix is covered by source-level UI contract tests and should still be manually confirmed in the running app with a loaded preview.
 - Timeline drag seeking is covered by source-level UI contract tests and should still be manually confirmed visually with real media.
 - The owned modeless INFO window now has runtime UI coverage for open/close, duplicate prevention, field presence, and main-window interaction. A real export should still be manually observed once to confirm long-running live log updates remain readable while both windows are actively used.
-- App-layer tests now execute selected high-risk `MainPageViewModel` paths, but coverage remains intentionally focused; media-open state transitions, successful export orchestration, progress/cancellation state, and more settings combinations should be expanded incrementally.
-- Repository-wide `dotnet format --verify-no-changes` currently reports pre-existing whitespace diagnostics in `BitrateSuggestionService.cs` lines 51-55. All files changed in this hardening work pass the scoped whitespace verification.
+- App-layer tests now execute selected high-risk `MainPageViewModel` paths including successful export orchestration, terminal progress state, and cancellation. Media-open state transitions and more settings combinations should be expanded incrementally.
 
 ## Recommended Next Slices
 

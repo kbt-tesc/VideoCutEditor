@@ -65,6 +65,62 @@ public sealed class MainPageViewModelTests
     }
 
     [Fact]
+    public async Task ExportAsync_creates_fast_copy_plan_and_completes_view_model_state()
+    {
+        string directory = CreateTempDirectory();
+        string sourcePath = await CreateFileAsync(directory, "source.mp4");
+        string ffmpegPath = await CreateFileAsync(directory, "ffmpeg.exe");
+        var runner = new SuccessfulFfmpegRunner();
+        var settings = new RecordingSettingsService();
+        MainPageViewModel viewModel = CreateViewModel(settingsService: settings, ffmpegRunner: runner);
+        viewModel.SelectedSourcePath = sourcePath;
+        viewModel.FfmpegPath = ffmpegPath;
+        viewModel.OutputDirectory = directory;
+        viewModel.RangeEndSeconds = 2;
+
+        await viewModel.ExportCommand.ExecuteAsync(null);
+
+        ExportPlan plan = Assert.IsType<ExportPlan>(runner.Plan);
+        Assert.Equal(sourcePath, plan.SourcePath);
+        Assert.Equal(Path.Combine(directory, "source_cut.mp4"), plan.FinalOutputPath);
+        Assert.Contains("copy", plan.Arguments);
+        Assert.Equal(plan.FinalOutputPath, viewModel.PlannedOutputPath);
+        Assert.True(viewModel.HasExportLog);
+        Assert.Equal(1, viewModel.ExportProgressValue);
+        Assert.False(viewModel.IsExportProgressIndeterminate);
+        Assert.False(viewModel.IsExporting);
+        Assert.Contains("書き出しが完了しました", viewModel.StatusMessage);
+        Assert.NotNull(settings.SavedSettings);
+    }
+
+    [Fact]
+    public async Task CancelExportAsync_cancels_runner_and_keeps_cancellation_log()
+    {
+        string directory = CreateTempDirectory();
+        string sourcePath = await CreateFileAsync(directory, "source.mp4");
+        string ffmpegPath = await CreateFileAsync(directory, "ffmpeg.exe");
+        var runner = new BlockingFfmpegRunner();
+        MainPageViewModel viewModel = CreateViewModel(ffmpegRunner: runner);
+        viewModel.SelectedSourcePath = sourcePath;
+        viewModel.FfmpegPath = ffmpegPath;
+        viewModel.OutputDirectory = directory;
+        viewModel.RangeEndSeconds = 2;
+
+        Task exportTask = viewModel.ExportCommand.ExecuteAsync(null);
+        await runner.Started.Task;
+
+        Assert.True(viewModel.IsExporting);
+        viewModel.CancelExportCommand.Execute(null);
+        await exportTask;
+
+        Assert.True(runner.CancellationRequested);
+        Assert.False(viewModel.IsExporting);
+        Assert.False(viewModel.IsExportProgressIndeterminate);
+        Assert.Contains("キャンセルを要求しました", viewModel.ExportLogText);
+        Assert.Equal("書き出しをキャンセルしました", viewModel.StatusMessage);
+    }
+
+    [Fact]
     public async Task InitializeAsync_uses_defaults_and_reports_recoverable_settings_load_failure()
     {
         MainPageViewModel viewModel = CreateViewModel(settingsService: new ThrowingSettingsService());
@@ -95,6 +151,13 @@ public sealed class MainPageViewModelTests
         return directory;
     }
 
+    private static async Task<string> CreateFileAsync(string directory, string fileName)
+    {
+        string path = Path.Combine(directory, fileName);
+        await File.WriteAllTextAsync(path, string.Empty);
+        return path;
+    }
+
     private sealed class StubSettingsService : ISettingsService
     {
         public string SettingsFilePath => "settings.json";
@@ -104,6 +167,22 @@ public sealed class MainPageViewModelTests
 
         public ValueTask SaveAsync(AppSettings settings, CancellationToken cancellationToken = default) =>
             ValueTask.CompletedTask;
+    }
+
+    private sealed class RecordingSettingsService : ISettingsService
+    {
+        public AppSettings? SavedSettings { get; private set; }
+
+        public string SettingsFilePath => "settings.json";
+
+        public ValueTask<AppSettings> LoadAsync(CancellationToken cancellationToken = default) =>
+            ValueTask.FromResult(new AppSettings());
+
+        public ValueTask SaveAsync(AppSettings settings, CancellationToken cancellationToken = default)
+        {
+            SavedSettings = settings;
+            return ValueTask.CompletedTask;
+        }
     }
 
     private sealed class ThrowingSettingsService : ISettingsService
@@ -133,6 +212,48 @@ public sealed class MainPageViewModelTests
         {
             WasCalled = true;
             return Task.FromResult(new ExportResult(true, null));
+        }
+    }
+
+    private sealed class SuccessfulFfmpegRunner : IFfmpegRunner
+    {
+        public ExportPlan? Plan { get; private set; }
+
+        public Task<ExportResult> RunAsync(
+            ExportPlan plan,
+            IProgress<ExportProgress>? progress = null,
+            CancellationToken cancellationToken = default)
+        {
+            Plan = plan;
+            progress?.Report(new ExportProgress(TimeSpan.FromSeconds(1), null, "書き出し進捗"));
+            return Task.FromResult(new ExportResult(true, null));
+        }
+    }
+
+    private sealed class BlockingFfmpegRunner : IFfmpegRunner
+    {
+        public TaskCompletionSource Started { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public bool CancellationRequested { get; private set; }
+
+        public async Task<ExportResult> RunAsync(
+            ExportPlan plan,
+            IProgress<ExportProgress>? progress = null,
+            CancellationToken cancellationToken = default)
+        {
+            Started.TrySetResult();
+
+            try
+            {
+                await Task.Delay(Timeout.InfiniteTimeSpan, cancellationToken);
+            }
+            catch (OperationCanceledException)
+            {
+                CancellationRequested = true;
+                return new ExportResult(false, "書き出しをキャンセルしました");
+            }
+
+            throw new InvalidOperationException("The blocking export runner should be canceled.");
         }
     }
 

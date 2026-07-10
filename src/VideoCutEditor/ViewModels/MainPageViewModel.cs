@@ -518,6 +518,7 @@ public partial class MainPageViewModel : ObservableObject
         ExportLogText = "書き出しを開始しています...";
         HasExportLog = true;
         StatusMessage = "書き出し中...";
+        bool acceptsProgress = true;
 
         try
         {
@@ -532,6 +533,11 @@ public partial class MainPageViewModel : ObservableObject
             ExportPlan plan = planner.CreatePlan(request);
             var progress = new Progress<ExportProgress>(exportProgress =>
             {
+                if (!acceptsProgress)
+                {
+                    return;
+                }
+
                 AppendExportLog(exportProgress.Status);
 
                 if (exportProgress.Position is { } position)
@@ -551,6 +557,7 @@ public partial class MainPageViewModel : ObservableObject
             });
 
             ExportResult result = await ffmpegRunner.RunAsync(plan, progress, exportCancellation.Token);
+            acceptsProgress = false;
             StatusMessage = result.Succeeded
                 ? $"書き出しが完了しました: {Path.GetFileName(plan.FinalOutputPath)}"
                 : result.ErrorMessage ?? "書き出しに失敗しました";
@@ -566,11 +573,13 @@ public partial class MainPageViewModel : ObservableObject
         }
         catch (Exception exception)
         {
+            acceptsProgress = false;
             StatusMessage = exception.Message;
             AppLogger.Error("Export failed", exception);
         }
         finally
         {
+            acceptsProgress = false;
             IsExporting = false;
             exportCancellation.Dispose();
             exportCancellation = null;
