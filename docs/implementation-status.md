@@ -167,6 +167,10 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 - `fix: avoid generated partial property diagnostic for HDR SDR toggle`
   - Changed `ConvertHdrToSdrEnabled` from a CommunityToolkit-generated partial property to a hand-written `SetProperty` property.
   - This follows the output filename fix pattern and avoids VS Code/Roslyn design-time diagnostics (`CS9248`, `CS0759`) while preserving the HDR notice refresh behavior.
+- `ui: move export information to a modeless window`
+  - Replaced the modal INFO `ContentDialog` with a separate `InfoWindow` so encoder details, media details, and export logs no longer block the main editor.
+  - Reused and reactivated the existing INFO window on repeated button presses instead of opening duplicates.
+  - Bound the INFO window to the main view model so log and progress-related text continues updating during export, and close it when the main page unloads.
 
 ## Implemented Capabilities
 
@@ -219,7 +223,7 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 - Play/pause button icon follows playback state.
 - Settings dialog owns ffmpeg, ffprobe, and output-folder configuration.
 - Main export surface supports editing the output file name before export.
-- INFO dialog shows encoder information, media information, and export logs without growing the main editor layout.
+- A modeless INFO window shows encoder information, media information, and live export logs without growing or locking the main editor layout.
 - Editable output filename uses a hand-written view-model property to avoid source-generator design-time diagnostics in VS Code.
 - Editable output filename and HDR to SDR toggle state use hand-written view-model properties to avoid source-generator design-time diagnostics in VS Code.
 - HDR media shows a Japanese INFO notice; Fast copy preserves HDR, while Re-encode exposes a default-checked SDR conversion option.
@@ -228,6 +232,10 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 
 Most recent successful checks:
 
+- `dotnet test VideoCutEditor.slnx --filter Settings_output_filename_and_info_surfaces_are_separated`
+  - 1 test passed after first confirming failure while `InfoWindow.xaml` did not exist, then verifying the modal INFO dialog was replaced by a reusable modeless window.
+- `dotnet build src\VideoCutEditor\VideoCutEditor.csproj -c Release -p:Platform=x64 -p:WindowsPackageType=None`
+  - Build succeeded with 0 warnings and 0 errors after adding the secondary INFO window.
 - `dotnet test VideoCutEditor.slnx`
   - 124 tests passed.
 - `dotnet test VideoCutEditor.slnx --filter Hdr_to_sdr_option_is_contextual_and_defaulted_for_hdr_media`
@@ -317,6 +325,7 @@ When resuming in a new session, rerun the relevant subset before making assumpti
 - VS Code DocumentCompilerSemantic warnings for `VideoCutEditor.Core` references should be resolved by the `DesignTimeBuild`-only core reference fallback while VS Code remains pinned to `VideoCutEditor.slnx`. Existing VS Code sessions may need `Developer: Reload Window` or a C# language server restart to clear stale diagnostics.
 - The `[` and `]` shortcut fix is covered by source-level UI contract tests and should still be manually confirmed in the running app with a loaded preview.
 - Timeline drag seeking is covered by source-level UI contract tests and should still be manually confirmed visually with real media.
+- The modeless INFO window is covered by source-level UI contracts and compile validation. It should still be manually verified for repeated open/close, live log updates during export, and main-window interaction while the INFO window remains open.
 
 ## Recommended Next Slices
 

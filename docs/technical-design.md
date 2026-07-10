@@ -37,6 +37,8 @@ If ffprobe cannot return a source bitrate, fall back to stream-level bitrate or 
 
 The initial media probing implementation runs `ffprobe -v error -show_format -show_streams -print_format json <source>` through `ProcessStartInfo.ArgumentList`, parses format and stream metadata in testable code, and uses the primary video stream frame rate for one-frame keyboard stepping when available.
 
+Encoder information, media information, and export logs are displayed by one modeless `InfoWindow`. The main page retains the window instance while it is open, activates that instance on repeated INFO commands, and releases it after `Closed`. The window binds to the same `MainPageViewModel` as the editor so export progress and logs continue updating without blocking the main window. Unloading the main page closes the secondary window to keep application lifetime predictable.
+
 HDR detection treats a video stream as HDR when ffprobe reports `color_transfer=smpte2084` (HDR10/PQ) or `color_transfer=arib-std-b67` (HLG). `color_space` and `color_primaries` are retained for display/debugging and future refinement, but transfer characteristics drive the current HDR decision to avoid treating BT.2020 SDR as HDR.
 
 ## Export Modes

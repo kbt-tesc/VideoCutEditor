@@ -47,6 +47,7 @@ public sealed partial class MainPage : Page
     private readonly WaveformPlanner waveformPlanner = new();
     private readonly IWaveformGenerator waveformGenerator = new WaveformGenerator();
     private CancellationTokenSource? waveformCancellation;
+    private InfoWindow? infoWindow;
     private bool isDraggingTimeline;
 
     public MainPageViewModel ViewModel { get; } = new();
@@ -99,6 +100,13 @@ public sealed partial class MainPage : Page
         AppLogger.Info("MainPage unloaded");
         playbackTimer.Stop();
         waveformCancellation?.Cancel();
+        if (infoWindow is not null)
+        {
+            infoWindow.Closed -= InfoWindowClosed;
+            infoWindow.Close();
+            infoWindow = null;
+        }
+
         ViewModel.PropertyChanged -= ViewModelPropertyChanged;
         PreviewPlayer.MediaPlayer.CurrentStateChanged -= PreviewPlayerCurrentStateChanged;
         PreviewPlayer.MediaPlayer.Pause();
@@ -245,12 +253,22 @@ public sealed partial class MainPage : Page
         EditorRoot.Focus(Microsoft.UI.Xaml.FocusState.Programmatic);
     }
 
-    private async void ShowInfoButton_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
+    private void ShowInfoButton_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
     {
-        InfoDialog.XamlRoot = XamlRoot;
-        InfoDialog.Style = Microsoft.UI.Xaml.Application.Current.Resources["DefaultContentDialogStyle"] as Microsoft.UI.Xaml.Style;
-        await InfoDialog.ShowAsync();
-        EditorRoot.Focus(Microsoft.UI.Xaml.FocusState.Programmatic);
+        infoWindow ??= new InfoWindow(ViewModel);
+        infoWindow.Closed -= InfoWindowClosed;
+        infoWindow.Closed += InfoWindowClosed;
+        infoWindow.Activate();
+    }
+
+    private void InfoWindowClosed(object sender, Microsoft.UI.Xaml.WindowEventArgs args)
+    {
+        if (sender is InfoWindow closedWindow)
+        {
+            closedWindow.Closed -= InfoWindowClosed;
+        }
+
+        infoWindow = null;
     }
 
     private void TimelineCanvas_PointerPressed(object sender, PointerRoutedEventArgs e)

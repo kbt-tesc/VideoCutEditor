@@ -137,6 +137,8 @@ public sealed class UserInterfaceSourceTests
     {
         string xaml = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "src", "VideoCutEditor", "MainPage.xaml"));
         string codeBehind = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "src", "VideoCutEditor", "MainPage.xaml.cs"));
+        string infoWindowXaml = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "src", "VideoCutEditor", "InfoWindow.xaml"));
+        string infoWindowCodeBehind = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "src", "VideoCutEditor", "InfoWindow.xaml.cs"));
         string viewModel = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "src", "VideoCutEditor", "ViewModels", "MainPageViewModel.cs"));
 
         Assert.Contains("AutomationProperties.AutomationId=\"OutputFileNameTextBox\"", xaml);
@@ -145,17 +147,23 @@ public sealed class UserInterfaceSourceTests
         Assert.Contains("AutomationProperties.AutomationId=\"OpenSettingsButton\"", xaml);
         Assert.Contains("AutomationProperties.AutomationId=\"ShowInfoButton\"", xaml);
         Assert.Contains("x:Name=\"SettingsDialog\"", xaml);
-        Assert.Contains("x:Name=\"InfoDialog\"", xaml);
+        Assert.DoesNotContain("x:Name=\"InfoDialog\"", xaml);
         Assert.Matches(new Regex("x:Name=\"SettingsDialog\"[\\s\\S]*?AutomationProperties.AutomationId=\"FfmpegPathTextBox\"", RegexOptions.None, TimeSpan.FromSeconds(1)), xaml);
         Assert.Matches(new Regex("x:Name=\"SettingsDialog\"[\\s\\S]*?AutomationProperties.AutomationId=\"FfprobePathTextBox\"", RegexOptions.None, TimeSpan.FromSeconds(1)), xaml);
         Assert.Matches(new Regex("x:Name=\"SettingsDialog\"[\\s\\S]*?AutomationProperties.AutomationId=\"OutputDirectoryTextBox\"", RegexOptions.None, TimeSpan.FromSeconds(1)), xaml);
-        Assert.Matches(new Regex("x:Name=\"InfoDialog\"[\\s\\S]*?<ScrollViewer[\\s\\S]*?MaxHeight=\"520\"", RegexOptions.None, TimeSpan.FromSeconds(1)), xaml);
-        Assert.Matches(new Regex("x:Name=\"InfoDialog\"[\\s\\S]*?AutomationProperties.AutomationId=\"EncoderSummaryTextBox\"", RegexOptions.None, TimeSpan.FromSeconds(1)), xaml);
-        Assert.Matches(new Regex("x:Name=\"InfoDialog\"[\\s\\S]*?AutomationProperties.AutomationId=\"ExportLogTextBox\"", RegexOptions.None, TimeSpan.FromSeconds(1)), xaml);
+        Assert.Contains("x:Class=\"VideoCutEditor.InfoWindow\"", infoWindowXaml);
+        Assert.Contains("<ScrollViewer", infoWindowXaml);
+        Assert.Contains("AutomationProperties.AutomationId=\"EncoderSummaryTextBox\"", infoWindowXaml);
+        Assert.Contains("AutomationProperties.AutomationId=\"ExportLogTextBox\"", infoWindowXaml);
+        Assert.Contains("AutomationProperties.AutomationId=\"MediaInfoTextBox\"", infoWindowXaml);
+        Assert.Contains("public MainPageViewModel ViewModel { get; }", infoWindowCodeBehind);
         Assert.Contains("OpenSettingsButton_Click", codeBehind);
         Assert.Contains("ShowInfoButton_Click", codeBehind);
         Assert.Contains("SettingsDialog.XamlRoot = XamlRoot;", codeBehind);
-        Assert.Contains("InfoDialog.XamlRoot = XamlRoot;", codeBehind);
+        Assert.Contains("private InfoWindow? infoWindow;", codeBehind);
+        Assert.Contains("infoWindow ??= new InfoWindow(ViewModel);", codeBehind);
+        Assert.Contains("infoWindow.Activate();", codeBehind);
+        Assert.DoesNotContain("await InfoDialog.ShowAsync();", codeBehind);
         Assert.Contains("private string plannedOutputFileName = string.Empty;", viewModel);
         Assert.Contains("public string PlannedOutputFileName", viewModel);
         Assert.Contains("SetProperty(ref plannedOutputFileName, value)", viewModel);
