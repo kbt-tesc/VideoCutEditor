@@ -246,13 +246,23 @@ public partial class MainPageViewModel : ObservableObject
 
     public MainPageViewModel()
         : this(
-            new JsonSettingsService(),
+            CreateSettingsService(),
             new OutputPathService(),
             new FfmpegToolPathService(),
             new FfmpegRunner(),
             new MediaProbeService(),
             new FfmpegCapabilityService())
     {
+    }
+
+    private static JsonSettingsService CreateSettingsService()
+    {
+#if DEBUG
+        string? testSettingsDirectory = Environment.GetEnvironmentVariable("VIDEOCUTEDITOR_TEST_SETTINGS_DIRECTORY");
+        return new JsonSettingsService(testSettingsDirectory);
+#else
+        return new JsonSettingsService();
+#endif
     }
 
     public MainPageViewModel(

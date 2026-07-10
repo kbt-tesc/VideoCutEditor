@@ -198,6 +198,10 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
   - Verified that opening the generated audio/video sample updates the Japanese status and initializes a non-zero editable range.
   - Added a loaded-media screenshot and fixed timeline ruler label rounding after the visual check exposed `0:02` rendering as `0:01`.
   - Added PowerShell failure stack traces and compatibility for both `FileNameControlHost` and legacy picker field ID `1148`.
+- `test: verify isolated Fast copy UI export`
+  - Added a Debug-only test settings directory override that never changes Release settings behavior.
+  - Added `scripts/Test-FastCopyUi.ps1` to generate media, create isolated settings/output directories, launch the unpackaged app, and clean up in `finally`.
+  - Extended the UI workflow to verify planned output isolation, Fast copy completion status, and creation of a non-empty output file.
 
 ## Implemented Capabilities
 
@@ -266,6 +270,15 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 
 Most recent successful checks:
 
+- `powershell -ExecutionPolicy Bypass -File scripts\Test-FastCopyUi.ps1`
+  - 61 UI tests passed using temporary settings, media, and output directories; Fast copy produced a non-empty file and all temporary state was removed.
+  - Visual review confirmed the completion status and editor layout remained readable after export.
+- `powershell -ExecutionPolicy Bypass -File .agents\skills\winui-dev-workflow\BuildAndRun.ps1 .\src\VideoCutEditor\VideoCutEditor.csproj -SkipRun`
+  - Analyzer-enabled Debug x64 build succeeded with 0 warnings and 0 errors.
+- `dotnet test VideoCutEditor.slnx`
+  - 135 core tests and 8 app-layer tests passed after adding isolated Fast copy UI verification.
+- `dotnet build src\VideoCutEditor\VideoCutEditor.csproj -c Release -p:Platform=x64 -p:WindowsPackageType=None`
+  - Release x64 build succeeded with 0 warnings and 0 errors; the test settings override is excluded by `#if DEBUG`.
 - `powershell -ExecutionPolicy Bypass -File tests\ui-tests.ps1 -AppPid <pid> -SampleVideoPath artifacts\verification-media\video-with-audio.mp4`
   - 58 UI tests passed, including the real Windows file picker, generated sample loading, Japanese loaded status, non-zero range initialization, INFO window behavior, and screenshot capture.
   - Visual review confirmed the generated preview and waveform render without clipping or overlap, and the ruler labels now read `0:00`, `0:01`, `0:02`, `0:03`, `0:04` for the four-second sample.
@@ -387,7 +400,7 @@ When resuming in a new session, rerun the relevant subset before making assumpti
 - NVEnc behavior should be manually verified on hardware and ffmpeg builds that expose NVEnc.
 - Preview-unavailable fallback behavior needs more manual and/or UI coverage.
 - Portable x64 publish, x86 publish, arm64 publish, artifact validation, and published x64 EXE startup smoke testing now succeed. Signing, MSIX packaging, installer validation, distribution packaging, and x86/arm64 runtime startup on matching devices still need verification.
-- UI tests now cover opening generated media through the real Windows file picker and validating loaded range state. Export completion through the UI is still not scripted.
+- UI tests cover opening generated media through the real Windows file picker, loaded range state, and isolated Fast copy export completion.
 - The picker workflow supports the current legacy filename field ID `1148` and the newer `FileNameControlHost` ID. Future Windows picker UIA changes may require updating these selectors.
 - VS Code F5 now has an explicit x64 unpackaged launch path, but the user should manually confirm breakpoint attachment from VS Code because automated tests can only validate the configuration files and build output.
 - VS Code DocumentCompilerSemantic warnings for `VideoCutEditor.Core` references should be resolved by the `DesignTimeBuild`-only core reference fallback while VS Code remains pinned to `VideoCutEditor.slnx`. Existing VS Code sessions may need `Developer: Reload Window` or a C# language server restart to clear stale diagnostics.
@@ -401,8 +414,8 @@ When resuming in a new session, rerun the relevant subset before making assumpti
 
 1. Continue end-to-end verification.
    - Generate local verification inputs with `scripts/New-SampleMedia.ps1` when real sample media is not available.
-   - Add scripted Fast copy export completion coverage while isolating output settings from the user's normal configuration.
-   - Add manual verification notes for real preview/export/NVEnc/package runs.
+   - Add isolated Re-encode and audio-normalization export completion coverage where runtime remains reasonable.
+   - Add manual verification notes for representative real preview/NVEnc/package runs.
 2. Deepen audio normalization verification.
    - Manually verify representative real media and no-audio media.
    - Consider configurable loudness/true peak/LRA only if real users need targets other than `-14 LUFS`.

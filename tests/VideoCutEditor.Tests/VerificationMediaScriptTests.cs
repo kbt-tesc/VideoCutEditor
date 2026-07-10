@@ -30,6 +30,23 @@ public sealed class VerificationMediaScriptTests
         Assert.Contains("RangeEndTextBox", script);
     }
 
+    [Fact]
+    public void Fast_copy_ui_verification_isolated_from_normal_user_settings()
+    {
+        string root = FindRepositoryRoot();
+        string viewModel = File.ReadAllText(Path.Combine(root, "src", "VideoCutEditor", "ViewModels", "MainPageViewModel.cs"));
+        string uiScript = File.ReadAllText(Path.Combine(root, "tests", "ui-tests.ps1"));
+        string runnerPath = Path.Combine(root, "scripts", "Test-FastCopyUi.ps1");
+
+        Assert.Contains("VIDEOCUTEDITOR_TEST_SETTINGS_DIRECTORY", viewModel);
+        Assert.Contains("[switch]$VerifyFastCopyExport", uiScript);
+        Assert.Contains("ExpectedOutputDirectory", uiScript);
+        Assert.Contains("ExportButton", uiScript);
+        Assert.Contains("[System.IO.File]::Exists", uiScript);
+        Assert.True(File.Exists(runnerPath));
+        Assert.Contains("VIDEOCUTEDITOR_TEST_SETTINGS_DIRECTORY", File.ReadAllText(runnerPath));
+    }
+
     private static (int ExitCode, string Output) RunSampleMediaDryRun(string outputDirectory)
     {
         string scriptPath = Path.Combine(FindRepositoryRoot(), "scripts", "New-SampleMedia.ps1");

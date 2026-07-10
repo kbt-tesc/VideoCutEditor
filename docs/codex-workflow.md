@@ -81,6 +81,10 @@ Use `scripts/New-SampleMedia.ps1` to create repeatable local sample inputs befor
 
 Record manual test results, skipped checks, and newly discovered validation needs in `docs/implementation-status.md`.
 
+## Context Budget Handoff
+
+When the active Codex plan has a constrained context allowance, keep each turn to one complete implementation slice. If the remaining allowance may not cover implementation, verification, documentation, and commit, stop at the nearest coherent boundary, update `docs/implementation-status.md` with exact completed work and the next command or step, and hand off instead of starting another partial slice.
+
 ## Handling Uncertainty
 
 - For ffmpeg behavior, prefer local `ffmpeg -version`, `ffmpeg -encoders`, and `ffmpeg -h encoder=<name>` over assumptions.

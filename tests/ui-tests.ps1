@@ -4,7 +4,11 @@ param(
 
     [string]$OutputDirectory = "",
 
-    [string]$SampleVideoPath = ""
+    [string]$SampleVideoPath = "",
+
+    [switch]$VerifyFastCopyExport,
+
+    [string]$ExpectedOutputDirectory = ""
 )
 
 $ErrorActionPreference = "Continue"
@@ -390,6 +394,38 @@ if (-not [string]::IsNullOrWhiteSpace($SampleVideoPath)) {
 
     Test-UI "Loaded sample screenshot captured" {
         winapp ui screenshot -a $AppPid -o (Join-Path $screenshots "02-sample-loaded.png") 2>$null
+    }
+
+    if ($VerifyFastCopyExport) {
+        Test-UI "Fast copy output uses isolated directory" {
+            if ([string]::IsNullOrWhiteSpace($ExpectedOutputDirectory)) {
+                throw "ExpectedOutputDirectory is required for Fast copy verification."
+            }
+
+            winapp ui invoke "Fast copy" -w $mainWindowHwnd -q
+            $planned = winapp ui get-value "PlannedOutputTextBox" -w $mainWindowHwnd --json 2>$null | ConvertFrom-Json
+            $script:plannedExportPath = $planned.text
+            $expected = (Resolve-Path -LiteralPath $ExpectedOutputDirectory).Path
+            if (-not [string]::Equals([System.IO.Path]::GetDirectoryName($plannedExportPath), $expected, [StringComparison]::OrdinalIgnoreCase)) {
+                throw "Planned output is outside the isolated directory: '$plannedExportPath'."
+            }
+            if ([System.IO.File]::Exists($plannedExportPath)) {
+                throw "Planned output already exists before export."
+            }
+        }
+
+        Test-UI "Fast copy export completes" {
+            winapp ui invoke "ExportButton" -w $mainWindowHwnd -q
+            $completedText = -join [char[]]@(0x66F8, 0x304D, 0x51FA, 0x3057, 0x304C, 0x5B8C, 0x4E86, 0x3057, 0x307E, 0x3057, 0x305F)
+            Wait-ForTextValue -AutomationId "StatusMessageText" -ExpectedText $completedText -WindowHwnd ([long]$mainWindowHwnd) -TimeoutMilliseconds 60000
+            if (-not [System.IO.File]::Exists($plannedExportPath) -or (Get-Item -LiteralPath $plannedExportPath).Length -eq 0) {
+                throw "Fast copy export did not create a non-empty output file."
+            }
+        }
+
+        Test-UI "Fast copy completion screenshot captured" {
+            winapp ui screenshot -a $AppPid -o (Join-Path $screenshots "03-fast-copy-complete.png") 2>$null
+        }
     }
 }
 
