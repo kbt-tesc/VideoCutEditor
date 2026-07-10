@@ -4,6 +4,7 @@
     <Project Path="src/VideoCutEditor/VideoCutEditor.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/VideoCutEditor.App.Tests/VideoCutEditor.App.Tests.csproj" />
     <Project Path="tests/VideoCutEditor.Tests/VideoCutEditor.Tests.csproj" />
   </Folder>
 </Solution>

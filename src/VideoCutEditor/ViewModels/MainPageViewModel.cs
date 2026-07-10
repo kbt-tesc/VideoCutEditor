@@ -268,14 +268,28 @@ public partial class MainPageViewModel : ObservableObject
     public async Task InitializeAsync()
     {
         AppLogger.Info("MainPageViewModel InitializeAsync starting");
-        AppSettings settings = await settingsService.LoadAsync();
+        AppSettings settings;
+        bool settingsLoadFailed = false;
+        try
+        {
+            settings = await settingsService.LoadAsync();
+        }
+        catch (Exception exception)
+        {
+            settings = new AppSettings();
+            settingsLoadFailed = true;
+            AppLogger.Error("Settings load failed; defaults will be used", exception);
+        }
+
         FfmpegToolPaths paths = toolPathService.Resolve(settings);
 
         FfmpegPath = paths.FfmpegPath;
         FfprobePath = paths.FfprobePath;
         OutputDirectory = settings.OutputDirectory;
         ApplyExportSettings(settings);
-        StatusMessage = CreateToolDetectionStatus(paths);
+        StatusMessage = settingsLoadFailed
+            ? "設定を読み込めなかったため、既定値を使用します"
+            : CreateToolDetectionStatus(paths);
         await DetectEncoderCapabilitiesAsync();
         AppLogger.Info($"Tool paths resolved. ffmpeg={FfmpegPath ?? "(null)"}, ffprobe={FfprobePath ?? "(null)"}");
     }

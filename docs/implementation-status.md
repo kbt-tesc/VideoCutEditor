@@ -171,6 +171,11 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
   - Replaced the modal INFO `ContentDialog` with a separate `InfoWindow` so encoder details, media details, and export logs no longer block the main editor.
   - Reused and reactivated the existing INFO window on repeated button presses instead of opening duplicates.
   - Bound the INFO window to the main view model so log and progress-related text continues updating during export, and close it when the main page unloads.
+- `fix: recover damaged settings and add app-layer tests`
+  - Changed settings saves to write and flush a same-directory temporary file before replacing `settings.json`, while preserving the previous file when serialization is canceled or fails.
+  - Added invalid/empty JSON recovery that archives damaged settings and falls back to defaults; unreadable settings now produce a best-effort diagnostic instead of preventing startup.
+  - Added a defensive view-model initialization fallback for unexpected settings-service failures.
+  - Added the Windows-targeted `VideoCutEditor.App.Tests` project with behavior tests for time/range input, editable output naming, export preconditions, and settings-load recovery.
 
 ## Implemented Capabilities
 
@@ -200,6 +205,7 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 - Export progress parsing, log display, cancellation, temporary output path, and final promotion after success.
 - Output filename collision avoidance.
 - Settings persistence for tool paths, output directory, export mode, normalize audio, codec, encoder, bitrate mode, video bitrate, and additional ffmpeg arguments.
+- Atomic settings replacement, damaged-settings archival, and recoverable startup with defaults.
 - Re-encode video bitrate suggestions from source bitrate or resolution with codec-specific multipliers.
 - Predicted output size display for bitrate-based Re-encode when enough information is available.
 - Scripted WinUI UI smoke tests with screenshots.
@@ -227,11 +233,16 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 - Editable output filename uses a hand-written view-model property to avoid source-generator design-time diagnostics in VS Code.
 - Editable output filename and HDR to SDR toggle state use hand-written view-model properties to avoid source-generator design-time diagnostics in VS Code.
 - HDR media shows a Japanese INFO notice; Fast copy preserves HDR, while Re-encode exposes a default-checked SDR conversion option.
+- `MainPageViewModel` has executable app-layer tests instead of relying only on source-text contracts.
 
 ## Current Verification Baseline
 
 Most recent successful checks:
 
+- `dotnet test VideoCutEditor.slnx`
+  - 132 core tests and 5 app-layer tests passed after adding settings recovery and the Windows-targeted app test project.
+- `dotnet test VideoCutEditor.slnx --collect:"XPlat Code Coverage"`
+  - Core line/branch coverage measured 88.77%/77.73%; `MainPageViewModel` now has 35.19% line and 22.62% branch coverage for its initial high-risk behavior set.
 - `dotnet test VideoCutEditor.slnx --filter Settings_output_filename_and_info_surfaces_are_separated`
   - 1 test passed after first confirming failure while `InfoWindow.xaml` did not exist, then verifying the modal INFO dialog was replaced by a reusable modeless window.
 - `dotnet build src\VideoCutEditor\VideoCutEditor.csproj -c Release -p:Platform=x64 -p:WindowsPackageType=None`
@@ -326,6 +337,8 @@ When resuming in a new session, rerun the relevant subset before making assumpti
 - The `[` and `]` shortcut fix is covered by source-level UI contract tests and should still be manually confirmed in the running app with a loaded preview.
 - Timeline drag seeking is covered by source-level UI contract tests and should still be manually confirmed visually with real media.
 - The modeless INFO window is covered by source-level UI contracts and compile validation. It should still be manually verified for repeated open/close, live log updates during export, and main-window interaction while the INFO window remains open.
+- App-layer tests now execute selected high-risk `MainPageViewModel` paths, but coverage remains intentionally focused; media-open state transitions, successful export orchestration, progress/cancellation state, and more settings combinations should be expanded incrementally.
+- Repository-wide `dotnet format --verify-no-changes` currently reports pre-existing whitespace diagnostics in `BitrateSuggestionService.cs` lines 51-55. All files changed in this hardening work pass the scoped whitespace verification.
 
 ## Recommended Next Slices
 

@@ -21,6 +21,14 @@ Use a small MVVM-style structure:
 
 Prefer testable command-generation code that does not require launching ffmpeg.
 
+## Settings Persistence
+
+`JsonSettingsService` stores settings in `%AppData%/VideoCutEditor/settings.json`. Saving first serializes to a unique temporary file in the same directory, flushes and closes it, then replaces the destination with a same-volume move. Cancellation or failure removes the temporary file and leaves the previous settings file unchanged.
+
+Invalid or empty JSON is moved to a timestamped `settings.corrupt.*.json` file before defaults are returned. I/O or access failures return defaults and attempt to write a timestamped `settings.load-error.*.txt` diagnostic without allowing the diagnostic write itself to prevent startup. `MainPageViewModel.InitializeAsync` also has a defensive fallback for unexpected `ISettingsService` failures.
+
+App-layer behavior tests live in `tests/VideoCutEditor.App.Tests`. The project targets the Windows TFM and x64 runtime, references the WinUI app with Windows App SDK bootstrap/deployment initialization disabled, and exercises `MainPageViewModel` without creating XAML windows. Core-only tests remain in `tests/VideoCutEditor.Tests`.
+
 ## Media Probing
 
 Use ffprobe to collect:

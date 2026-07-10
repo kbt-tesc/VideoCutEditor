@@ -94,6 +94,8 @@ Persist these settings in the user's AppData folder:
 
 The app should try configured paths first, then PATH discovery as a fallback.
 
+If the settings file is empty or contains invalid JSON, preserve the unreadable file for diagnosis and continue startup with default settings. A settings read failure must not prevent the editor from opening. Settings writes should replace the previous file only after a complete new JSON file has been written successfully.
+
 ## Error States
 
 Show clear recoverable errors for:
@@ -110,6 +112,7 @@ Show clear recoverable errors for:
 - Export process failure
 - Export cancellation
 - Start/end range errors
+- Unreadable or damaged settings data
 
 Errors should not delete source files or overwrite existing output files.
 
