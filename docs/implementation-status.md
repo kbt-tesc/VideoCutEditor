@@ -193,6 +193,11 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
   - Added a non-blocking inline warning when a manually edited output filename points to an existing destination file.
   - Kept manual filenames unchanged while preserving the runner-level overwrite guard.
   - Added core, app-layer, and UI source contract tests for the updated behavior.
+- `test: exercise generated media through the system picker`
+  - Extended `tests/ui-tests.ps1` with an optional generated sample path and automated the Windows file picker without depending on the display language.
+  - Verified that opening the generated audio/video sample updates the Japanese status and initializes a non-zero editable range.
+  - Added a loaded-media screenshot and fixed timeline ruler label rounding after the visual check exposed `0:02` rendering as `0:01`.
+  - Added PowerShell failure stack traces and compatibility for both `FileNameControlHost` and legacy picker field ID `1148`.
 
 ## Implemented Capabilities
 
@@ -254,11 +259,20 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 - Editable output filename and HDR to SDR toggle state use hand-written view-model properties to avoid source-generator design-time diagnostics in VS Code.
 - HDR media shows a Japanese INFO notice; Fast copy preserves HDR, while Re-encode exposes a default-checked SDR conversion option.
 - `MainPageViewModel` has executable app-layer tests instead of relying only on source-text contracts.
+- Scripted UI verification can open generated sample media through the owned Windows file picker and confirm loaded range state.
+- Timeline major-tick labels round accumulated fractional seconds before formatting so whole-second labels remain accurate.
 
 ## Current Verification Baseline
 
 Most recent successful checks:
 
+- `powershell -ExecutionPolicy Bypass -File tests\ui-tests.ps1 -AppPid <pid> -SampleVideoPath artifacts\verification-media\video-with-audio.mp4`
+  - 58 UI tests passed, including the real Windows file picker, generated sample loading, Japanese loaded status, non-zero range initialization, INFO window behavior, and screenshot capture.
+  - Visual review confirmed the generated preview and waveform render without clipping or overlap, and the ruler labels now read `0:00`, `0:01`, `0:02`, `0:03`, `0:04` for the four-second sample.
+- `dotnet test VideoCutEditor.slnx`
+  - 134 core tests and 8 app-layer tests passed after adding picker workflow coverage and ruler label rounding.
+- `dotnet build src\VideoCutEditor\VideoCutEditor.csproj -c Release -p:Platform=x64 -p:WindowsPackageType=None`
+  - Release x64 build succeeded with 0 warnings and 0 errors after the end-to-end picker verification slice.
 - `dotnet test VideoCutEditor.slnx --filter "CreateAvailableCutPath_appends_one_based_number_when_default_exists|CreateAvailableCutPath_continues_after_one_based_suffix_exists|Manual_output_file_name_warns_when_the_destination_file_already_exists|Settings_output_filename_and_info_surfaces_are_separated"`
   - 4 focused tests passed after adding one-based automatic suffixing and the manual output filename collision warning.
 - `dotnet test VideoCutEditor.slnx`
@@ -373,7 +387,8 @@ When resuming in a new session, rerun the relevant subset before making assumpti
 - NVEnc behavior should be manually verified on hardware and ffmpeg builds that expose NVEnc.
 - Preview-unavailable fallback behavior needs more manual and/or UI coverage.
 - Portable x64 publish, x86 publish, arm64 publish, artifact validation, and published x64 EXE startup smoke testing now succeed. Signing, MSIX packaging, installer validation, distribution packaging, and x86/arm64 runtime startup on matching devices still need verification.
-- UI tests currently cover presence and defaults more than full user workflows with real picker interactions and export completion.
+- UI tests now cover opening generated media through the real Windows file picker and validating loaded range state. Export completion through the UI is still not scripted.
+- The picker workflow supports the current legacy filename field ID `1148` and the newer `FileNameControlHost` ID. Future Windows picker UIA changes may require updating these selectors.
 - VS Code F5 now has an explicit x64 unpackaged launch path, but the user should manually confirm breakpoint attachment from VS Code because automated tests can only validate the configuration files and build output.
 - VS Code DocumentCompilerSemantic warnings for `VideoCutEditor.Core` references should be resolved by the `DesignTimeBuild`-only core reference fallback while VS Code remains pinned to `VideoCutEditor.slnx`. Existing VS Code sessions may need `Developer: Reload Window` or a C# language server restart to clear stale diagnostics.
 - The `[` and `]` shortcut fix is covered by source-level UI contract tests and should still be manually confirmed in the running app with a loaded preview.
@@ -386,7 +401,7 @@ When resuming in a new session, rerun the relevant subset before making assumpti
 
 1. Continue end-to-end verification.
    - Generate local verification inputs with `scripts/New-SampleMedia.ps1` when real sample media is not available.
-   - Add scripted picker workflow coverage where reliable.
+   - Add scripted Fast copy export completion coverage while isolating output settings from the user's normal configuration.
    - Add manual verification notes for real preview/export/NVEnc/package runs.
 2. Deepen audio normalization verification.
    - Manually verify representative real media and no-audio media.

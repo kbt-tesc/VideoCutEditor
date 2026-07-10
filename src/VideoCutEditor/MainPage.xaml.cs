@@ -601,7 +601,7 @@ public sealed partial class MainPage : Page
 
             var label = new TextBlock
             {
-                Text = FormatTimelineLabel(TimeSpan.FromSeconds(second)),
+                Text = FormatTimelineLabel(TimeSpan.FromSeconds(Math.Round(second, 6, MidpointRounding.AwayFromZero))),
                 Width = TimelineLabelWidth,
                 Style = Microsoft.UI.Xaml.Application.Current.Resources["CaptionTextBlockStyle"] as Microsoft.UI.Xaml.Style,
                 Foreground = Microsoft.UI.Xaml.Application.Current.Resources["TextFillColorSecondaryBrush"] as Microsoft.UI.Xaml.Media.Brush,

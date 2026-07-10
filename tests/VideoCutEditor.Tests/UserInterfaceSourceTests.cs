@@ -73,6 +73,7 @@ public sealed class UserInterfaceSourceTests
         Assert.Contains("continue;", codeBehind);
         Assert.Contains("Canvas.SetTop(label, TimelineLabelTop)", codeBehind);
         Assert.Contains("Height = isMajorTick ? TimelineMajorTickHeight : TimelineMinorTickHeight", codeBehind);
+        Assert.Contains("Math.Round(second, 6, MidpointRounding.AwayFromZero)", codeBehind);
     }
 
     [Fact]

@@ -25,7 +25,7 @@ Only one keep range is supported per export.
 - Show a video preview using Windows standard media playback.
 - Show a custom editor-style timeline below the preview with the current playhead position, start/end markers, timeline zoom controls, and an audio waveform when ffmpeg can generate one.
 - The play/pause button shows a play icon while not playing and switches to a pause icon while playback is active.
-- The timeline ruler shows frequent minor tick lines plus longer labeled major tick lines. Time labels appear above their major tick lines with enough ruler height to avoid overlapping the tick marks.
+- The timeline ruler shows frequent minor tick lines plus longer labeled major tick lines. Time labels appear above their major tick lines with enough ruler height to avoid overlapping the tick marks, and whole-second labels must not display the preceding second because of floating-point accumulation.
 - At timeline zoom `1.00x`, the timeline content fills the available parent width. Higher zoom levels expand the content horizontally inside the parent and allow horizontal scrolling. Timeline zoom changes in `0.01x` steps through the zoom slider and zoom buttons. Ctrl + mouse wheel over the timeline/waveform area changes zoom in `0.10x` steps.
 - Provide a control near playback and range-marking controls that scrolls the timeline/waveform to the current playhead position.
 - Ctrl + mouse wheel timeline zoom preserves the waveform time under the mouse cursor. Zoom-in and zoom-out buttons preserve the current playhead position by keeping it centered after zooming.

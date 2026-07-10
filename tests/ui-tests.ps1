@@ -2,7 +2,9 @@ param(
     [Parameter(Mandatory)]
     [int]$AppPid,
 
-    [string]$OutputDirectory = ""
+    [string]$OutputDirectory = "",
+
+    [string]$SampleVideoPath = ""
 )
 
 $ErrorActionPreference = "Continue"
@@ -40,6 +42,117 @@ function Get-AppWindows {
     $parsed = winapp ui list-windows -a $AppPid --json 2>$null | ConvertFrom-Json
     foreach ($window in $parsed) {
         Write-Output $window
+    }
+}
+
+function Get-FilePickerWindow {
+    param([int]$TimeoutMilliseconds = 5000)
+
+    $deadline = [DateTime]::UtcNow.AddMilliseconds($TimeoutMilliseconds)
+    do {
+        $windows = @(winapp ui list-windows --json 2>$null | ConvertFrom-Json)
+        $picker = $windows | Where-Object {
+            $_.processName -eq "PickerHost" -and
+            $_.ownerHwnd -eq $mainWindowHwnd -and
+            $_.className -eq "#32770"
+        } | Select-Object -First 1
+
+        if ($null -ne $picker) {
+            return $picker
+        }
+
+        Start-Sleep -Milliseconds 100
+    } while ([DateTime]::UtcNow -lt $deadline)
+
+    return $null
+}
+
+function Wait-ForFilePickerClose {
+    param(
+        [Parameter(Mandatory)][long]$OwnerHwnd,
+        [int]$TimeoutMilliseconds = 10000
+    )
+
+    $deadline = [DateTime]::UtcNow.AddMilliseconds($TimeoutMilliseconds)
+    do {
+        $windows = @(winapp ui list-windows --json 2>$null | ConvertFrom-Json)
+        $picker = $windows | Where-Object {
+            $_.processName -eq "PickerHost" -and $_.ownerHwnd -eq $OwnerHwnd
+        } | Select-Object -First 1
+        if ($null -eq $picker) {
+            return
+        }
+
+        Start-Sleep -Milliseconds 100
+    } while ([DateTime]::UtcNow -lt $deadline)
+
+    throw "The system file picker did not close after selecting the sample."
+}
+
+function Wait-ForTextValue {
+    param(
+        [Parameter(Mandatory)][string]$AutomationId,
+        [Parameter(Mandatory)][string]$ExpectedText,
+        [Parameter(Mandatory)][long]$WindowHwnd,
+        [int]$TimeoutMilliseconds = 30000
+    )
+
+    $deadline = [DateTime]::UtcNow.AddMilliseconds($TimeoutMilliseconds)
+    do {
+        try {
+            $value = winapp ui get-value $AutomationId -w $WindowHwnd --json 2>$null | ConvertFrom-Json
+            if ($value.text -like "*$ExpectedText*") {
+                return
+            }
+        }
+        catch {
+        }
+
+        Start-Sleep -Milliseconds 250
+    } while ([DateTime]::UtcNow -lt $deadline)
+
+    throw "'$AutomationId' did not contain '$ExpectedText' within $TimeoutMilliseconds ms."
+}
+
+function Set-FilePickerPath {
+    param(
+        [Parameter(Mandatory)][long]$PickerHwnd,
+        [Parameter(Mandatory)][string]$Path
+    )
+
+    $pickerHwndText = $PickerHwnd.ToString([Globalization.CultureInfo]::InvariantCulture)
+    $searchArguments = @("ui", "search", "1148", "-w", $pickerHwndText, "--json")
+    $fileNameSearch = & winapp $searchArguments 2>$null | ConvertFrom-Json
+    $fileNameEdit = @($fileNameSearch.matches) | Where-Object {
+        $_.type -eq "Edit" -and $_.automationId -eq "1148"
+    } | Select-Object -First 1
+    if ($null -eq $fileNameEdit) {
+        $searchArguments[2] = "FileNameControlHost"
+        $fileNameSearch = & winapp $searchArguments 2>$null | ConvertFrom-Json
+        $fileNameEdit = @($fileNameSearch.matches) | Where-Object { $_.type -eq "Edit" } | Select-Object -First 1
+    }
+    if ($null -eq $fileNameEdit) {
+        throw "The file picker filename field was not found."
+    }
+
+    & winapp @("ui", "set-value", $fileNameEdit.selector, $Path, "-w", $pickerHwndText, "-q")
+    if ($LASTEXITCODE -ne 0) {
+        throw "Failed to set the sample video path in the file picker."
+    }
+
+    $openButtonSearch = & winapp @("ui", "search", "1", "-w", $pickerHwndText, "--json") 2>$null | ConvertFrom-Json
+    $openButton = @($openButtonSearch.matches) | Where-Object {
+        $_.automationId -eq "1" -and
+        $_.className -eq "Button" -and
+        $_.type -in @("Button", "SplitButton")
+    } | Select-Object -First 1
+    if ($null -eq $openButton) {
+        throw "The file picker open button was not found."
+    }
+
+    & winapp @("ui", "invoke", $openButton.selector, "-w", $pickerHwndText, "-q")
+    if ($LASTEXITCODE -ne 0) {
+        throw "Failed to confirm the sample video in the file picker."
     }
 }
 
@@ -83,7 +196,11 @@ function Test-UI {
     }
     catch {
         $script:fail++
-        $script:results += @{ name = $Name; status = "FAIL"; detail = "$_" }
+        $detail = $_.Exception.Message
+        if (-not [string]::IsNullOrWhiteSpace($_.ScriptStackTrace)) {
+            $detail = "$detail`n$($_.ScriptStackTrace)"
+        }
+        $script:results += @{ name = $Name; status = "FAIL"; detail = $detail }
     }
 }
 
@@ -236,6 +353,44 @@ Test-UI "Range end defaults to zero" {
 
 Test-UI "Initial screenshot captured" {
     winapp ui screenshot -a $AppPid -o (Join-Path $screenshots "01-initial.png") 2>$null
+}
+
+if (-not [string]::IsNullOrWhiteSpace($SampleVideoPath)) {
+    Test-UI "Generated sample exists" {
+        if (-not (Test-Path -LiteralPath $SampleVideoPath -PathType Leaf)) {
+            throw "Sample video was not found at '$SampleVideoPath'."
+        }
+        $script:SampleVideoPath = (Resolve-Path -LiteralPath $SampleVideoPath).Path
+    }
+
+    Test-UI "Open generated sample through system picker" {
+        winapp ui invoke "OpenVideoButton" -w $mainWindowHwnd -q
+        if ($LASTEXITCODE -ne 0) {
+            throw "OpenVideoButton could not be invoked."
+        }
+
+        $picker = Get-FilePickerWindow
+        $pickerWindow = @($picker | Where-Object { $_.processName -eq "PickerHost" }) | Select-Object -First 1
+        if ($null -eq $pickerWindow) {
+            throw "The system file picker did not appear."
+        }
+
+        Set-FilePickerPath -PickerHwnd ([long]$pickerWindow.hwnd) -Path $SampleVideoPath
+        Wait-ForFilePickerClose -OwnerHwnd ([long]$mainWindowHwnd)
+        $loadedStatusText = -join [char[]]@(0x52D5, 0x753B, 0x3092, 0x9078, 0x629E, 0x3057, 0x307E, 0x3057, 0x305F)
+        Wait-ForTextValue -AutomationId "StatusMessageText" -ExpectedText $loadedStatusText -WindowHwnd ([long]$mainWindowHwnd)
+    }
+
+    Test-UI "Loaded sample initializes the editable range" {
+        $rangeEnd = winapp ui get-value "RangeEndTextBox" -w $mainWindowHwnd --json 2>$null | ConvertFrom-Json
+        if ([string]::IsNullOrWhiteSpace($rangeEnd.text) -or $rangeEnd.text -in @("00:00:00", "0:00.000")) {
+            throw "The loaded sample did not initialize a non-zero range end."
+        }
+    }
+
+    Test-UI "Loaded sample screenshot captured" {
+        winapp ui screenshot -a $AppPid -o (Join-Path $screenshots "02-sample-loaded.png") 2>$null
+    }
 }
 
 Test-UI "UI automation tree can be inspected" {

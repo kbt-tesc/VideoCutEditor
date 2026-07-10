@@ -17,6 +17,19 @@ public sealed class VerificationMediaScriptTests
         Assert.Contains("quiet-audio.mp4", output);
     }
 
+    [Fact]
+    public void Ui_test_script_can_open_a_generated_sample_through_the_system_picker()
+    {
+        string scriptPath = Path.Combine(FindRepositoryRoot(), "tests", "ui-tests.ps1");
+        string script = File.ReadAllText(scriptPath);
+
+        Assert.Contains("[string]$SampleVideoPath", script);
+        Assert.Contains("Get-FilePickerWindow", script);
+        Assert.Contains("FileNameControlHost", script);
+        Assert.Contains("0x52D5, 0x753B, 0x3092", script);
+        Assert.Contains("RangeEndTextBox", script);
+    }
+
     private static (int ExitCode, string Output) RunSampleMediaDryRun(string outputDirectory)
     {
         string scriptPath = Path.Combine(FindRepositoryRoot(), "scripts", "New-SampleMedia.ps1");
