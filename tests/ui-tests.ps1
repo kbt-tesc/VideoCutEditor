@@ -9,6 +9,47 @@ $ErrorActionPreference = "Continue"
 $pass = 0
 $fail = 0
 $results = @()
+$mainWindowHwnd = $null
+$infoWindowHwnd = $null
+
+Add-Type -TypeDefinition @"
+using System;
+using System.Runtime.InteropServices;
+
+public static class NativeWindowTest
+{
+    [DllImport("user32.dll")]
+    public static extern IntPtr GetWindow(IntPtr hWnd, uint command);
+
+    [DllImport("user32.dll")]
+    public static extern bool PostMessage(IntPtr hWnd, uint message, IntPtr wParam, IntPtr lParam);
+}
+"@
+
+function ConvertTo-Hwnd {
+    param([Parameter(Mandatory)][object]$Value)
+
+    if ($Value -is [string] -and $Value.StartsWith("0x", [StringComparison]::OrdinalIgnoreCase)) {
+        return [IntPtr]([Convert]::ToInt64($Value.Substring(2), 16))
+    }
+
+    return [IntPtr]([long]$Value)
+}
+
+function Get-AppWindows {
+    $parsed = winapp ui list-windows -a $AppPid --json 2>$null | ConvertFrom-Json
+    foreach ($window in $parsed) {
+        Write-Output $window
+    }
+}
+
+function Get-InfoWindows {
+    return @(Get-AppWindows | Where-Object {
+        $_.title.StartsWith("VideoCutEditor -", [StringComparison]::Ordinal) -and
+        $_.ownerHwnd -ne 0 -and
+        $_.className -eq "WinUIDesktopWin32WindowClass"
+    })
+}
 
 if ([string]::IsNullOrWhiteSpace($OutputDirectory)) {
     $scriptRoot = if ([string]::IsNullOrWhiteSpace($PSScriptRoot)) { Split-Path -Parent $MyInvocation.MyCommand.Path } else { $PSScriptRoot }
@@ -47,9 +88,10 @@ function Test-UI {
 }
 
 Test-UI "App has a main window" {
-    $windows = winapp ui list-windows -a $AppPid --json 2>$null | ConvertFrom-Json
+    $windows = Get-AppWindows
     $main = @($windows | Where-Object { $_.title -eq "VideoCutEditor" })
     if ($main.Count -lt 1) { throw "VideoCutEditor window was not found." }
+    $script:mainWindowHwnd = $main[0].hwnd
 }
 
 $expectedElements = @(
@@ -202,6 +244,59 @@ Test-UI "UI automation tree can be inspected" {
     if (!(Test-Path $inspectPath) -or (Get-Item $inspectPath).Length -eq 0) {
         throw "inspect.json was not created."
     }
+}
+
+Test-UI "INFO window opens once and is owned by main window" {
+    winapp ui invoke "ShowInfoButton" -w $mainWindowHwnd
+    Start-Sleep -Milliseconds 500
+    $infoWindows = @(Get-InfoWindows)
+    if ($infoWindows.Count -ne 1) { throw "Expected one INFO window, found $($infoWindows.Count)." }
+    $script:infoWindowHwnd = $infoWindows[0].hwnd
+
+    $owner = [NativeWindowTest]::GetWindow((ConvertTo-Hwnd $infoWindowHwnd), 4)
+    if ($owner -ne (ConvertTo-Hwnd $mainWindowHwnd)) { throw "INFO window does not have the main HWND as owner." }
+
+    winapp ui invoke "ShowInfoButton" -w $mainWindowHwnd
+    Start-Sleep -Milliseconds 300
+    $infoWindows = @(Get-InfoWindows)
+    if ($infoWindows.Count -ne 1) { throw "Repeated INFO command created a duplicate window." }
+}
+
+Test-UI "INFO window shows all three information fields" {
+    winapp ui wait-for "EncoderSummaryTextBox" -w $infoWindowHwnd -t 3000 -q
+    winapp ui wait-for "ExportLogTextBox" -w $infoWindowHwnd -t 3000 -q
+    winapp ui wait-for "MediaInfoTextBox" -w $infoWindowHwnd -t 3000 -q
+}
+
+Test-UI "Main window remains operable while INFO is open" {
+    winapp ui invoke "Fast copy" -w $mainWindowHwnd
+    winapp ui wait-for "CodecFamilyComboBox" -w $mainWindowHwnd --gone -t 3000 -q
+}
+
+Test-UI "INFO window can close and reopen" {
+    $closed = [NativeWindowTest]::PostMessage((ConvertTo-Hwnd $infoWindowHwnd), 0x0010, [IntPtr]::Zero, [IntPtr]::Zero)
+    if (!$closed) { throw "Failed to request INFO window close." }
+
+    $deadline = [DateTime]::UtcNow.AddSeconds(3)
+    do {
+        Start-Sleep -Milliseconds 100
+        $remaining = @(Get-InfoWindows)
+    } while ($remaining.Count -gt 0 -and [DateTime]::UtcNow -lt $deadline)
+    if ($remaining.Count -gt 0) { throw "INFO window did not close." }
+
+    winapp ui invoke "ShowInfoButton" -w $mainWindowHwnd
+    Start-Sleep -Milliseconds 500
+    $reopened = @(Get-InfoWindows)
+    if ($reopened.Count -ne 1) { throw "INFO window did not reopen exactly once." }
+    $script:infoWindowHwnd = $reopened[0].hwnd
+    winapp ui wait-for "EncoderSummaryTextBox" -w $infoWindowHwnd -t 3000 -q
+}
+
+Test-UI "INFO window is closed during test cleanup" {
+    $closed = [NativeWindowTest]::PostMessage((ConvertTo-Hwnd $infoWindowHwnd), 0x0010, [IntPtr]::Zero, [IntPtr]::Zero)
+    if (!$closed) { throw "Failed to close INFO window during cleanup." }
+    Start-Sleep -Milliseconds 300
+    if (@(Get-InfoWindows).Count -ne 0) { throw "INFO window remained open after cleanup." }
 }
 
 Write-Host ""

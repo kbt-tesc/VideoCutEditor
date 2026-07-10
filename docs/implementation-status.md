@@ -180,6 +180,10 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
   - Replaced silent early returns in ffmpeg/ffprobe/PowerShell integration tests with explicit skipped results and prerequisite reasons.
   - Added fake-process waveform tests for successful output, process failure, missing output, cancellation, and partial-file cleanup.
   - Reduced source-text assertions that duplicated behavior now covered by executable app-layer and UI tests.
+- `ui: own and behavior-test the modeless INFO window`
+  - Set the main HWND as the INFO window's native owner with x64/ARM64 and x86 interop paths while keeping the window non-modal.
+  - Extended the WinUI script to verify one owned INFO window, all three information fields, continued main-window interaction, duplicate prevention, close/reopen behavior, and cleanup.
+  - Replaced source-text-only claims with runtime UI coverage where WinUI Automation can exercise the behavior.
 
 ## Implemented Capabilities
 
@@ -234,7 +238,7 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 - Play/pause button icon follows playback state.
 - Settings dialog owns ffmpeg, ffprobe, and output-folder configuration.
 - Main export surface supports editing the output file name before export.
-- A modeless INFO window shows encoder information, media information, and live export logs without growing or locking the main editor layout.
+- A main-owned modeless INFO window shows encoder information, media information, and live export logs without growing or locking the main editor layout.
 - Editable output filename uses a hand-written view-model property to avoid source-generator design-time diagnostics in VS Code.
 - Editable output filename and HDR to SDR toggle state use hand-written view-model properties to avoid source-generator design-time diagnostics in VS Code.
 - HDR media shows a Japanese INFO notice; Fast copy preserves HDR, while Re-encode exposes a default-checked SDR conversion option.
@@ -252,6 +256,14 @@ Most recent successful checks:
   - The environment-dependent test reported one explicit skip with `ffmpeg is not available` instead of a false pass.
 - `dotnet test VideoCutEditor.slnx`
   - 132 core tests passed with the local ffmpeg/ffprobe and Windows PowerShell prerequisites available, including the expanded waveform process tests.
+- `powershell -ExecutionPolicy Bypass -File .agents\skills\winui-dev-workflow\BuildAndRun.ps1 .\src\VideoCutEditor\VideoCutEditor.csproj -Detach`
+  - The WinUI Analyzer-enabled Debug x64 build succeeded with 0 warnings and 0 errors and launched successfully.
+- `powershell -ExecutionPolicy Bypass -File tests\ui-tests.ps1 -AppPid <pid>`
+  - 54 UI tests passed, including native owner verification, duplicate prevention, non-modal main-window interaction, INFO fields, and close/reopen behavior.
+- `dotnet build src\VideoCutEditor\VideoCutEditor.csproj -c Release -p:Platform=x64 -p:WindowsPackageType=None`
+  - Release x64 build succeeded with 0 warnings and 0 errors.
+- Sequential Release unpackaged builds for `win-x86` and `win-arm64`
+  - Both architecture builds succeeded with 0 warnings and 0 errors after architecture-specific restore.
 - `dotnet test VideoCutEditor.slnx --filter Settings_output_filename_and_info_surfaces_are_separated`
   - 1 test passed after first confirming failure while `InfoWindow.xaml` did not exist, then verifying the modal INFO dialog was replaced by a reusable modeless window.
 - `dotnet build src\VideoCutEditor\VideoCutEditor.csproj -c Release -p:Platform=x64 -p:WindowsPackageType=None`
@@ -345,7 +357,7 @@ When resuming in a new session, rerun the relevant subset before making assumpti
 - VS Code DocumentCompilerSemantic warnings for `VideoCutEditor.Core` references should be resolved by the `DesignTimeBuild`-only core reference fallback while VS Code remains pinned to `VideoCutEditor.slnx`. Existing VS Code sessions may need `Developer: Reload Window` or a C# language server restart to clear stale diagnostics.
 - The `[` and `]` shortcut fix is covered by source-level UI contract tests and should still be manually confirmed in the running app with a loaded preview.
 - Timeline drag seeking is covered by source-level UI contract tests and should still be manually confirmed visually with real media.
-- The modeless INFO window is covered by source-level UI contracts and compile validation. It should still be manually verified for repeated open/close, live log updates during export, and main-window interaction while the INFO window remains open.
+- The owned modeless INFO window now has runtime UI coverage for open/close, duplicate prevention, field presence, and main-window interaction. A real export should still be manually observed once to confirm long-running live log updates remain readable while both windows are actively used.
 - App-layer tests now execute selected high-risk `MainPageViewModel` paths, but coverage remains intentionally focused; media-open state transitions, successful export orchestration, progress/cancellation state, and more settings combinations should be expanded incrementally.
 - Repository-wide `dotnet format --verify-no-changes` currently reports pre-existing whitespace diagnostics in `BitrateSuggestionService.cs` lines 51-55. All files changed in this hardening work pass the scoped whitespace verification.
 

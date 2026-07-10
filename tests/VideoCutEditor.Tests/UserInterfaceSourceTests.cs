@@ -21,29 +21,12 @@ public sealed class UserInterfaceSourceTests
     }
 
     [Fact]
-    public void View_model_uses_japanese_status_and_information_messages()
-    {
-        string viewModel = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "src", "VideoCutEditor", "ViewModels", "MainPageViewModel.cs"));
-
-        Assert.Contains("動画が選択されていません", viewModel);
-        Assert.Contains("準備完了", viewModel);
-        Assert.Contains("推定サイズはまだ計算できません", viewModel);
-        Assert.Contains("出力フォルダーを開きました", viewModel);
-        Assert.Contains("Fast copy は可能な限りストリームを保持します", viewModel);
-        Assert.DoesNotContain("No video selected", viewModel);
-        Assert.DoesNotContain("Estimated size unavailable", viewModel);
-    }
-
-    [Fact]
-    public void View_model_recovers_from_picker_com_failures()
+    public void Winrt_picker_commands_keep_explicit_com_exception_boundaries()
     {
         string viewModel = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "src", "VideoCutEditor", "ViewModels", "MainPageViewModel.cs"));
 
         Assert.Contains("using System.Runtime.InteropServices;", viewModel);
         Assert.True(Regex.Matches(viewModel, "catch \\(COMException exception\\)").Count >= 3);
-        Assert.Contains("動画ファイルの選択を完了できませんでした", viewModel);
-        Assert.Contains("出力フォルダーの選択を完了できませんでした", viewModel);
-        Assert.Contains("実行ファイルの選択を完了できませんでした", viewModel);
         Assert.Contains("AppLogger.Error(\"Video picker failed\"", viewModel);
         Assert.Contains("AppLogger.Error(\"Output folder picker failed\"", viewModel);
         Assert.Contains("AppLogger.Error(\"Executable picker failed\"", viewModel);
@@ -139,8 +122,6 @@ public sealed class UserInterfaceSourceTests
         string codeBehind = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "src", "VideoCutEditor", "MainPage.xaml.cs"));
         string infoWindowXaml = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "src", "VideoCutEditor", "InfoWindow.xaml"));
         string infoWindowCodeBehind = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "src", "VideoCutEditor", "InfoWindow.xaml.cs"));
-        string viewModel = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "src", "VideoCutEditor", "ViewModels", "MainPageViewModel.cs"));
-
         Assert.Contains("AutomationProperties.AutomationId=\"OutputFileNameTextBox\"", xaml);
         Assert.Contains("Text=\"{x:Bind ViewModel.PlannedOutputFileName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}\"", xaml);
         Assert.Contains("AutomationProperties.AutomationId=\"OpenOutputDirectoryButton\"", xaml);
@@ -156,20 +137,14 @@ public sealed class UserInterfaceSourceTests
         Assert.Contains("AutomationProperties.AutomationId=\"EncoderSummaryTextBox\"", infoWindowXaml);
         Assert.Contains("AutomationProperties.AutomationId=\"ExportLogTextBox\"", infoWindowXaml);
         Assert.Contains("AutomationProperties.AutomationId=\"MediaInfoTextBox\"", infoWindowXaml);
-        Assert.Contains("public MainPageViewModel ViewModel { get; }", infoWindowCodeBehind);
         Assert.Contains("OpenSettingsButton_Click", codeBehind);
         Assert.Contains("ShowInfoButton_Click", codeBehind);
-        Assert.Contains("SettingsDialog.XamlRoot = XamlRoot;", codeBehind);
         Assert.Contains("private InfoWindow? infoWindow;", codeBehind);
-        Assert.Contains("infoWindow ??= new InfoWindow(ViewModel);", codeBehind);
+        Assert.Contains("infoWindow ??= new InfoWindow(ViewModel, App.WindowHandle);", codeBehind);
         Assert.Contains("infoWindow.Activate();", codeBehind);
         Assert.DoesNotContain("await InfoDialog.ShowAsync();", codeBehind);
-        Assert.Contains("private string plannedOutputFileName = string.Empty;", viewModel);
-        Assert.Contains("public string PlannedOutputFileName", viewModel);
-        Assert.Contains("SetProperty(ref plannedOutputFileName, value)", viewModel);
-        Assert.DoesNotContain("public partial string PlannedOutputFileName", viewModel);
-        Assert.Contains("BuildPlannedOutputPath()", viewModel);
-        Assert.Contains("Path.GetInvalidFileNameChars()", viewModel);
+        Assert.Contains("public InfoWindow(MainPageViewModel viewModel, nint ownerWindowHandle)", infoWindowCodeBehind);
+        Assert.Contains("SetOwner(ownerWindowHandle);", infoWindowCodeBehind);
     }
 
     [Fact]

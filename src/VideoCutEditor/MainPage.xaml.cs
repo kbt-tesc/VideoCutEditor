@@ -255,7 +255,7 @@ public sealed partial class MainPage : Page
 
     private void ShowInfoButton_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
     {
-        infoWindow ??= new InfoWindow(ViewModel);
+        infoWindow ??= new InfoWindow(ViewModel, App.WindowHandle);
         infoWindow.Closed -= InfoWindowClosed;
         infoWindow.Closed += InfoWindowClosed;
         infoWindow.Activate();
