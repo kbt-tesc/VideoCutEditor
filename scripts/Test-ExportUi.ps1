@@ -1,4 +1,6 @@
 param(
+    [ValidateSet("FastCopy", "Reencode")]
+    [string]$Mode = "FastCopy",
     [string]$FfmpegPath = "",
     [string]$FfprobePath = ""
 )
@@ -20,11 +22,18 @@ try {
     & powershell -ExecutionPolicy Bypass -File (Join-Path $root "scripts\New-SampleMedia.ps1") -OutputDirectory $mediaDirectory -FfmpegPath $ffmpeg -DurationSeconds 4 -Force
     if ($LASTEXITCODE -ne 0) { throw "Sample media generation failed." }
 
+    $encoderKind = if ($Mode -eq "Reencode") { "Software" } else { "Auto" }
+    $videoBitrate = if ($Mode -eq "Reencode") { 1500 } else { 2500 }
+
     @{
         ffmpegPath = $ffmpeg
         ffprobePath = $ffprobe
         outputDirectory = $outputDirectory
-        lastExportMode = "FastCopy"
+        lastExportMode = $Mode
+        lastCodecFamily = "H264"
+        lastEncoderKind = $encoderKind
+        lastBitrateMode = "Bitrate"
+        lastVideoBitrateKbps = $videoBitrate
         normalizeAudio = $false
     } | ConvertTo-Json | Set-Content -Encoding utf8 (Join-Path $settingsDirectory "settings.json")
 
@@ -36,8 +45,8 @@ try {
     $appProcess = Start-Process -FilePath $exe -PassThru
     Start-Sleep -Seconds 2
 
-    & powershell -ExecutionPolicy Bypass -File (Join-Path $root "tests\ui-tests.ps1") -AppPid $appProcess.Id -SampleVideoPath (Join-Path $mediaDirectory "video-with-audio.mp4") -VerifyFastCopyExport -ExpectedOutputDirectory $outputDirectory
-    if ($LASTEXITCODE -ne 0) { throw "Fast copy UI verification failed." }
+    & powershell -ExecutionPolicy Bypass -File (Join-Path $root "tests\ui-tests.ps1") -AppPid $appProcess.Id -SampleVideoPath (Join-Path $mediaDirectory "video-with-audio.mp4") -VerifyExportMode $Mode -ExpectedOutputDirectory $outputDirectory
+    if ($LASTEXITCODE -ne 0) { throw "$Mode UI verification failed." }
 }
 finally {
     if ($null -ne $appProcess -and -not $appProcess.HasExited) {

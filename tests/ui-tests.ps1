@@ -6,7 +6,7 @@ param(
 
     [string]$SampleVideoPath = "",
 
-    [switch]$VerifyFastCopyExport,
+    [string]$VerifyExportMode = "",
 
     [string]$ExpectedOutputDirectory = ""
 )
@@ -294,16 +294,18 @@ Test-UI "Codec defaults to H.264 in Re-encode mode" {
     winapp ui wait-for "CodecFamilyComboBox" -a $AppPid --value "H.264" -t 3000 -q
 }
 
-Test-UI "Encoder defaults to Auto in Re-encode mode" {
-    winapp ui wait-for "EncoderKindComboBox" -a $AppPid --value "Auto" -t 3000 -q
+$expectedInitialEncoder = if ($VerifyExportMode -eq "Reencode") { "Software" } else { "Auto" }
+Test-UI "Encoder matches expected Re-encode setting" {
+    winapp ui wait-for "EncoderKindComboBox" -a $AppPid --value $expectedInitialEncoder -t 3000 -q
 }
 
 Test-UI "Rate control defaults to video bitrate in Re-encode mode" {
     winapp ui wait-for "BitrateModeComboBox" -a $AppPid --value "Video bitrate" -t 3000 -q
 }
 
-Test-UI "Video bitrate defaults to 2500 in Re-encode mode" {
-    winapp ui wait-for "VideoBitrateTextBox" -a $AppPid --value "2500" -t 3000 -q
+$expectedInitialVideoBitrate = if ($VerifyExportMode -eq "Reencode") { "1500" } else { "2500" }
+Test-UI "Video bitrate matches expected Re-encode setting" {
+    winapp ui wait-for "VideoBitrateTextBox" -a $AppPid --value $expectedInitialVideoBitrate -t 3000 -q
 }
 
 Test-UI "Target size is disabled in bitrate mode in Re-encode mode" {
@@ -396,13 +398,25 @@ if (-not [string]::IsNullOrWhiteSpace($SampleVideoPath)) {
         winapp ui screenshot -a $AppPid -o (Join-Path $screenshots "02-sample-loaded.png") 2>$null
     }
 
-    if ($VerifyFastCopyExport) {
-        Test-UI "Fast copy output uses isolated directory" {
+    if (-not [string]::IsNullOrWhiteSpace($VerifyExportMode)) {
+        Test-UI "$VerifyExportMode mode is selected for isolated export" {
+            if ($VerifyExportMode -eq "Reencode") {
+                winapp ui invoke "Re-encode" -w $mainWindowHwnd -q
+                winapp ui wait-for "EncoderKindComboBox" -w $mainWindowHwnd --value "Software" -t 3000 -q
+            }
+            elseif ($VerifyExportMode -eq "FastCopy") {
+                winapp ui invoke "Fast copy" -w $mainWindowHwnd -q
+            }
+            else {
+                throw "Unsupported export verification mode '$VerifyExportMode'."
+            }
+        }
+
+        Test-UI "$VerifyExportMode output uses isolated directory" {
             if ([string]::IsNullOrWhiteSpace($ExpectedOutputDirectory)) {
-                throw "ExpectedOutputDirectory is required for Fast copy verification."
+                throw "ExpectedOutputDirectory is required for export verification."
             }
 
-            winapp ui invoke "Fast copy" -w $mainWindowHwnd -q
             $planned = winapp ui get-value "PlannedOutputTextBox" -w $mainWindowHwnd --json 2>$null | ConvertFrom-Json
             $script:plannedExportPath = $planned.text
             $expected = (Resolve-Path -LiteralPath $ExpectedOutputDirectory).Path
@@ -414,17 +428,18 @@ if (-not [string]::IsNullOrWhiteSpace($SampleVideoPath)) {
             }
         }
 
-        Test-UI "Fast copy export completes" {
+        Test-UI "$VerifyExportMode export completes" {
             winapp ui invoke "ExportButton" -w $mainWindowHwnd -q
             $completedText = -join [char[]]@(0x66F8, 0x304D, 0x51FA, 0x3057, 0x304C, 0x5B8C, 0x4E86, 0x3057, 0x307E, 0x3057, 0x305F)
             Wait-ForTextValue -AutomationId "StatusMessageText" -ExpectedText $completedText -WindowHwnd ([long]$mainWindowHwnd) -TimeoutMilliseconds 60000
             if (-not [System.IO.File]::Exists($plannedExportPath) -or (Get-Item -LiteralPath $plannedExportPath).Length -eq 0) {
-                throw "Fast copy export did not create a non-empty output file."
+                throw "$VerifyExportMode export did not create a non-empty output file."
             }
         }
 
-        Test-UI "Fast copy completion screenshot captured" {
-            winapp ui screenshot -a $AppPid -o (Join-Path $screenshots "03-fast-copy-complete.png") 2>$null
+        Test-UI "$VerifyExportMode completion screenshot captured" {
+            $screenshotName = "03-" + $VerifyExportMode.ToLowerInvariant() + "-complete.png"
+            winapp ui screenshot -a $AppPid -o (Join-Path $screenshots $screenshotName) 2>$null
         }
     }
 }

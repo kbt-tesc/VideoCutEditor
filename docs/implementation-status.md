@@ -1,6 +1,6 @@
 # Implementation Status
 
-Last updated: 2026-07-10
+Last updated: 2026-07-11
 
 This document is the handoff ledger for future Codex sessions. Read it after `AGENTS.md`, `docs/product-spec.md`, `docs/technical-design.md`, `docs/codex-workflow.md`, and `docs/implementation-kickoff.md` before choosing the next implementation slice.
 
@@ -202,6 +202,10 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
   - Added a Debug-only test settings directory override that never changes Release settings behavior.
   - Added `scripts/Test-FastCopyUi.ps1` to generate media, create isolated settings/output directories, launch the unpackaged app, and clean up in `finally`.
   - Extended the UI workflow to verify planned output isolation, Fast copy completion status, and creation of a non-empty output file.
+- `test: verify isolated Re-encode UI export`
+  - Generalized the isolated runner to `scripts/Test-ExportUi.ps1 -Mode FastCopy|Reencode` without duplicating setup and cleanup logic.
+  - Added deterministic H.264 Software Re-encode verification at 1500 kbps, including UI state, completion status, and non-empty output validation.
+  - Re-ran Fast copy through the generalized runner to preserve the existing workflow.
 
 ## Implemented Capabilities
 
@@ -270,9 +274,11 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 
 Most recent successful checks:
 
-- `powershell -ExecutionPolicy Bypass -File scripts\Test-FastCopyUi.ps1`
-  - 61 UI tests passed using temporary settings, media, and output directories; Fast copy produced a non-empty file and all temporary state was removed.
-  - Visual review confirmed the completion status and editor layout remained readable after export.
+- `powershell -ExecutionPolicy Bypass -File scripts\Test-ExportUi.ps1 -Mode Reencode`
+  - 62 UI tests passed; generated media was re-encoded with the Software H.264 selection and produced a non-empty isolated output file.
+  - Visual review confirmed the Re-encode completion state, encoder, bitrate, waveform, and layout.
+- `powershell -ExecutionPolicy Bypass -File scripts\Test-ExportUi.ps1 -Mode FastCopy`
+  - 62 UI tests passed after generalizing the export runner, preserving the Fast copy workflow.
 - `powershell -ExecutionPolicy Bypass -File .agents\skills\winui-dev-workflow\BuildAndRun.ps1 .\src\VideoCutEditor\VideoCutEditor.csproj -SkipRun`
   - Analyzer-enabled Debug x64 build succeeded with 0 warnings and 0 errors.
 - `dotnet test VideoCutEditor.slnx`
@@ -396,7 +402,7 @@ When resuming in a new session, rerun the relevant subset before making assumpti
 - Audio normalization is covered for generated audio/video media and fake-process two-pass argument replacement; the sample generator can produce quiet and no-audio inputs for manual checks, but representative real media and no-audio UI error handling still need manual verification.
 - HDR to SDR conversion is covered at ffprobe parsing, settings, planner, Fast copy non-conversion, and source-level UI contract layers. It still needs manual verification with representative HDR10/PQ and HLG media on the user's ffmpeg build, especially because the initial implementation relies on ffmpeg `zscale` and `tonemap` filter availability.
 - Quality mode is covered for generated software-encoded media; NVEnc quality-mode execution still needs manual hardware-backed verification.
-- Real media export should still be manually verified for Fast copy and Re-encode on local sample files.
+- Generated media export is automated for Fast copy and Software H.264 Re-encode. Representative real media should still be manually verified for both modes.
 - NVEnc behavior should be manually verified on hardware and ffmpeg builds that expose NVEnc.
 - Preview-unavailable fallback behavior needs more manual and/or UI coverage.
 - Portable x64 publish, x86 publish, arm64 publish, artifact validation, and published x64 EXE startup smoke testing now succeed. Signing, MSIX packaging, installer validation, distribution packaging, and x86/arm64 runtime startup on matching devices still need verification.
@@ -414,7 +420,7 @@ When resuming in a new session, rerun the relevant subset before making assumpti
 
 1. Continue end-to-end verification.
    - Generate local verification inputs with `scripts/New-SampleMedia.ps1` when real sample media is not available.
-   - Add isolated Re-encode and audio-normalization export completion coverage where runtime remains reasonable.
+   - Add isolated audio-normalization export completion coverage where runtime remains reasonable.
    - Add manual verification notes for representative real preview/NVEnc/package runs.
 2. Deepen audio normalization verification.
    - Manually verify representative real media and no-audio media.

@@ -31,20 +31,24 @@ public sealed class VerificationMediaScriptTests
     }
 
     [Fact]
-    public void Fast_copy_ui_verification_isolated_from_normal_user_settings()
+    public void Export_ui_verification_supports_isolated_fast_copy_and_reencode_modes()
     {
         string root = FindRepositoryRoot();
         string viewModel = File.ReadAllText(Path.Combine(root, "src", "VideoCutEditor", "ViewModels", "MainPageViewModel.cs"));
         string uiScript = File.ReadAllText(Path.Combine(root, "tests", "ui-tests.ps1"));
-        string runnerPath = Path.Combine(root, "scripts", "Test-FastCopyUi.ps1");
+        string runnerPath = Path.Combine(root, "scripts", "Test-ExportUi.ps1");
 
         Assert.Contains("VIDEOCUTEDITOR_TEST_SETTINGS_DIRECTORY", viewModel);
-        Assert.Contains("[switch]$VerifyFastCopyExport", uiScript);
+        Assert.Contains("VerifyExportMode", uiScript);
+        Assert.Contains("Reencode", uiScript);
         Assert.Contains("ExpectedOutputDirectory", uiScript);
         Assert.Contains("ExportButton", uiScript);
         Assert.Contains("[System.IO.File]::Exists", uiScript);
         Assert.True(File.Exists(runnerPath));
-        Assert.Contains("VIDEOCUTEDITOR_TEST_SETTINGS_DIRECTORY", File.ReadAllText(runnerPath));
+        string runner = File.ReadAllText(runnerPath);
+        Assert.Contains("VIDEOCUTEDITOR_TEST_SETTINGS_DIRECTORY", runner);
+        Assert.Contains("ValidateSet(\"FastCopy\", \"Reencode\")", runner);
+        Assert.Contains("$encoderKind = if ($Mode -eq \"Reencode\") { \"Software\" }", runner);
     }
 
     private static (int ExitCode, string Output) RunSampleMediaDryRun(string outputDirectory)
