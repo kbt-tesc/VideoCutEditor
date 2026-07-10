@@ -53,6 +53,8 @@ Use automated tests for deterministic behavior:
 - bitrate and predicted file size calculation
 - cancellation state handling
 
+Keep integration prerequisites visible in test results. Tests that require ffmpeg, ffprobe, a specific encoder, hardware, or an external executable must use an explicit skip with a reason when the prerequisite is unavailable; do not use an early `return` that is counted as a pass. Use Core tests for platform-independent behavior, `VideoCutEditor.App.Tests` for executable view-model behavior, and source-text tests only for narrow static contracts that cannot reasonably be exercised at runtime.
+
 Use `tests/ui-tests.ps1` with `winapp ui` for WinUI surface behavior:
 
 - expected editor controls and AutomationIds exist

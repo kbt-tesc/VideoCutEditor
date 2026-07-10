@@ -176,6 +176,10 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
   - Added invalid/empty JSON recovery that archives damaged settings and falls back to defaults; unreadable settings now produce a best-effort diagnostic instead of preventing startup.
   - Added a defensive view-model initialization fallback for unexpected settings-service failures.
   - Added the Windows-targeted `VideoCutEditor.App.Tests` project with behavior tests for time/range input, editable output naming, export preconditions, and settings-load recovery.
+- `test: make integration prerequisites and waveform paths trustworthy`
+  - Replaced silent early returns in ffmpeg/ffprobe/PowerShell integration tests with explicit skipped results and prerequisite reasons.
+  - Added fake-process waveform tests for successful output, process failure, missing output, cancellation, and partial-file cleanup.
+  - Reduced source-text assertions that duplicated behavior now covered by executable app-layer and UI tests.
 
 ## Implemented Capabilities
 
@@ -186,6 +190,7 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 - Preview area using `MediaPlayerElement`.
 - Custom timeline shell with playhead, selected range fill, start/end markers, zoom, horizontal scrolling, and waveform image slot.
 - Waveform PNG generation through ffmpeg `showwavespic` into a temporary cache path.
+- Waveform process execution has deterministic success/failure/no-output/cancellation cleanup coverage.
 - Start/end controls through `[` and `]` buttons plus keyboard shortcuts.
 - Left/right arrow frame stepping using ffprobe frame rate when available, otherwise 30 fps.
 - Slow playback rates through the speed selector.
@@ -243,6 +248,10 @@ Most recent successful checks:
   - 132 core tests and 5 app-layer tests passed after adding settings recovery and the Windows-targeted app test project.
 - `dotnet test VideoCutEditor.slnx --collect:"XPlat Code Coverage"`
   - Core line/branch coverage measured 88.77%/77.73%; `MainPageViewModel` now has 35.19% line and 22.62% branch coverage for its initial high-risk behavior set.
+- `dotnet test tests\VideoCutEditor.Tests\VideoCutEditor.Tests.csproj --no-build --no-restore --filter DetectAsync_reads_installed_ffmpeg_encoders_when_ffmpeg_is_available` with PATH isolated from ffmpeg
+  - The environment-dependent test reported one explicit skip with `ffmpeg is not available` instead of a false pass.
+- `dotnet test VideoCutEditor.slnx`
+  - 132 core tests passed with the local ffmpeg/ffprobe and Windows PowerShell prerequisites available, including the expanded waveform process tests.
 - `dotnet test VideoCutEditor.slnx --filter Settings_output_filename_and_info_surfaces_are_separated`
   - 1 test passed after first confirming failure while `InfoWindow.xaml` did not exist, then verifying the modal INFO dialog was replaced by a reusable modeless window.
 - `dotnet build src\VideoCutEditor\VideoCutEditor.csproj -c Release -p:Platform=x64 -p:WindowsPackageType=None`
@@ -319,7 +328,7 @@ When resuming in a new session, rerun the relevant subset before making assumpti
 
 ## Known Gaps
 
-- Waveform generation is implemented in code, and repeatable generated sample media is now available. It should still be manually verified with representative real videos that have audio streams.
+- Waveform generation process success, failure, missing-output, cancellation, and cleanup paths are automated, and repeatable generated sample media is available. Rendering quality and usefulness should still be manually verified with representative real videos that have audio streams.
 - Fade controls and fade-triggered Re-encode are covered by generated audio/video integration tests and can be exercised with generated sample media, but should still be manually verified on representative real media.
 - Audio fade behavior for generated video-only inputs is covered, and `scripts/New-SampleMedia.ps1` can generate a local `video-only.mp4`; still verify representative real video-only media manually.
 - Advanced ffmpeg arguments are implemented for Re-encode mode only. They are quote-parsed, reject app-managed options, catch obvious syntax mistakes, and are passed as argument-list entries. Full ffmpeg option compatibility validation is intentionally not implemented because support varies by ffmpeg build, encoder, and muxer.

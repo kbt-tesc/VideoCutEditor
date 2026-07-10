@@ -6,17 +6,12 @@ namespace VideoCutEditor.Tests;
 
 public sealed class MediaProbeServiceIntegrationTests
 {
-    [Fact]
+    [SkippableFact]
     public async Task ProbeAsync_reads_generated_video_when_tools_are_available()
     {
         FfmpegToolPaths paths = new FfmpegToolPathService().Resolve(new AppSettings());
-        if (string.IsNullOrWhiteSpace(paths.FfmpegPath)
-            || string.IsNullOrWhiteSpace(paths.FfprobePath)
-            || !File.Exists(paths.FfmpegPath)
-            || !File.Exists(paths.FfprobePath))
-        {
-            return;
-        }
+        IntegrationTestRequirements.RequireFile(paths.FfmpegPath, "ffmpeg is not available.");
+        IntegrationTestRequirements.RequireFile(paths.FfprobePath, "ffprobe is not available.");
 
         string workingDirectory = Path.Combine(Path.GetTempPath(), "VideoCutEditor.Tests", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(workingDirectory);

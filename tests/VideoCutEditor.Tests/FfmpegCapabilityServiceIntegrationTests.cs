@@ -5,14 +5,11 @@ namespace VideoCutEditor.Tests;
 
 public sealed class FfmpegCapabilityServiceIntegrationTests
 {
-    [Fact]
+    [SkippableFact]
     public async Task DetectAsync_reads_installed_ffmpeg_encoders_when_ffmpeg_is_available()
     {
         FfmpegToolPaths paths = new FfmpegToolPathService().Resolve(new AppSettings());
-        if (string.IsNullOrWhiteSpace(paths.FfmpegPath) || !File.Exists(paths.FfmpegPath))
-        {
-            return;
-        }
+        IntegrationTestRequirements.RequireFile(paths.FfmpegPath, "ffmpeg is not available.");
 
         FfmpegCapabilities capabilities = await new FfmpegCapabilityService().DetectAsync(paths.FfmpegPath);
 

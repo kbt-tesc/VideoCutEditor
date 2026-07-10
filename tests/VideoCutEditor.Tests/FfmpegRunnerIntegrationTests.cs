@@ -6,14 +6,11 @@ namespace VideoCutEditor.Tests;
 
 public sealed class FfmpegRunnerIntegrationTests
 {
-    [Fact]
+    [SkippableFact]
     public async Task RunAsync_applies_two_pass_loudnorm_measurements_before_export()
     {
         string? powershellPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), @"WindowsPowerShell\v1.0\powershell.exe");
-        if (string.IsNullOrWhiteSpace(powershellPath) || !File.Exists(powershellPath))
-        {
-            return;
-        }
+        IntegrationTestRequirements.RequireFile(powershellPath, "Windows PowerShell is not available.");
 
         string workingDirectory = Path.Combine(Path.GetTempPath(), "VideoCutEditor.Tests", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(workingDirectory);
@@ -96,14 +93,11 @@ public sealed class FfmpegRunnerIntegrationTests
         }
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task RunAsync_creates_fast_copy_output_when_ffmpeg_is_available()
     {
         FfmpegToolPaths paths = new FfmpegToolPathService().Resolve(new AppSettings());
-        if (string.IsNullOrWhiteSpace(paths.FfmpegPath) || !File.Exists(paths.FfmpegPath))
-        {
-            return;
-        }
+        IntegrationTestRequirements.RequireFile(paths.FfmpegPath, "ffmpeg is not available.");
 
         string workingDirectory = Path.Combine(Path.GetTempPath(), "VideoCutEditor.Tests", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(workingDirectory);
@@ -152,23 +146,15 @@ public sealed class FfmpegRunnerIntegrationTests
         }
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task RunAsync_creates_reencode_output_with_fades_when_tools_are_available()
     {
         FfmpegToolPaths paths = new FfmpegToolPathService().Resolve(new AppSettings());
-        if (string.IsNullOrWhiteSpace(paths.FfmpegPath)
-            || string.IsNullOrWhiteSpace(paths.FfprobePath)
-            || !File.Exists(paths.FfmpegPath)
-            || !File.Exists(paths.FfprobePath))
-        {
-            return;
-        }
+        IntegrationTestRequirements.RequireFile(paths.FfmpegPath, "ffmpeg is not available.");
+        IntegrationTestRequirements.RequireFile(paths.FfprobePath, "ffprobe is not available.");
 
         FfmpegCapabilities capabilities = await new FfmpegCapabilityService().DetectAsync(paths.FfmpegPath);
-        if (!capabilities.SupportsEncoder("libx264"))
-        {
-            return;
-        }
+        IntegrationTestRequirements.Require(capabilities.SupportsEncoder("libx264"), "ffmpeg does not provide the libx264 encoder.");
 
         string workingDirectory = Path.Combine(Path.GetTempPath(), "VideoCutEditor.Tests", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(workingDirectory);
@@ -248,23 +234,15 @@ public sealed class FfmpegRunnerIntegrationTests
         }
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task RunAsync_reencodes_video_only_source_when_audio_fade_is_enabled()
     {
         FfmpegToolPaths paths = new FfmpegToolPathService().Resolve(new AppSettings());
-        if (string.IsNullOrWhiteSpace(paths.FfmpegPath)
-            || string.IsNullOrWhiteSpace(paths.FfprobePath)
-            || !File.Exists(paths.FfmpegPath)
-            || !File.Exists(paths.FfprobePath))
-        {
-            return;
-        }
+        IntegrationTestRequirements.RequireFile(paths.FfmpegPath, "ffmpeg is not available.");
+        IntegrationTestRequirements.RequireFile(paths.FfprobePath, "ffprobe is not available.");
 
         FfmpegCapabilities capabilities = await new FfmpegCapabilityService().DetectAsync(paths.FfmpegPath);
-        if (!capabilities.SupportsEncoder("libx264"))
-        {
-            return;
-        }
+        IntegrationTestRequirements.Require(capabilities.SupportsEncoder("libx264"), "ffmpeg does not provide the libx264 encoder.");
 
         string workingDirectory = Path.Combine(Path.GetTempPath(), "VideoCutEditor.Tests", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(workingDirectory);
@@ -331,23 +309,15 @@ public sealed class FfmpegRunnerIntegrationTests
         }
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task RunAsync_creates_reencode_output_with_quality_mode_when_tools_are_available()
     {
         FfmpegToolPaths paths = new FfmpegToolPathService().Resolve(new AppSettings());
-        if (string.IsNullOrWhiteSpace(paths.FfmpegPath)
-            || string.IsNullOrWhiteSpace(paths.FfprobePath)
-            || !File.Exists(paths.FfmpegPath)
-            || !File.Exists(paths.FfprobePath))
-        {
-            return;
-        }
+        IntegrationTestRequirements.RequireFile(paths.FfmpegPath, "ffmpeg is not available.");
+        IntegrationTestRequirements.RequireFile(paths.FfprobePath, "ffprobe is not available.");
 
         FfmpegCapabilities capabilities = await new FfmpegCapabilityService().DetectAsync(paths.FfmpegPath);
-        if (!capabilities.SupportsEncoder("libx264"))
-        {
-            return;
-        }
+        IntegrationTestRequirements.Require(capabilities.SupportsEncoder("libx264"), "ffmpeg does not provide the libx264 encoder.");
 
         string workingDirectory = Path.Combine(Path.GetTempPath(), "VideoCutEditor.Tests", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(workingDirectory);
@@ -407,17 +377,12 @@ public sealed class FfmpegRunnerIntegrationTests
         }
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task RunAsync_creates_audio_normalized_output_when_tools_are_available()
     {
         FfmpegToolPaths paths = new FfmpegToolPathService().Resolve(new AppSettings());
-        if (string.IsNullOrWhiteSpace(paths.FfmpegPath)
-            || string.IsNullOrWhiteSpace(paths.FfprobePath)
-            || !File.Exists(paths.FfmpegPath)
-            || !File.Exists(paths.FfprobePath))
-        {
-            return;
-        }
+        IntegrationTestRequirements.RequireFile(paths.FfmpegPath, "ffmpeg is not available.");
+        IntegrationTestRequirements.RequireFile(paths.FfprobePath, "ffprobe is not available.");
 
         string workingDirectory = Path.Combine(Path.GetTempPath(), "VideoCutEditor.Tests", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(workingDirectory);
@@ -485,14 +450,11 @@ public sealed class FfmpegRunnerIntegrationTests
         }
     }
 
-    [Fact]
+    [SkippableFact]
     public async Task RunAsync_cleans_temporary_output_when_export_is_canceled()
     {
         FfmpegToolPaths paths = new FfmpegToolPathService().Resolve(new AppSettings());
-        if (string.IsNullOrWhiteSpace(paths.FfmpegPath) || !File.Exists(paths.FfmpegPath))
-        {
-            return;
-        }
+        IntegrationTestRequirements.RequireFile(paths.FfmpegPath, "ffmpeg is not available.");
 
         string workingDirectory = Path.Combine(Path.GetTempPath(), "VideoCutEditor.Tests", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(workingDirectory);
