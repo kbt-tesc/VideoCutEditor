@@ -208,6 +208,12 @@ If media metadata confirms there is no audio stream, the planner rejects the exp
 - In re-encode mode, preserve non-processed streams where compatible with the output container.
 - If a stream cannot be preserved, surface the reason in the export summary or log.
 
+## Output Path Selection
+
+`OutputPathService` creates automatic default output names from the source stem using `<source>_cut<extension>`. When that default path already exists, it probes one-based suffixes in order: `<source>_cut_1<extension>`, `<source>_cut_2<extension>`, and so on.
+
+Manual output filename edits are owned by `MainPageViewModel`. The view model keeps the typed filename, rebuilds the planned output path from the configured output directory and source extension, and exposes `IsManualOutputFileNameCollision` when the manual destination already exists. The warning is informational and non-blocking; `FfmpegRunner` remains the final overwrite guard by refusing to promote the temporary export output when the final path exists.
+
 ## Process Execution
 
 - Run ffmpeg as a child process with arguments passed as an argument list, not string-concatenated shell commands.

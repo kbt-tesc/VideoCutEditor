@@ -123,6 +123,8 @@ public sealed class UserInterfaceSourceTests
         string infoWindowXaml = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "src", "VideoCutEditor", "InfoWindow.xaml"));
         string infoWindowCodeBehind = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "src", "VideoCutEditor", "InfoWindow.xaml.cs"));
         Assert.Contains("AutomationProperties.AutomationId=\"OutputFileNameTextBox\"", xaml);
+        Assert.Contains("AutomationProperties.AutomationId=\"OutputFileNameCollisionWarningText\"", xaml);
+        Assert.Contains("ViewModel.IsManualOutputFileNameCollision", xaml);
         Assert.Contains("Text=\"{x:Bind ViewModel.PlannedOutputFileName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}\"", xaml);
         Assert.Contains("AutomationProperties.AutomationId=\"OpenOutputDirectoryButton\"", xaml);
         Assert.Contains("AutomationProperties.AutomationId=\"OpenSettingsButton\"", xaml);

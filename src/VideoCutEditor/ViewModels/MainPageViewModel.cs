@@ -30,7 +30,9 @@ public partial class MainPageViewModel : ObservableObject
     private bool isUpdatingPlannedOutputFileName;
     private bool hasManualVideoBitrateOverride;
     private bool hasManualOutputFileNameOverride;
+    private bool isManualOutputFileNameCollision;
     private string plannedOutputFileName = string.Empty;
+    private string? lastCompletedOutputPath;
     private bool convertHdrToSdrEnabled;
 
     [ObservableProperty]
@@ -58,8 +60,16 @@ public partial class MainPageViewModel : ObservableObject
             }
 
             hasManualOutputFileNameOverride = true;
+            lastCompletedOutputPath = null;
             PlannedOutputPath = BuildPlannedOutputPath();
+            UpdateManualOutputFileNameCollision();
         }
+    }
+
+    public bool IsManualOutputFileNameCollision
+    {
+        get => isManualOutputFileNameCollision;
+        private set => SetProperty(ref isManualOutputFileNameCollision, value);
     }
 
     [ObservableProperty]
@@ -345,6 +355,7 @@ public partial class MainPageViewModel : ObservableObject
         FrameStepSeconds = 1.0 / 30.0;
         SetRangeTextWithoutParsing(TimeSpan.Zero, TimeSpan.Zero);
         hasManualOutputFileNameOverride = false;
+        lastCompletedOutputPath = null;
         UpdatePlannedOutputPath();
 
         await ProbeSelectedMediaAsync(file.Path);
@@ -567,6 +578,8 @@ public partial class MainPageViewModel : ObservableObject
             if (result.Succeeded)
             {
                 PlannedOutputPath = plan.FinalOutputPath;
+                lastCompletedOutputPath = plan.FinalOutputPath;
+                UpdateManualOutputFileNameCollision();
             }
 
             AppLogger.Info($"Export completed. Success={result.Succeeded}, Output={plan.FinalOutputPath}, Error={result.ErrorMessage}");
@@ -799,6 +812,7 @@ public partial class MainPageViewModel : ObservableObject
         {
             PlannedOutputPath = null;
             SetPlannedOutputFileNameWithoutManual(string.Empty);
+            UpdateManualOutputFileNameCollision();
             return;
         }
 
@@ -806,10 +820,12 @@ public partial class MainPageViewModel : ObservableObject
         {
             PlannedOutputPath = outputPathService.CreateAvailableCutPath(SelectedSourcePath, OutputDirectory);
             SetPlannedOutputFileNameWithoutManual(Path.GetFileName(PlannedOutputPath));
+            UpdateManualOutputFileNameCollision();
             return;
         }
 
         PlannedOutputPath = BuildPlannedOutputPath();
+        UpdateManualOutputFileNameCollision();
     }
 
     private string? BuildPlannedOutputPath()
@@ -845,6 +861,14 @@ public partial class MainPageViewModel : ObservableObject
         {
             isUpdatingPlannedOutputFileName = false;
         }
+    }
+
+    private void UpdateManualOutputFileNameCollision()
+    {
+        IsManualOutputFileNameCollision = hasManualOutputFileNameOverride
+            && !string.IsNullOrWhiteSpace(PlannedOutputPath)
+            && !string.Equals(PlannedOutputPath, lastCompletedOutputPath, StringComparison.OrdinalIgnoreCase)
+            && File.Exists(PlannedOutputPath);
     }
 
     private ExportMode CurrentExportMode => SelectedExportModeIndex switch

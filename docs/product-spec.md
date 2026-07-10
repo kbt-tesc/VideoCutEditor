@@ -72,7 +72,8 @@ The first screen should be the usable editor, not a landing page or marketing sc
 - The output folder is configured in settings before export.
 - The settings surface provides both a picker for the output folder and a button to open the configured output folder in the system file explorer.
 - The output filename is generated from the source filename with a cut suffix.
-- If the generated filename already exists, append a numeric suffix such as `_cut_2` instead of overwriting.
+- If the generated filename already exists, append a numeric suffix starting at `_cut_1`, then `_cut_2`, instead of overwriting.
+- If the user manually edits the output filename to an existing file, keep the typed filename and show a non-blocking inline warning rather than silently changing the name. Export still must not overwrite an existing output file.
 - The default output container follows the input extension.
 - Stream-copy cuts may not be frame-accurate because they depend on keyframes. The UI should make that tradeoff clear.
 - Enabling any fade forces the export through Re-encode even when the visible export mode is Fast copy, because ffmpeg filters require decoding and encoding.

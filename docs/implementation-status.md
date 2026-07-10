@@ -1,6 +1,6 @@
 # Implementation Status
 
-Last updated: 2026-07-09
+Last updated: 2026-07-10
 
 This document is the handoff ledger for future Codex sessions. Read it after `AGENTS.md`, `docs/product-spec.md`, `docs/technical-design.md`, `docs/codex-workflow.md`, and `docs/implementation-kickoff.md` before choosing the next implementation slice.
 
@@ -188,6 +188,11 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
   - Ignore queued runner progress after export success, failure, or cancellation so a stale timestamp cannot replace the final `1.0` completion value or terminal status.
   - Added executable view-model tests for Fast copy success planning, final progress state, cancellation propagation, and cancellation log output.
   - Formatted the existing tuple-pattern whitespace in `BitrateSuggestionService` so repository-wide formatting verification is clean.
+- `ui: clarify output filename collision handling`
+  - Changed automatic default output naming to use one-based suffixes after the base `_cut` name, for example `_cut_1`, then `_cut_2`.
+  - Added a non-blocking inline warning when a manually edited output filename points to an existing destination file.
+  - Kept manual filenames unchanged while preserving the runner-level overwrite guard.
+  - Added core, app-layer, and UI source contract tests for the updated behavior.
 
 ## Implemented Capabilities
 
@@ -218,6 +223,7 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 - Export progress parsing, log display, cancellation, temporary output path, and final promotion after success.
 - Terminal export state is protected from late queued progress notifications.
 - Output filename collision avoidance.
+- Automatic output filename collision avoidance starts with `_cut_1` after the base `_cut` name, while manually typed collisions show a non-blocking inline warning.
 - Settings persistence for tool paths, output directory, export mode, normalize audio, codec, encoder, bitrate mode, video bitrate, and additional ffmpeg arguments.
 - Atomic settings replacement, damaged-settings archival, and recoverable startup with defaults.
 - Re-encode video bitrate suggestions from source bitrate or resolution with codec-specific multipliers.
@@ -253,8 +259,16 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 
 Most recent successful checks:
 
+- `dotnet test VideoCutEditor.slnx --filter "CreateAvailableCutPath_appends_one_based_number_when_default_exists|CreateAvailableCutPath_continues_after_one_based_suffix_exists|Manual_output_file_name_warns_when_the_destination_file_already_exists|Settings_output_filename_and_info_surfaces_are_separated"`
+  - 4 focused tests passed after adding one-based automatic suffixing and the manual output filename collision warning.
 - `dotnet test VideoCutEditor.slnx`
-  - 132 core tests and 7 app-layer tests passed after covering export success, cancellation, and late-progress handling.
+  - 133 core tests and 8 app-layer tests passed after adding the manual output filename collision behavior.
+- `dotnet build src\VideoCutEditor\VideoCutEditor.csproj -c Release -p:Platform=x64 -p:WindowsPackageType=None`
+  - Release x64 build succeeded with 0 warnings and 0 errors after the output filename warning UI change.
+- `dotnet format VideoCutEditor.slnx --verify-no-changes --verbosity diagnostic`
+  - Formatting verification completed with exit code 0 and 0 formatted files. The diagnostic output still reports duplicate WinUI-generated `obj` source files for the app project; this is a validation-tool warning, not a build or test failure.
+- `git diff --check`
+  - Whitespace check passed after the output filename collision slice.
 - `dotnet format VideoCutEditor.slnx --verify-no-changes --verbosity minimal`
   - Formatting verification passed after normalizing the existing tuple-pattern whitespace.
 - `dotnet test VideoCutEditor.slnx --collect:"XPlat Code Coverage"`
@@ -366,6 +380,7 @@ When resuming in a new session, rerun the relevant subset before making assumpti
 - Timeline drag seeking is covered by source-level UI contract tests and should still be manually confirmed visually with real media.
 - The owned modeless INFO window now has runtime UI coverage for open/close, duplicate prevention, field presence, and main-window interaction. A real export should still be manually observed once to confirm long-running live log updates remain readable while both windows are actively used.
 - App-layer tests now execute selected high-risk `MainPageViewModel` paths including successful export orchestration, terminal progress state, and cancellation. Media-open state transitions and more settings combinations should be expanded incrementally.
+- `dotnet format` can report duplicate WinUI-generated app-project sources under `obj` during workspace loading while still exiting successfully and formatting zero files. Treat this as validation noise unless it starts producing a nonzero exit, file changes, build failures, or VS Code diagnostics.
 
 ## Recommended Next Slices
 

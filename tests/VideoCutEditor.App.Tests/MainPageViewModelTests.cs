@@ -34,6 +34,21 @@ public sealed class MainPageViewModelTests
     }
 
     [Fact]
+    public void Manual_output_file_name_warns_when_the_destination_file_already_exists()
+    {
+        string directory = CreateTempDirectory();
+        File.WriteAllText(Path.Combine(directory, "existing.mp4"), string.Empty);
+        MainPageViewModel viewModel = CreateViewModel();
+        viewModel.SelectedSourcePath = Path.Combine(directory, "source.mp4");
+        viewModel.OutputDirectory = directory;
+
+        viewModel.PlannedOutputFileName = "existing";
+
+        Assert.Equal(Path.Combine(directory, "existing.mp4"), viewModel.PlannedOutputPath);
+        Assert.True(viewModel.IsManualOutputFileNameCollision);
+    }
+
+    [Fact]
     public async Task Export_validation_reports_missing_source_before_starting_runner()
     {
         var runner = new RecordingFfmpegRunner();

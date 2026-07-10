@@ -523,6 +523,7 @@
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
@@ -534,13 +535,21 @@
                                 Header="出力ファイル名"
                                 Text="{x:Bind ViewModel.PlannedOutputFileName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                             <TextBox
-                                Grid.Row="1"
+                                Grid.Row="2"
                                 AutomationProperties.AutomationId="PlannedOutputTextBox"
                                 Header="出力予定"
                                 IsReadOnly="True"
                                 Text="{x:Bind ViewModel.PlannedOutputPath, Mode=OneWay}" />
-                            <Button
+                            <TextBlock
                                 Grid.Row="1"
+                                Grid.ColumnSpan="2"
+                                AutomationProperties.AutomationId="OutputFileNameCollisionWarningText"
+                                Style="{StaticResource CaptionTextBlockStyle}"
+                                Text="同名の出力ファイルが既に存在します。書き出しても上書きされません。別の名前を指定してください。"
+                                TextWrapping="Wrap"
+                                Visibility="{x:Bind local:MainPage.BoolToVisibility(ViewModel.IsManualOutputFileNameCollision), Mode=OneWay}" />
+                            <Button
+                                Grid.Row="2"
                                 Grid.Column="1"
                                 AutomationProperties.AutomationId="OpenOutputDirectoryButton"
                                 AutomationProperties.Name="出力フォルダーを開く"

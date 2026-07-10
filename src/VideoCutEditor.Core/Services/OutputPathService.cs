@@ -16,7 +16,7 @@ public sealed class OutputPathService
             return firstCandidate;
         }
 
-        for (int index = 2; ; index++)
+        for (int index = 1; ; index++)
         {
             string candidate = Path.Combine(outputDirectory, $"{sourceName}_cut_{index}{extension}");
             if (!File.Exists(candidate))
