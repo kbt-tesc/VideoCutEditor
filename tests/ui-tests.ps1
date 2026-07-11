@@ -253,7 +253,7 @@ Test-UI "Select Fast copy mode" {
     winapp ui wait-for "CodecFamilyComboBox" -a $AppPid --gone -t 3000 -q
 }
 
-$expectedNormalizeAudio = if ($VerifyExportMode -eq "NormalizeAudio") { "On" } else { "Off" }
+$expectedNormalizeAudio = if ($VerifyExportMode -in @("NormalizeAudio", "NormalizeNoAudio")) { "On" } else { "Off" }
 Test-UI "Normalize audio matches expected setting" {
     winapp ui wait-for "NormalizeAudioCheckBox" -a $AppPid --value $expectedNormalizeAudio -t 3000 -q
 }
@@ -412,6 +412,10 @@ if (-not [string]::IsNullOrWhiteSpace($SampleVideoPath)) {
                 winapp ui invoke "Fast copy" -w $mainWindowHwnd -q
                 winapp ui wait-for "NormalizeAudioCheckBox" -w $mainWindowHwnd --value "On" -t 3000 -q
             }
+            elseif ($VerifyExportMode -eq "NormalizeNoAudio") {
+                winapp ui invoke "Fast copy" -w $mainWindowHwnd -q
+                winapp ui wait-for "NormalizeAudioCheckBox" -w $mainWindowHwnd --value "On" -t 3000 -q
+            }
             else {
                 throw "Unsupported export verification mode '$VerifyExportMode'."
             }
@@ -435,10 +439,19 @@ if (-not [string]::IsNullOrWhiteSpace($SampleVideoPath)) {
 
         Test-UI "$VerifyExportMode export completes" {
             winapp ui invoke "ExportButton" -w $mainWindowHwnd -q
-            $completedText = -join [char[]]@(0x66F8, 0x304D, 0x51FA, 0x3057, 0x304C, 0x5B8C, 0x4E86, 0x3057, 0x307E, 0x3057, 0x305F)
-            Wait-ForTextValue -AutomationId "StatusMessageText" -ExpectedText $completedText -WindowHwnd ([long]$mainWindowHwnd) -TimeoutMilliseconds 60000
-            if (-not [System.IO.File]::Exists($plannedExportPath) -or (Get-Item -LiteralPath $plannedExportPath).Length -eq 0) {
-                throw "$VerifyExportMode export did not create a non-empty output file."
+            if ($VerifyExportMode -eq "NormalizeNoAudio") {
+                $noAudioText = -join [char[]]@(0x97F3, 0x58F0, 0x30B9, 0x30C8, 0x30EA, 0x30FC, 0x30E0, 0x304C, 0x306A, 0x3044, 0x305F, 0x3081, 0x3001, 0x97F3, 0x91CF, 0x6B63, 0x898F, 0x5316, 0x3092, 0x4F7F, 0x7528, 0x3067, 0x304D, 0x307E, 0x305B, 0x3093)
+                Wait-ForTextValue -AutomationId "StatusMessageText" -ExpectedText $noAudioText -WindowHwnd ([long]$mainWindowHwnd)
+                if ([System.IO.File]::Exists($plannedExportPath)) {
+                    throw "No-audio normalization unexpectedly created an output file."
+                }
+            }
+            else {
+                $completedText = -join [char[]]@(0x66F8, 0x304D, 0x51FA, 0x3057, 0x304C, 0x5B8C, 0x4E86, 0x3057, 0x307E, 0x3057, 0x305F)
+                Wait-ForTextValue -AutomationId "StatusMessageText" -ExpectedText $completedText -WindowHwnd ([long]$mainWindowHwnd) -TimeoutMilliseconds 60000
+                if (-not [System.IO.File]::Exists($plannedExportPath) -or (Get-Item -LiteralPath $plannedExportPath).Length -eq 0) {
+                    throw "$VerifyExportMode export did not create a non-empty output file."
+                }
             }
         }
 

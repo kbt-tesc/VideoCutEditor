@@ -200,7 +200,7 @@ Re-encode command policy when normalize audio is enabled:
 - Add the measured `loudnorm` audio filter and override audio with `-c:a aac`.
 - If clip-edge audio fades are also enabled, combine `loudnorm` and `afade` in a single `-af` chain.
 
-If media metadata confirms there is no audio stream, the planner rejects the export with a clear error. If metadata is unavailable, the planner assumes audio may exist and lets the loudnorm analysis pass report any process-level failure. Future work may add configurable true peak/loudness range and codec-preserving audio encode choices.
+If media metadata confirms there is no audio stream, the planner rejects the export before starting ffmpeg with the Japanese error `音声ストリームがないため、音量正規化を使用できません`. If metadata is unavailable, the planner assumes audio may exist and lets the loudnorm analysis pass report any process-level failure. Future work may add configurable true peak/loudness range and codec-preserving audio encode choices.
 
 ## Stream And Metadata Preservation
 
@@ -231,7 +231,7 @@ The timeline ruler accumulates fractional minor-tick intervals for positioning. 
 
 Deterministic Core tests run without external tools. Environment-dependent ffmpeg, ffprobe, encoder, and Windows PowerShell tests use `SkippableFact`; an unavailable prerequisite must be reported as an explicit skipped test with a reason, never as a passing test reached through an early `return`.
 
-End-to-end export UI verification uses `scripts/Test-ExportUi.ps1` with `-Mode FastCopy`, `-Mode Reencode`, or `-Mode NormalizeAudio`. The script generates temporary sample media, writes temporary settings and output directories, launches the unpackaged Debug x64 app, runs the picker and export UI workflow, and removes the process and temporary tree in `finally`. Re-encode verification fixes H.264 Software encoding at 1500 kbps so it does not depend on GPU availability. NormalizeAudio uses the quiet audio sample, keeps Fast copy selected, and verifies that the live export log records both loudness analysis and normalization application passes. The app honors `VIDEOCUTEDITOR_TEST_SETTINGS_DIRECTORY` only in Debug builds; Release builds always use the normal AppData settings location.
+End-to-end export UI verification uses `scripts/Test-ExportUi.ps1` with `-Mode FastCopy`, `-Mode Reencode`, `-Mode NormalizeAudio`, or `-Mode NormalizeNoAudio`. The script generates temporary sample media, writes temporary settings and output directories, launches the unpackaged Debug x64 app, runs the picker and export UI workflow, and removes the process and temporary tree in `finally`. Re-encode verification fixes H.264 Software encoding at 1500 kbps so it does not depend on GPU availability. NormalizeAudio uses the quiet audio sample, keeps Fast copy selected, and verifies that the live export log records both loudness analysis and normalization application passes. NormalizeNoAudio uses video-only media and verifies the localized rejection plus absence of an output file. The app honors `VIDEOCUTEDITOR_TEST_SETTINGS_DIRECTORY` only in Debug builds; Release builds always use the normal AppData settings location.
 
 `WaveformGenerator` process behavior is exercised with a fake Windows PowerShell process for success, nonzero exit, successful exit without output, cancellation, and partial-output cleanup. Real ffmpeg integration tests continue covering generated media and export/probe behavior when the detected local build provides the required tools and encoders.
 

@@ -646,7 +646,7 @@ public sealed class ReencodeExportPlannerTests
 
         InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => planner.CreatePlan(request));
 
-        Assert.Contains("audio stream", exception.Message);
+        Assert.Equal("音声ストリームがないため、音量正規化を使用できません", exception.Message);
     }
 
     [Fact]

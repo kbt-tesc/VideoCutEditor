@@ -210,6 +210,10 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
   - Added `NormalizeAudio` to the isolated export runner using generated quiet-audio media and Fast copy video behavior.
   - Verified the normalize checkbox, successful non-empty output, and both `Analyzing audio loudness...` and `Applying audio normalization...` log stages.
   - Captured and visually reviewed the completed `-14 LUFS` normalization state.
+- `test: reject no-audio normalization in isolated UI export`
+  - Added `NormalizeNoAudio` coverage using generated video-only media.
+  - Localized the planner error to `音声ストリームがないため、音量正規化を使用できません`.
+  - Verified the visible error, absence of an output file, and the video-only UI state.
 
 ## Implemented Capabilities
 
@@ -278,6 +282,9 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 
 Most recent successful checks:
 
+- `powershell -ExecutionPolicy Bypass -File scripts\Test-ExportUi.ps1 -Mode NormalizeNoAudio`
+  - 62 UI tests passed; video-only media produced the localized normalization error and no output file.
+  - Visual review confirmed the error state and video-only timeline remained readable.
 - `powershell -ExecutionPolicy Bypass -File scripts\Test-ExportUi.ps1 -Mode NormalizeAudio`
   - 63 UI tests passed; the quiet-audio sample completed two-pass normalization into an isolated non-empty output file.
   - INFO log verification confirmed both loudness analysis and measured normalization application passes ran.
@@ -407,7 +414,7 @@ When resuming in a new session, rerun the relevant subset before making assumpti
 - Audio fade behavior for generated video-only inputs is covered, and `scripts/New-SampleMedia.ps1` can generate a local `video-only.mp4`; still verify representative real video-only media manually.
 - Advanced ffmpeg arguments are implemented for Re-encode mode only. They are quote-parsed, reject app-managed options, catch obvious syntax mistakes, and are passed as argument-list entries. Full ffmpeg option compatibility validation is intentionally not implemented because support varies by ffmpeg build, encoder, and muxer.
 - Audio normalization now uses fixed-target two-pass loudnorm. Configurable loudness/true peak/LRA values are intentionally not implemented.
-- Audio normalization is covered by generated-media integration tests, fake-process two-pass argument replacement, and isolated UI export with both pass logs. Representative real media and no-audio UI error handling still need manual verification.
+- Audio normalization is covered by generated-media integration tests, fake-process two-pass argument replacement, isolated UI export with both pass logs, and video-only rejection with no output. Representative real media still needs manual verification.
 - HDR to SDR conversion is covered at ffprobe parsing, settings, planner, Fast copy non-conversion, and source-level UI contract layers. It still needs manual verification with representative HDR10/PQ and HLG media on the user's ffmpeg build, especially because the initial implementation relies on ffmpeg `zscale` and `tonemap` filter availability.
 - Quality mode is covered for generated software-encoded media; NVEnc quality-mode execution still needs manual hardware-backed verification.
 - Generated media export is automated for Fast copy and Software H.264 Re-encode. Representative real media should still be manually verified for both modes.
@@ -428,7 +435,6 @@ When resuming in a new session, rerun the relevant subset before making assumpti
 
 1. Continue end-to-end verification.
    - Generate local verification inputs with `scripts/New-SampleMedia.ps1` when real sample media is not available.
-   - Add isolated no-audio normalization error coverage without producing output.
    - Add manual verification notes for representative real preview/normalization/NVEnc/package runs.
 2. Deepen audio normalization verification.
    - Manually verify representative real media and no-audio media.

@@ -1,5 +1,5 @@
 param(
-    [ValidateSet("FastCopy", "Reencode", "NormalizeAudio")]
+    [ValidateSet("FastCopy", "Reencode", "NormalizeAudio", "NormalizeNoAudio")]
     [string]$Mode = "FastCopy",
     [string]$FfmpegPath = "",
     [string]$FfprobePath = ""
@@ -25,7 +25,7 @@ try {
     $encoderKind = if ($Mode -eq "Reencode") { "Software" } else { "Auto" }
     $videoBitrate = if ($Mode -eq "Reencode") { 1500 } else { 2500 }
     $exportMode = if ($Mode -eq "Reencode") { "Reencode" } else { "FastCopy" }
-    $normalizeAudio = $Mode -eq "NormalizeAudio"
+    $normalizeAudio = $Mode -in @("NormalizeAudio", "NormalizeNoAudio")
 
     @{
         ffmpegPath = $ffmpeg
@@ -47,7 +47,11 @@ try {
     $appProcess = Start-Process -FilePath $exe -PassThru
     Start-Sleep -Seconds 2
 
-    $sampleName = if ($Mode -eq "NormalizeAudio") { "quiet-audio.mp4" } else { "video-with-audio.mp4" }
+    $sampleName = switch ($Mode) {
+        "NormalizeAudio" { "quiet-audio.mp4" }
+        "NormalizeNoAudio" { "video-only.mp4" }
+        default { "video-with-audio.mp4" }
+    }
     & powershell -ExecutionPolicy Bypass -File (Join-Path $root "tests\ui-tests.ps1") -AppPid $appProcess.Id -SampleVideoPath (Join-Path $mediaDirectory $sampleName) -VerifyExportMode $Mode -ExpectedOutputDirectory $outputDirectory
     if ($LASTEXITCODE -ne 0) { throw "$Mode UI verification failed." }
 }

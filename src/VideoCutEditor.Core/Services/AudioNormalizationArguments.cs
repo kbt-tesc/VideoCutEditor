@@ -13,7 +13,7 @@ internal static partial class AudioNormalizationArguments
     {
         if (settings.NormalizeAudio && mediaInfo is not null && !HasAudioStream(mediaInfo))
         {
-            throw new InvalidOperationException("Audio normalization requires an audio stream.");
+            throw new InvalidOperationException("音声ストリームがないため、音量正規化を使用できません");
         }
     }
 
