@@ -31,7 +31,7 @@ public sealed class VerificationMediaScriptTests
     }
 
     [Fact]
-    public void Export_ui_verification_supports_isolated_fast_copy_and_reencode_modes()
+    public void Export_ui_verification_supports_isolated_fast_copy_reencode_and_normalize_modes()
     {
         string root = FindRepositoryRoot();
         string viewModel = File.ReadAllText(Path.Combine(root, "src", "VideoCutEditor", "ViewModels", "MainPageViewModel.cs"));
@@ -47,8 +47,12 @@ public sealed class VerificationMediaScriptTests
         Assert.True(File.Exists(runnerPath));
         string runner = File.ReadAllText(runnerPath);
         Assert.Contains("VIDEOCUTEDITOR_TEST_SETTINGS_DIRECTORY", runner);
-        Assert.Contains("ValidateSet(\"FastCopy\", \"Reencode\")", runner);
+        Assert.Contains("ValidateSet(\"FastCopy\", \"Reencode\", \"NormalizeAudio\")", runner);
         Assert.Contains("$encoderKind = if ($Mode -eq \"Reencode\") { \"Software\" }", runner);
+        Assert.Contains("normalizeAudio = $normalizeAudio", runner);
+        Assert.Contains("NormalizeAudioCheckBox", uiScript);
+        Assert.Contains("Analyzing audio loudness...", uiScript);
+        Assert.Contains("Applying audio normalization...", uiScript);
     }
 
     private static (int ExitCode, string Output) RunSampleMediaDryRun(string outputDirectory)

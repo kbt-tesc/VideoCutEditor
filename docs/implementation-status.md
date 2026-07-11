@@ -1,6 +1,6 @@
 # Implementation Status
 
-Last updated: 2026-07-11
+Last updated: 2026-07-12
 
 This document is the handoff ledger for future Codex sessions. Read it after `AGENTS.md`, `docs/product-spec.md`, `docs/technical-design.md`, `docs/codex-workflow.md`, and `docs/implementation-kickoff.md` before choosing the next implementation slice.
 
@@ -206,6 +206,10 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
   - Generalized the isolated runner to `scripts/Test-ExportUi.ps1 -Mode FastCopy|Reencode` without duplicating setup and cleanup logic.
   - Added deterministic H.264 Software Re-encode verification at 1500 kbps, including UI state, completion status, and non-empty output validation.
   - Re-ran Fast copy through the generalized runner to preserve the existing workflow.
+- `test: verify isolated audio-normalization UI export`
+  - Added `NormalizeAudio` to the isolated export runner using generated quiet-audio media and Fast copy video behavior.
+  - Verified the normalize checkbox, successful non-empty output, and both `Analyzing audio loudness...` and `Applying audio normalization...` log stages.
+  - Captured and visually reviewed the completed `-14 LUFS` normalization state.
 
 ## Implemented Capabilities
 
@@ -274,6 +278,10 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 
 Most recent successful checks:
 
+- `powershell -ExecutionPolicy Bypass -File scripts\Test-ExportUi.ps1 -Mode NormalizeAudio`
+  - 63 UI tests passed; the quiet-audio sample completed two-pass normalization into an isolated non-empty output file.
+  - INFO log verification confirmed both loudness analysis and measured normalization application passes ran.
+  - Visual review confirmed Fast copy remained selected, normalization was checked, and the completed layout was readable.
 - `powershell -ExecutionPolicy Bypass -File scripts\Test-ExportUi.ps1 -Mode Reencode`
   - 62 UI tests passed; generated media was re-encoded with the Software H.264 selection and produced a non-empty isolated output file.
   - Visual review confirmed the Re-encode completion state, encoder, bitrate, waveform, and layout.
@@ -399,7 +407,7 @@ When resuming in a new session, rerun the relevant subset before making assumpti
 - Audio fade behavior for generated video-only inputs is covered, and `scripts/New-SampleMedia.ps1` can generate a local `video-only.mp4`; still verify representative real video-only media manually.
 - Advanced ffmpeg arguments are implemented for Re-encode mode only. They are quote-parsed, reject app-managed options, catch obvious syntax mistakes, and are passed as argument-list entries. Full ffmpeg option compatibility validation is intentionally not implemented because support varies by ffmpeg build, encoder, and muxer.
 - Audio normalization now uses fixed-target two-pass loudnorm. Configurable loudness/true peak/LRA values are intentionally not implemented.
-- Audio normalization is covered for generated audio/video media and fake-process two-pass argument replacement; the sample generator can produce quiet and no-audio inputs for manual checks, but representative real media and no-audio UI error handling still need manual verification.
+- Audio normalization is covered by generated-media integration tests, fake-process two-pass argument replacement, and isolated UI export with both pass logs. Representative real media and no-audio UI error handling still need manual verification.
 - HDR to SDR conversion is covered at ffprobe parsing, settings, planner, Fast copy non-conversion, and source-level UI contract layers. It still needs manual verification with representative HDR10/PQ and HLG media on the user's ffmpeg build, especially because the initial implementation relies on ffmpeg `zscale` and `tonemap` filter availability.
 - Quality mode is covered for generated software-encoded media; NVEnc quality-mode execution still needs manual hardware-backed verification.
 - Generated media export is automated for Fast copy and Software H.264 Re-encode. Representative real media should still be manually verified for both modes.
@@ -420,8 +428,8 @@ When resuming in a new session, rerun the relevant subset before making assumpti
 
 1. Continue end-to-end verification.
    - Generate local verification inputs with `scripts/New-SampleMedia.ps1` when real sample media is not available.
-   - Add isolated audio-normalization export completion coverage where runtime remains reasonable.
-   - Add manual verification notes for representative real preview/NVEnc/package runs.
+   - Add isolated no-audio normalization error coverage without producing output.
+   - Add manual verification notes for representative real preview/normalization/NVEnc/package runs.
 2. Deepen audio normalization verification.
    - Manually verify representative real media and no-audio media.
    - Consider configurable loudness/true peak/LRA only if real users need targets other than `-14 LUFS`.

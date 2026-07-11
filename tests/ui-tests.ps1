@@ -253,8 +253,9 @@ Test-UI "Select Fast copy mode" {
     winapp ui wait-for "CodecFamilyComboBox" -a $AppPid --gone -t 3000 -q
 }
 
-Test-UI "Normalize audio defaults off" {
-    winapp ui wait-for "NormalizeAudioCheckBox" -a $AppPid --value "Off" -t 3000 -q
+$expectedNormalizeAudio = if ($VerifyExportMode -eq "NormalizeAudio") { "On" } else { "Off" }
+Test-UI "Normalize audio matches expected setting" {
+    winapp ui wait-for "NormalizeAudioCheckBox" -a $AppPid --value $expectedNormalizeAudio -t 3000 -q
 }
 
 Test-UI "Normalize audio remains available in Fast copy mode" {
@@ -407,6 +408,10 @@ if (-not [string]::IsNullOrWhiteSpace($SampleVideoPath)) {
             elseif ($VerifyExportMode -eq "FastCopy") {
                 winapp ui invoke "Fast copy" -w $mainWindowHwnd -q
             }
+            elseif ($VerifyExportMode -eq "NormalizeAudio") {
+                winapp ui invoke "Fast copy" -w $mainWindowHwnd -q
+                winapp ui wait-for "NormalizeAudioCheckBox" -w $mainWindowHwnd --value "On" -t 3000 -q
+            }
             else {
                 throw "Unsupported export verification mode '$VerifyExportMode'."
             }
@@ -472,6 +477,15 @@ Test-UI "INFO window shows all three information fields" {
     winapp ui wait-for "EncoderSummaryTextBox" -w $infoWindowHwnd -t 3000 -q
     winapp ui wait-for "ExportLogTextBox" -w $infoWindowHwnd -t 3000 -q
     winapp ui wait-for "MediaInfoTextBox" -w $infoWindowHwnd -t 3000 -q
+}
+
+if ($VerifyExportMode -eq "NormalizeAudio") {
+    Test-UI "Normalize audio export log records both loudness passes" {
+        $log = winapp ui get-value "ExportLogTextBox" -w $infoWindowHwnd --json 2>$null | ConvertFrom-Json
+        if ($log.text -notlike "*Analyzing audio loudness...*" -or $log.text -notlike "*Applying audio normalization...*") {
+            throw "The export log did not record both audio normalization passes."
+        }
+    }
 }
 
 Test-UI "Main window remains operable while INFO is open" {

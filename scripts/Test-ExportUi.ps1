@@ -1,5 +1,5 @@
 param(
-    [ValidateSet("FastCopy", "Reencode")]
+    [ValidateSet("FastCopy", "Reencode", "NormalizeAudio")]
     [string]$Mode = "FastCopy",
     [string]$FfmpegPath = "",
     [string]$FfprobePath = ""
@@ -24,17 +24,19 @@ try {
 
     $encoderKind = if ($Mode -eq "Reencode") { "Software" } else { "Auto" }
     $videoBitrate = if ($Mode -eq "Reencode") { 1500 } else { 2500 }
+    $exportMode = if ($Mode -eq "Reencode") { "Reencode" } else { "FastCopy" }
+    $normalizeAudio = $Mode -eq "NormalizeAudio"
 
     @{
         ffmpegPath = $ffmpeg
         ffprobePath = $ffprobe
         outputDirectory = $outputDirectory
-        lastExportMode = $Mode
+        lastExportMode = $exportMode
         lastCodecFamily = "H264"
         lastEncoderKind = $encoderKind
         lastBitrateMode = "Bitrate"
         lastVideoBitrateKbps = $videoBitrate
-        normalizeAudio = $false
+        normalizeAudio = $normalizeAudio
     } | ConvertTo-Json | Set-Content -Encoding utf8 (Join-Path $settingsDirectory "settings.json")
 
     & dotnet build (Join-Path $root "src\VideoCutEditor\VideoCutEditor.csproj") -p:Platform=x64 -p:WindowsPackageType=None
@@ -45,7 +47,8 @@ try {
     $appProcess = Start-Process -FilePath $exe -PassThru
     Start-Sleep -Seconds 2
 
-    & powershell -ExecutionPolicy Bypass -File (Join-Path $root "tests\ui-tests.ps1") -AppPid $appProcess.Id -SampleVideoPath (Join-Path $mediaDirectory "video-with-audio.mp4") -VerifyExportMode $Mode -ExpectedOutputDirectory $outputDirectory
+    $sampleName = if ($Mode -eq "NormalizeAudio") { "quiet-audio.mp4" } else { "video-with-audio.mp4" }
+    & powershell -ExecutionPolicy Bypass -File (Join-Path $root "tests\ui-tests.ps1") -AppPid $appProcess.Id -SampleVideoPath (Join-Path $mediaDirectory $sampleName) -VerifyExportMode $Mode -ExpectedOutputDirectory $outputDirectory
     if ($LASTEXITCODE -ne 0) { throw "$Mode UI verification failed." }
 }
 finally {
