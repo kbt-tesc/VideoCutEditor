@@ -39,7 +39,7 @@
                 AutomationProperties.AutomationId="MediaInfoTextBox"
                 Header="メディア情報"
                 AcceptsReturn="True"
-                Height="160"
+                Height="220"
                 IsReadOnly="True"
                 Text="{x:Bind ViewModel.MediaSummaryText, Mode=OneWay}"
                 TextWrapping="Wrap" />

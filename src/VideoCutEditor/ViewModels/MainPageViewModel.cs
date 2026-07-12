@@ -1292,7 +1292,7 @@ public partial class MainPageViewModel : ObservableObject
             ApplySuggestedVideoBitrate(force: !hasManualVideoBitrateOverride);
             UpdateTargetSizeDerivedBitrate();
             UpdatePredictedOutputSizeText();
-            MediaSummaryText = CreateMediaSummary(info);
+            MediaSummaryText = MediaSummaryFormatter.Create(info);
             StatusMessage = "動画を選択しました";
             AppLogger.Info($"ffprobe metadata loaded: {MediaSummaryText.Replace(Environment.NewLine, " | ")}");
         }
@@ -1327,57 +1327,6 @@ public partial class MainPageViewModel : ObservableObject
 
     private static bool HasHdrVideoStream(MediaInfo info) =>
         info.Streams.Any(stream => stream.IsHighDynamicRange);
-
-    private static string CreateMediaSummary(MediaInfo info)
-    {
-        MediaStreamInfo? video = info.Streams.FirstOrDefault(stream => stream.CodecType == "video");
-        MediaStreamInfo? audio = info.Streams.FirstOrDefault(stream => stream.CodecType == "audio");
-
-        string duration = FormatTime(info.Duration);
-        string videoText = video is null
-            ? "映像: なし"
-            : $"映像: {CreateVideoDescription(video)}";
-        string audioText = audio is null
-            ? "音声: なし"
-            : $"音声: {CreateAudioDescription(audio)}";
-        string bitrateText = info.Bitrate is { } bitrate
-            ? $"ビットレート: {FormatBitrate(bitrate)}"
-            : "ビットレート: 不明";
-
-        return $"長さ: {duration}{Environment.NewLine}{videoText}{Environment.NewLine}{audioText}{Environment.NewLine}{bitrateText}";
-    }
-
-    private static string CreateVideoDescription(MediaStreamInfo stream)
-    {
-        string codec = stream.CodecName ?? "unknown";
-        string size = stream is { Width: > 0, Height: > 0 }
-            ? $"{stream.Width}x{stream.Height}"
-            : "サイズ不明";
-        string fps = stream.FrameRate is { } frameRate
-            ? $"{frameRate:0.###} fps"
-            : "fps 不明";
-
-        return $"{codec}, {size}, {fps}";
-    }
-
-    private static string CreateAudioDescription(MediaStreamInfo stream)
-    {
-        string codec = stream.CodecName ?? "不明";
-        string channels = stream.ChannelLayout
-            ?? (stream.Channels is { } channelCount ? $"{channelCount} ch" : "チャンネル不明");
-        string sampleRate = stream.SampleRate is { } rate
-            ? $"{rate / 1000.0:0.#} kHz"
-            : "サンプルレート不明";
-
-        return $"{codec}, {channels}, {sampleRate}";
-    }
-
-    private static string FormatBitrate(long bitsPerSecond)
-    {
-        return bitsPerSecond >= 1_000_000
-            ? $"{bitsPerSecond / 1_000_000.0:0.##} Mbps"
-            : $"{bitsPerSecond / 1000.0:0.#} kbps";
-    }
 
     private async Task DetectEncoderCapabilitiesAsync()
     {

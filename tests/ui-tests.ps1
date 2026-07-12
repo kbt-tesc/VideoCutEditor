@@ -519,6 +519,15 @@ if ($VerifyExportMode -eq "NormalizeAudio") {
     }
 }
 
+if ($VerifyExportMode -eq "ReencodeHdrToSdr") {
+    Test-UI "HDR media information shows transfer and color specifications" {
+        $mediaInfo = winapp ui get-value "MediaInfoTextBox" -w $infoWindowHwnd --json 2>$null | ConvertFrom-Json
+        if ($mediaInfo.text -notlike "*HDR10 (PQ)*" -or $mediaInfo.text -notlike "*smpte2084*" -or $mediaInfo.text -notlike "*bt2020*") {
+            throw "HDR media information did not include the expected PQ and BT.2020 specifications."
+        }
+    }
+}
+
 Test-UI "Main window remains operable while INFO is open" {
     winapp ui invoke "Fast copy" -w $mainWindowHwnd
     winapp ui wait-for "CodecFamilyComboBox" -w $mainWindowHwnd --gone -t 3000 -q

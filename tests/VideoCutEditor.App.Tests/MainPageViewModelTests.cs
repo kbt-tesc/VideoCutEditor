@@ -7,6 +7,39 @@ namespace VideoCutEditor.App.Tests;
 public sealed class MainPageViewModelTests
 {
     [Fact]
+    public void Media_summary_identifies_hdr10_pq_and_color_metadata()
+    {
+        var info = new MediaInfo(
+            "hdr10.mp4",
+            TimeSpan.FromSeconds(10),
+            "mov,mp4",
+            12_000_000,
+            [new MediaStreamInfo(0, "video", "hevc", 10_000_000, 3840, 2160, 60, ColorSpace: "bt2020nc", ColorTransfer: "smpte2084", ColorPrimaries: "bt2020")]);
+
+        string summary = MediaSummaryFormatter.Create(info);
+
+        Assert.Contains("ダイナミックレンジ: HDR10 (PQ)", summary);
+        Assert.Contains("色空間: bt2020nc", summary);
+        Assert.Contains("伝達特性: smpte2084", summary);
+        Assert.Contains("色域: bt2020", summary);
+    }
+
+    [Fact]
+    public void Media_summary_identifies_hlg()
+    {
+        var info = new MediaInfo(
+            "hlg.mp4",
+            TimeSpan.FromSeconds(10),
+            "mov,mp4",
+            null,
+            [new MediaStreamInfo(0, "video", "hevc", null, 1920, 1080, 30, ColorTransfer: "arib-std-b67")]);
+
+        string summary = MediaSummaryFormatter.Create(info);
+
+        Assert.Contains("ダイナミックレンジ: HLG", summary);
+    }
+
+    [Fact]
     public void Time_inputs_update_and_clamp_the_selected_range()
     {
         MainPageViewModel viewModel = CreateViewModel();

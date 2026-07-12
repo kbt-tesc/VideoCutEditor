@@ -238,6 +238,10 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
   - Set the app product version to `0.1.0` and added a tested `New-PortableRelease.ps1` workflow.
   - Created an installer-free x64 ZIP containing the self-contained single-file EXE and Japanese usage guidance, without bundling ffmpeg/ffprobe.
   - Generated and verified the SHA-256 checksum, extracted the ZIP, confirmed product version `0.1.0`, and smoke-launched the distributed EXE.
+- `feat: show HDR specifications in media information`
+  - Kept the existing Re-encode-only HDR-to-SDR checkbox contextual to detected HDR media and default-checked for each newly opened HDR source.
+  - Added tested INFO-window labels for HDR10/PQ and HLG plus ffprobe color space, transfer characteristic, and color primaries.
+  - Increased the media-information field height for the additional diagnostic lines while retaining the modeless scrollable INFO layout.
 
 ## Implemented Capabilities
 
@@ -257,6 +261,7 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 - Direct Fast copy/Re-encode mode selection without a drop-down.
 - Re-encode export planning and execution for bitrate, target-size, and quality-based video encoding.
 - HDR media detection from ffprobe color transfer metadata, with Re-encode-only HDR to SDR tone mapping.
+- INFO media details identify HDR10/PQ or HLG and show color space, transfer characteristic, and color primaries.
 - Re-encode advanced additional ffmpeg arguments with quote-aware argument parsing, app-managed option validation, and obvious syntax-mistake validation.
 - Two-pass audio normalization option with fixed `-14 LUFS` loudnorm and AAC audio re-encode in both Fast copy and Re-encode.
 - Target-size mode that derives Re-encode video bitrate from desired output size.
@@ -311,15 +316,15 @@ Most recent successful checks:
   - Created `artifacts\releases\VideoCutEditor-0.1.0-win-x64.zip` and its `.sha256` file after portable artifact validation.
   - The ZIP contains only `VideoCutEditor.exe` and `README.txt`; checksum verification, product-version inspection, extraction, and startup smoke testing passed.
 - `powershell -ExecutionPolicy Bypass -File scripts\Test-ExportUi.ps1 -Mode ReencodeHdrToSdr`
-  - 62 UI tests passed using generated 10-bit BT.2020/PQ media; the default-checked conversion completed into a non-empty Software H.264 output.
-  - ffprobe confirmed BT.709 color space, transfer, and primaries, and visual review confirmed the HDR notice, conversion option, timeline, waveform, and completion state.
+  - 63 UI tests passed using generated 10-bit BT.2020/PQ media; the default-checked conversion completed into a non-empty Software H.264 output.
+  - ffprobe confirmed BT.709 output color metadata, while INFO-window UIA confirmed the source HDR10/PQ, SMPTE 2084, and BT.2020 specifications. Visual review confirmed the HDR notice, conversion option, timeline, waveform, and completion state.
 - `powershell -ExecutionPolicy Bypass -File scripts\Test-ExportUi.ps1 -Mode ReencodeNvencHevcQuality`
   - 62 UI tests passed; H.265, NVEnc, Quality 23, completion state, and non-empty output were confirmed on RTX 5080.
 - `powershell -ExecutionPolicy Bypass -File scripts\Test-ExportUi.ps1 -Mode ReencodeNvencAv1Quality`
   - 62 UI tests passed and a non-empty AV1 NVEnc output was produced on RTX 5080.
   - A repeat run also passed 62 UI tests and produced a complete screenshot confirming AV1, NVEnc, Quality 23, completion state, timeline, and waveform rendering. The earlier partial-black capture did not reproduce.
 - `dotnet test VideoCutEditor.slnx`
-  - 138 Core tests and 8 app-layer tests passed with no failures or skips after adding portable release packaging and version contracts.
+  - 138 Core tests and 10 app-layer tests passed with no failures or skips after adding HDR10/PQ and HLG media-summary coverage.
 - `powershell -ExecutionPolicy Bypass -File .agents\skills\winui-dev-workflow\BuildAndRun.ps1 .\src\VideoCutEditor\VideoCutEditor.csproj -SkipRun`
   - Debug x64 build passed with the Windows App SDK analyzer enabled, with zero warnings and zero errors.
 - `dotnet build src\VideoCutEditor\VideoCutEditor.csproj -c Release -p:Platform=x64 -p:WindowsPackageType=None`
