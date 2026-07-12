@@ -1,5 +1,5 @@
 param(
-    [ValidateSet("FastCopy", "Reencode", "ReencodeNvenc", "ReencodeNvencQuality", "ReencodeNvencHevc", "ReencodeNvencAv1", "NormalizeAudio", "NormalizeNoAudio")]
+    [ValidateSet("FastCopy", "Reencode", "ReencodeNvenc", "ReencodeNvencQuality", "ReencodeNvencHevc", "ReencodeNvencHevcQuality", "ReencodeNvencAv1", "ReencodeNvencAv1Quality", "NormalizeAudio", "NormalizeNoAudio")]
     [string]$Mode = "FastCopy",
     [string]$FfmpegPath = "",
     [string]$FfprobePath = ""
@@ -24,13 +24,13 @@ try {
 
     $isNvenc = $Mode -like "ReencodeNvenc*"
     $isReencode = $Mode -eq "Reencode" -or $isNvenc
-    $isQuality = $Mode -eq "ReencodeNvencQuality"
+    $isQuality = $Mode -like "*Quality"
 
     if ($isNvenc) {
         $encoders = & $ffmpeg -hide_banner -encoders 2>&1
         $requiredEncoder = switch ($Mode) {
-            "ReencodeNvencHevc" { "hevc_nvenc" }
-            "ReencodeNvencAv1" { "av1_nvenc" }
+            { $_ -like "ReencodeNvencHevc*" } { "hevc_nvenc" }
+            { $_ -like "ReencodeNvencAv1*" } { "av1_nvenc" }
             default { "h264_nvenc" }
         }
         if ($LASTEXITCODE -ne 0 -or -not ($encoders -match "\b$requiredEncoder\b")) {
@@ -45,7 +45,9 @@ try {
     $normalizeAudio = $Mode -in @("NormalizeAudio", "NormalizeNoAudio")
     $codecFamily = switch ($Mode) {
         "ReencodeNvencHevc" { "H265" }
+        "ReencodeNvencHevcQuality" { "H265" }
         "ReencodeNvencAv1" { "Av1" }
+        "ReencodeNvencAv1Quality" { "Av1" }
         default { "H264" }
     }
 

@@ -226,6 +226,10 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
   - Added isolated `ReencodeNvencHevc` and `ReencodeNvencAv1` modes with explicit `hevc_nvenc` and `av1_nvenc` prerequisite checks.
   - Verified each matching codec selection, NVEnc selection, 1500 kbps bitrate, completed hardware export, and non-empty output on RTX 5080.
   - Visually reviewed both completed states and confirmed the timeline, waveform, and export controls remained readable.
+- `test: verify HEVC and AV1 NVEnc quality-mode exports`
+  - Added isolated `ReencodeNvencHevcQuality` and `ReencodeNvencAv1Quality` modes using the common Quality 23 setting and codec-specific encoder prerequisite checks.
+  - Both modes passed 62 UI checks and produced non-empty hardware-encoded output files on RTX 5080.
+  - HEVC completion rendered normally; the AV1 completion screenshot was partially black despite passing UIA state checks, so visual confirmation remains open.
 
 ## Implemented Capabilities
 
@@ -294,6 +298,11 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 
 Most recent successful checks:
 
+- `powershell -ExecutionPolicy Bypass -File scripts\Test-ExportUi.ps1 -Mode ReencodeNvencHevcQuality`
+  - 62 UI tests passed; H.265, NVEnc, Quality 23, completion state, and non-empty output were confirmed on RTX 5080.
+- `powershell -ExecutionPolicy Bypass -File scripts\Test-ExportUi.ps1 -Mode ReencodeNvencAv1Quality`
+  - 62 UI tests passed and a non-empty AV1 NVEnc output was produced on RTX 5080.
+  - UIA confirmed AV1, NVEnc, Quality mode, and completion, but the saved completion screenshot was partially black.
 - `dotnet test VideoCutEditor.slnx`
   - 135 Core tests and 8 app-layer tests passed with no failures or skips after the HEVC/AV1 NVEnc runner extension.
 - `powershell -ExecutionPolicy Bypass -File .agents\skills\winui-dev-workflow\BuildAndRun.ps1 .\src\VideoCutEditor\VideoCutEditor.csproj -SkipRun`
@@ -452,9 +461,9 @@ When resuming in a new session, rerun the relevant subset before making assumpti
 - Audio normalization now uses fixed-target two-pass loudnorm. Configurable loudness/true peak/LRA values are intentionally not implemented.
 - Audio normalization is covered by generated-media integration tests, fake-process two-pass argument replacement, isolated UI export with both pass logs, and video-only rejection with no output. Representative real media still needs manual verification.
 - HDR to SDR conversion is covered at ffprobe parsing, settings, planner, Fast copy non-conversion, and source-level UI contract layers. It still needs manual verification with representative HDR10/PQ and HLG media on the user's ffmpeg build, especially because the initial implementation relies on ffmpeg `zscale` and `tonemap` filter availability.
-- Quality mode is covered for generated software media and H.264 NVEnc execution on RTX 5080. HEVC/AV1 quality-mode execution is not separately covered.
+- Quality mode is covered for generated software media and H.264, HEVC, and AV1 NVEnc execution on RTX 5080. The AV1 Quality completion screenshot was partially black even though UIA checks and export passed; rerun visual confirmation before treating its rendered completion state as verified.
 - Generated media export is automated for Fast copy and Software H.264 Re-encode. Representative real media should still be manually verified for both modes.
-- H.264, HEVC, and AV1 NVEnc bitrate exports plus H.264 NVEnc quality-mode export are verified on the local RTX 5080 and winget ffmpeg build. Representative real media still needs manual verification for these hardware paths.
+- H.264, HEVC, and AV1 NVEnc bitrate and quality-mode exports are verified on the local RTX 5080 and winget ffmpeg build. Representative real media still needs manual verification for these hardware paths.
 - The current winapp UIA bridge does not expose `QualityNumberBox` as a reliably parseable numeric value. Keep the isolated settings contract and screenshot review for the exact value while UIA verifies mode and enabled state.
 - Preview-unavailable fallback behavior needs more manual and/or UI coverage.
 - Portable x64 publish, x86 publish, arm64 publish, artifact validation, and published x64 EXE startup smoke testing now succeed. Signing, MSIX packaging, installer validation, distribution packaging, and x86/arm64 runtime startup on matching devices still need verification.
