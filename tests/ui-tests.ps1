@@ -302,7 +302,7 @@ Test-UI "Codec matches expected Re-encode setting" {
     winapp ui wait-for "CodecFamilyComboBox" -a $AppPid --value $expectedCodec -t 3000 -q
 }
 
-$expectedInitialEncoder = if ($VerifyExportMode -eq "Reencode") { "Software" } elseif ($VerifyExportMode -like "ReencodeNvenc*") { "NVEnc" } else { "Auto" }
+$expectedInitialEncoder = if ($VerifyExportMode -in @("Reencode", "ReencodeHdrToSdr")) { "Software" } elseif ($VerifyExportMode -like "ReencodeNvenc*") { "NVEnc" } else { "Auto" }
 Test-UI "Encoder matches expected Re-encode setting" {
     winapp ui wait-for "EncoderKindComboBox" -a $AppPid --value $expectedInitialEncoder -t 3000 -q
 }
@@ -312,7 +312,7 @@ Test-UI "Rate control matches expected Re-encode setting" {
     winapp ui wait-for "BitrateModeComboBox" -a $AppPid --value $expectedRateControl -t 3000 -q
 }
 
-$expectedInitialVideoBitrate = if ($VerifyExportMode -eq "Reencode" -or $VerifyExportMode -like "ReencodeNvenc*") { "1500" } else { "2500" }
+$expectedInitialVideoBitrate = if ($VerifyExportMode -in @("Reencode", "ReencodeHdrToSdr") -or $VerifyExportMode -like "ReencodeNvenc*") { "1500" } else { "2500" }
 Test-UI "Video bitrate matches expected Re-encode setting" {
     winapp ui wait-for "VideoBitrateTextBox" -a $AppPid --value $expectedInitialVideoBitrate -t 3000 -q
 }
@@ -410,9 +410,12 @@ if (-not [string]::IsNullOrWhiteSpace($SampleVideoPath)) {
 
     if (-not [string]::IsNullOrWhiteSpace($VerifyExportMode)) {
         Test-UI "$VerifyExportMode mode is selected for isolated export" {
-            if ($VerifyExportMode -eq "Reencode") {
+            if ($VerifyExportMode -in @("Reencode", "ReencodeHdrToSdr")) {
                 winapp ui invoke "Re-encode" -w $mainWindowHwnd -q
                 winapp ui wait-for "EncoderKindComboBox" -w $mainWindowHwnd --value "Software" -t 3000 -q
+                if ($VerifyExportMode -eq "ReencodeHdrToSdr") {
+                    winapp ui wait-for "ConvertHdrToSdrCheckBox" -w $mainWindowHwnd --value "On" -t 3000 -q
+                }
             }
             elseif ($VerifyExportMode -like "ReencodeNvenc*") {
                 winapp ui invoke "Re-encode" -w $mainWindowHwnd -q

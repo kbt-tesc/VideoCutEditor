@@ -230,6 +230,10 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
   - Added isolated `ReencodeNvencHevcQuality` and `ReencodeNvencAv1Quality` modes using the common Quality 23 setting and codec-specific encoder prerequisite checks.
   - Both modes passed 62 UI checks and produced non-empty hardware-encoded output files on RTX 5080.
   - HEVC completion rendered normally. A second AV1 run produced a complete screenshot after the first capture was partially black, confirming AV1, NVEnc, Quality 23, completion state, timeline, and waveform rendering.
+- `test: verify HDR to SDR export end to end`
+  - Added generated 10-bit BT.2020/PQ verification media with audio.
+  - Added an isolated Software H.264 HDR-to-SDR UI mode that verifies HDR detection, the default-checked conversion option, completed export, and non-empty output.
+  - Verified the real `zscale`/`tonemap` path and required ffprobe output metadata `color_space=bt709`, `color_transfer=bt709`, and `color_primaries=bt709`.
 
 ## Implemented Capabilities
 
@@ -271,6 +275,7 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 - Automated portable publish artifact validation for single-file shape and external ffmpeg/ffprobe policy.
 - All-platform portable publish script for x64, x86, and arm64.
 - Verification sample media generator for repeatable local manual checks.
+- Verification media includes a generated 10-bit BT.2020/PQ sample for HDR detection and SDR tone-mapping checks.
 - VS Code F5 configuration for x64 Debug breakpoint debugging.
 - VS Code F5 direct debugging uses the unpackaged entry point while packaged debug launch remains covered by `BuildAndRun.ps1` / `winapp run`.
 - VS Code/C# Dev Kit language-service opens `VideoCutEditor.slnx`, the repo-standard solution.
@@ -298,6 +303,9 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 
 Most recent successful checks:
 
+- `powershell -ExecutionPolicy Bypass -File scripts\Test-ExportUi.ps1 -Mode ReencodeHdrToSdr`
+  - 62 UI tests passed using generated 10-bit BT.2020/PQ media; the default-checked conversion completed into a non-empty Software H.264 output.
+  - ffprobe confirmed BT.709 color space, transfer, and primaries, and visual review confirmed the HDR notice, conversion option, timeline, waveform, and completion state.
 - `powershell -ExecutionPolicy Bypass -File scripts\Test-ExportUi.ps1 -Mode ReencodeNvencHevcQuality`
   - 62 UI tests passed; H.265, NVEnc, Quality 23, completion state, and non-empty output were confirmed on RTX 5080.
 - `powershell -ExecutionPolicy Bypass -File scripts\Test-ExportUi.ps1 -Mode ReencodeNvencAv1Quality`
@@ -460,7 +468,7 @@ When resuming in a new session, rerun the relevant subset before making assumpti
 - Advanced ffmpeg arguments are implemented for Re-encode mode only. They are quote-parsed, reject app-managed options, catch obvious syntax mistakes, and are passed as argument-list entries. Full ffmpeg option compatibility validation is intentionally not implemented because support varies by ffmpeg build, encoder, and muxer.
 - Audio normalization now uses fixed-target two-pass loudnorm. Configurable loudness/true peak/LRA values are intentionally not implemented.
 - Audio normalization is covered by generated-media integration tests, fake-process two-pass argument replacement, isolated UI export with both pass logs, and video-only rejection with no output. Representative real media still needs manual verification.
-- HDR to SDR conversion is covered at ffprobe parsing, settings, planner, Fast copy non-conversion, and source-level UI contract layers. It still needs manual verification with representative HDR10/PQ and HLG media on the user's ffmpeg build, especially because the initial implementation relies on ffmpeg `zscale` and `tonemap` filter availability.
+- HDR to SDR conversion is covered at ffprobe parsing, settings, planner, Fast copy non-conversion, generated 10-bit BT.2020/PQ media, real `zscale`/`tonemap` execution, UI completion, and BT.709 output metadata layers. Representative real HDR10/PQ and HLG game recordings still need manual visual verification for tone-mapping quality.
 - Quality mode is covered for generated software media and H.264, HEVC, and AV1 NVEnc execution on RTX 5080. One AV1 completion screenshot was partially black, but an immediate full E2E rerun passed and captured the complete rendered state; treat the first image as transient capture noise unless it recurs.
 - Generated media export is automated for Fast copy and Software H.264 Re-encode. Representative real media should still be manually verified for both modes.
 - H.264, HEVC, and AV1 NVEnc bitrate and quality-mode exports are verified on the local RTX 5080 and winget ffmpeg build. Representative real media still needs manual verification for these hardware paths.

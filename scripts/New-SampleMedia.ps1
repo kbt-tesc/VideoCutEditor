@@ -122,6 +122,21 @@ $samples = @(
             "-shortest",
             "-movflags", "+faststart"
         )
+    },
+    @{
+        Name = "hdr-pq.mp4"
+        Arguments = @(
+            "-hide_banner", "-loglevel", "error", $(if ($Force) { "-y" } else { "-n" }),
+            "-f", "lavfi", "-i", "testsrc2=size=1280x720:rate=30",
+            "-f", "lavfi", "-i", "sine=frequency=1000:sample_rate=48000",
+            "-t", $duration,
+            "-vf", "zscale=pin=bt709:tin=bt709:min=bt709:p=bt2020:t=smpte2084:m=bt2020nc,format=yuv420p10le",
+            "-c:v", "libx265",
+            "-x265-params", "colorprim=bt2020:transfer=smpte2084:colormatrix=bt2020nc",
+            "-c:a", "aac",
+            "-shortest",
+            "-movflags", "+faststart"
+        )
     }
 )
 

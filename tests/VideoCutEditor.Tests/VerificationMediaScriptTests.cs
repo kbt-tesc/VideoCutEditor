@@ -15,6 +15,7 @@ public sealed class VerificationMediaScriptTests
         Assert.Contains("video-with-audio.mp4", output);
         Assert.Contains("video-only.mp4", output);
         Assert.Contains("quiet-audio.mp4", output);
+        Assert.Contains("hdr-pq.mp4", output);
     }
 
     [Fact]
@@ -51,6 +52,7 @@ public sealed class VerificationMediaScriptTests
         Assert.Contains("ReencodeNvencAv1", runner);
         Assert.Contains("ReencodeNvencHevcQuality", runner);
         Assert.Contains("ReencodeNvencAv1Quality", runner);
+        Assert.Contains("ReencodeHdrToSdr", runner);
         Assert.Contains("elseif ($isNvenc) { \"Nvenc\" }", runner);
         Assert.Contains("h264_nvenc", runner);
         Assert.Contains("normalizeAudio = $normalizeAudio", runner);
@@ -60,6 +62,8 @@ public sealed class VerificationMediaScriptTests
         Assert.Contains("NormalizeNoAudio", uiScript);
         Assert.Contains("ReencodeNvenc", uiScript);
         Assert.Contains("$VerifyExportMode -like \"*Quality\"", uiScript);
+        Assert.Contains("ConvertHdrToSdrCheckBox", uiScript);
+        Assert.Contains("color_transfer=bt709", runner);
         Assert.Contains("lastQualityValue = 23", runner);
         Assert.Contains("\"ReencodeNvencHevc\" { \"H265\" }", runner);
         Assert.Contains("\"ReencodeNvencAv1\" { \"Av1\" }", runner);

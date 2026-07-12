@@ -1,5 +1,5 @@
 param(
-    [ValidateSet("FastCopy", "Reencode", "ReencodeNvenc", "ReencodeNvencQuality", "ReencodeNvencHevc", "ReencodeNvencHevcQuality", "ReencodeNvencAv1", "ReencodeNvencAv1Quality", "NormalizeAudio", "NormalizeNoAudio")]
+    [ValidateSet("FastCopy", "Reencode", "ReencodeHdrToSdr", "ReencodeNvenc", "ReencodeNvencQuality", "ReencodeNvencHevc", "ReencodeNvencHevcQuality", "ReencodeNvencAv1", "ReencodeNvencAv1Quality", "NormalizeAudio", "NormalizeNoAudio")]
     [string]$Mode = "FastCopy",
     [string]$FfmpegPath = "",
     [string]$FfprobePath = ""
@@ -23,7 +23,7 @@ try {
     if ($LASTEXITCODE -ne 0) { throw "Sample media generation failed." }
 
     $isNvenc = $Mode -like "ReencodeNvenc*"
-    $isReencode = $Mode -eq "Reencode" -or $isNvenc
+    $isReencode = $Mode -in @("Reencode", "ReencodeHdrToSdr") -or $isNvenc
     $isQuality = $Mode -like "*Quality"
 
     if ($isNvenc) {
@@ -38,7 +38,7 @@ try {
         }
     }
 
-    $encoderKind = if ($Mode -eq "Reencode") { "Software" } elseif ($isNvenc) { "Nvenc" } else { "Auto" }
+    $encoderKind = if ($Mode -in @("Reencode", "ReencodeHdrToSdr")) { "Software" } elseif ($isNvenc) { "Nvenc" } else { "Auto" }
     $videoBitrate = if ($isReencode) { 1500 } else { 2500 }
     $exportMode = if ($isReencode) { "Reencode" } else { "FastCopy" }
     $bitrateMode = if ($isQuality) { "Quality" } else { "Bitrate" }
@@ -62,6 +62,7 @@ try {
         lastVideoBitrateKbps = $videoBitrate
         lastQualityValue = 23
         normalizeAudio = $normalizeAudio
+        convertHdrToSdr = $Mode -eq "ReencodeHdrToSdr"
     } | ConvertTo-Json | Set-Content -Encoding utf8 (Join-Path $settingsDirectory "settings.json")
 
     & dotnet build (Join-Path $root "src\VideoCutEditor\VideoCutEditor.csproj") -p:Platform=x64 -p:WindowsPackageType=None
@@ -73,12 +74,26 @@ try {
     Start-Sleep -Seconds 2
 
     $sampleName = switch ($Mode) {
+        "ReencodeHdrToSdr" { "hdr-pq.mp4" }
         "NormalizeAudio" { "quiet-audio.mp4" }
         "NormalizeNoAudio" { "video-only.mp4" }
         default { "video-with-audio.mp4" }
     }
     & powershell -ExecutionPolicy Bypass -File (Join-Path $root "tests\ui-tests.ps1") -AppPid $appProcess.Id -SampleVideoPath (Join-Path $mediaDirectory $sampleName) -VerifyExportMode $Mode -ExpectedOutputDirectory $outputDirectory
     if ($LASTEXITCODE -ne 0) { throw "$Mode UI verification failed." }
+
+    if ($Mode -eq "ReencodeHdrToSdr") {
+        $outputFile = Get-ChildItem -LiteralPath $outputDirectory -File | Select-Object -First 1
+        if ($null -eq $outputFile) { throw "HDR to SDR verification output was not found." }
+        $colorMetadata = & $ffprobe -v error -select_streams v:0 -show_entries stream=color_space,color_transfer,color_primaries -of default=noprint_wrappers=1 $outputFile.FullName
+        if ($LASTEXITCODE -ne 0) { throw "ffprobe failed while verifying HDR to SDR output." }
+        $metadataText = $colorMetadata -join "`n"
+        foreach ($expectedValue in @("color_space=bt709", "color_transfer=bt709", "color_primaries=bt709")) {
+            if ($metadataText -notmatch "(?m)^$([regex]::Escape($expectedValue))$") {
+                throw "HDR to SDR output did not report $expectedValue. Actual metadata:`n$metadataText"
+            }
+        }
+    }
 }
 finally {
     if ($null -ne $appProcess -and -not $appProcess.HasExited) {
