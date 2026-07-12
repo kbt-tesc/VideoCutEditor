@@ -234,6 +234,10 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
   - Added generated 10-bit BT.2020/PQ verification media with audio.
   - Added an isolated Software H.264 HDR-to-SDR UI mode that verifies HDR detection, the default-checked conversion option, completed export, and non-empty output.
   - Verified the real `zscale`/`tonemap` path and required ffprobe output metadata `color_space=bt709`, `color_transfer=bt709`, and `color_primaries=bt709`.
+- `chore: create initial portable ZIP release`
+  - Set the app product version to `0.1.0` and added a tested `New-PortableRelease.ps1` workflow.
+  - Created an installer-free x64 ZIP containing the self-contained single-file EXE and Japanese usage guidance, without bundling ffmpeg/ffprobe.
+  - Generated and verified the SHA-256 checksum, extracted the ZIP, confirmed product version `0.1.0`, and smoke-launched the distributed EXE.
 
 ## Implemented Capabilities
 
@@ -303,6 +307,9 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 
 Most recent successful checks:
 
+- `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\New-PortableRelease.ps1 -Version 0.1.0 -Platform x64 -Configuration Release`
+  - Created `artifacts\releases\VideoCutEditor-0.1.0-win-x64.zip` and its `.sha256` file after portable artifact validation.
+  - The ZIP contains only `VideoCutEditor.exe` and `README.txt`; checksum verification, product-version inspection, extraction, and startup smoke testing passed.
 - `powershell -ExecutionPolicy Bypass -File scripts\Test-ExportUi.ps1 -Mode ReencodeHdrToSdr`
   - 62 UI tests passed using generated 10-bit BT.2020/PQ media; the default-checked conversion completed into a non-empty Software H.264 output.
   - ffprobe confirmed BT.709 color space, transfer, and primaries, and visual review confirmed the HDR notice, conversion option, timeline, waveform, and completion state.
@@ -312,7 +319,7 @@ Most recent successful checks:
   - 62 UI tests passed and a non-empty AV1 NVEnc output was produced on RTX 5080.
   - A repeat run also passed 62 UI tests and produced a complete screenshot confirming AV1, NVEnc, Quality 23, completion state, timeline, and waveform rendering. The earlier partial-black capture did not reproduce.
 - `dotnet test VideoCutEditor.slnx`
-  - 135 Core tests and 8 app-layer tests passed with no failures or skips after the HEVC/AV1 NVEnc runner extension.
+  - 138 Core tests and 8 app-layer tests passed with no failures or skips after adding portable release packaging and version contracts.
 - `powershell -ExecutionPolicy Bypass -File .agents\skills\winui-dev-workflow\BuildAndRun.ps1 .\src\VideoCutEditor\VideoCutEditor.csproj -SkipRun`
   - Debug x64 build passed with the Windows App SDK analyzer enabled, with zero warnings and zero errors.
 - `dotnet build src\VideoCutEditor\VideoCutEditor.csproj -c Release -p:Platform=x64 -p:WindowsPackageType=None`
@@ -474,7 +481,7 @@ When resuming in a new session, rerun the relevant subset before making assumpti
 - H.264, HEVC, and AV1 NVEnc bitrate and quality-mode exports are verified on the local RTX 5080 and winget ffmpeg build. Representative real media still needs manual verification for these hardware paths.
 - The current winapp UIA bridge does not expose `QualityNumberBox` as a reliably parseable numeric value. Keep the isolated settings contract and screenshot review for the exact value while UIA verifies mode and enabled state.
 - Preview-unavailable fallback behavior needs more manual and/or UI coverage.
-- Portable x64 publish, x86 publish, arm64 publish, artifact validation, and published x64 EXE startup smoke testing now succeed. Signing, MSIX packaging, installer validation, distribution packaging, and x86/arm64 runtime startup on matching devices still need verification.
+- Portable x64 publish, x86 publish, arm64 publish, artifact validation, x64 ZIP distribution packaging, checksum verification, and distributed x64 EXE startup smoke testing now succeed. Signing, MSIX/installer validation, and x86/arm64 runtime startup on matching devices still need verification.
 - UI tests cover opening generated media through the real Windows file picker, loaded range state, and isolated Fast copy export completion.
 - The picker workflow supports the current legacy filename field ID `1148` and the newer `FileNameControlHost` ID. Future Windows picker UIA changes may require updating these selectors.
 - VS Code F5 now has an explicit x64 unpackaged launch path, but the user should manually confirm breakpoint attachment from VS Code because automated tests can only validate the configuration files and build output.
@@ -496,7 +503,7 @@ When resuming in a new session, rerun the relevant subset before making assumpti
 3. Continue packaging and release preparation.
    - Use the repo-local `winui-packaging` skill.
    - Verify x86/ARM64 published EXE startup on matching devices when available.
-   - Add signing/MSIX packaging when distribution format is chosen.
+   - Add signing/MSIX packaging later if an installer-based distribution is chosen.
 
 ## Resume Checklist
 

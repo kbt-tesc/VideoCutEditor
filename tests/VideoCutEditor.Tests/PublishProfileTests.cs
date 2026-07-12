@@ -55,6 +55,15 @@ public sealed class PublishProfileTests
     }
 
     [Fact]
+    public void App_project_version_matches_initial_portable_release()
+    {
+        string projectPath = Path.Combine(FindRepositoryRoot(), "src", "VideoCutEditor", "VideoCutEditor.csproj");
+        XDocument project = XDocument.Load(projectPath);
+
+        Assert.Equal("0.1.0", project.Descendants("Version").Single().Value);
+    }
+
+    [Fact]
     public void Portable_publish_validation_accepts_single_file_artifact_with_symbols()
     {
         using var publishDirectory = new TemporaryDirectory();
@@ -115,6 +124,29 @@ public sealed class PublishProfileTests
         Assert.Contains("Would publish: arm64", output);
     }
 
+    [Fact]
+    public void Portable_release_script_packages_zip_checksum_and_readme()
+    {
+        string scriptPath = Path.Combine(FindRepositoryRoot(), "scripts", "New-PortableRelease.ps1");
+        string script = File.ReadAllText(scriptPath);
+
+        Assert.Contains("Publish-Portable.ps1", script);
+        Assert.Contains("-Version $Version", script);
+        Assert.Contains("Compress-Archive", script);
+        Assert.Contains("Get-FileHash", script);
+        Assert.Contains("README.txt", script);
+    }
+
+    [Fact]
+    public void Portable_release_script_dry_run_reports_versioned_x64_artifacts()
+    {
+        (int exitCode, string output) = RunPortableReleaseDryRun("0.1.0", "x64");
+
+        Assert.Equal(0, exitCode);
+        Assert.Contains("VideoCutEditor-0.1.0-win-x64.zip", output);
+        Assert.Contains("VideoCutEditor-0.1.0-win-x64.zip.sha256", output);
+    }
+
     private static (int ExitCode, string Output) RunPortableValidation(string publishDirectory)
     {
         string scriptPath = Path.Combine(FindRepositoryRoot(), "scripts", "Test-PortablePublish.ps1");
@@ -156,6 +188,31 @@ public sealed class PublishProfileTests
         {
             startInfo.ArgumentList.Add(argument);
         }
+
+        using Process process = Process.Start(startInfo) ?? throw new InvalidOperationException("Failed to start PowerShell.");
+        string output = process.StandardOutput.ReadToEnd() + process.StandardError.ReadToEnd();
+        process.WaitForExit();
+        return (process.ExitCode, output);
+    }
+
+    private static (int ExitCode, string Output) RunPortableReleaseDryRun(string version, string platform)
+    {
+        string scriptPath = Path.Combine(FindRepositoryRoot(), "scripts", "New-PortableRelease.ps1");
+        var startInfo = new ProcessStartInfo("powershell")
+        {
+            RedirectStandardError = true,
+            RedirectStandardOutput = true,
+            UseShellExecute = false,
+        };
+        startInfo.ArgumentList.Add("-ExecutionPolicy");
+        startInfo.ArgumentList.Add("Bypass");
+        startInfo.ArgumentList.Add("-File");
+        startInfo.ArgumentList.Add(scriptPath);
+        startInfo.ArgumentList.Add("-Version");
+        startInfo.ArgumentList.Add(version);
+        startInfo.ArgumentList.Add("-Platform");
+        startInfo.ArgumentList.Add(platform);
+        startInfo.ArgumentList.Add("-WhatIf");
 
         using Process process = Process.Start(startInfo) ?? throw new InvalidOperationException("Failed to start PowerShell.");
         string output = process.StandardOutput.ReadToEnd() + process.StandardError.ReadToEnd();
