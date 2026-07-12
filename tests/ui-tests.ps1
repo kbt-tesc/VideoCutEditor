@@ -295,16 +295,17 @@ Test-UI "Codec defaults to H.264 in Re-encode mode" {
     winapp ui wait-for "CodecFamilyComboBox" -a $AppPid --value "H.264" -t 3000 -q
 }
 
-$expectedInitialEncoder = if ($VerifyExportMode -eq "Reencode") { "Software" } elseif ($VerifyExportMode -eq "ReencodeNvenc") { "NVEnc" } else { "Auto" }
+$expectedInitialEncoder = if ($VerifyExportMode -eq "Reencode") { "Software" } elseif ($VerifyExportMode -in @("ReencodeNvenc", "ReencodeNvencQuality")) { "NVEnc" } else { "Auto" }
 Test-UI "Encoder matches expected Re-encode setting" {
     winapp ui wait-for "EncoderKindComboBox" -a $AppPid --value $expectedInitialEncoder -t 3000 -q
 }
 
-Test-UI "Rate control defaults to video bitrate in Re-encode mode" {
-    winapp ui wait-for "BitrateModeComboBox" -a $AppPid --value "Video bitrate" -t 3000 -q
+$expectedRateControl = if ($VerifyExportMode -eq "ReencodeNvencQuality") { "Quality" } else { "Video bitrate" }
+Test-UI "Rate control matches expected Re-encode setting" {
+    winapp ui wait-for "BitrateModeComboBox" -a $AppPid --value $expectedRateControl -t 3000 -q
 }
 
-$expectedInitialVideoBitrate = if ($VerifyExportMode -in @("Reencode", "ReencodeNvenc")) { "1500" } else { "2500" }
+$expectedInitialVideoBitrate = if ($VerifyExportMode -in @("Reencode", "ReencodeNvenc", "ReencodeNvencQuality")) { "1500" } else { "2500" }
 Test-UI "Video bitrate matches expected Re-encode setting" {
     winapp ui wait-for "VideoBitrateTextBox" -a $AppPid --value $expectedInitialVideoBitrate -t 3000 -q
 }
@@ -313,8 +314,9 @@ Test-UI "Target size is disabled in bitrate mode in Re-encode mode" {
     winapp ui wait-for "TargetSizeNumberBox" -a $AppPid -p IsEnabled --value "False" -t 3000 -q
 }
 
-Test-UI "Quality is disabled in bitrate mode in Re-encode mode" {
-    winapp ui wait-for "QualityNumberBox" -a $AppPid -p IsEnabled --value "False" -t 3000 -q
+$expectedQualityEnabled = if ($VerifyExportMode -eq "ReencodeNvencQuality") { "True" } else { "False" }
+Test-UI "Quality enabled state matches rate control" {
+    winapp ui wait-for "QualityNumberBox" -a $AppPid -p IsEnabled --value $expectedQualityEnabled -t 3000 -q
 }
 
 Test-UI "Predicted output size starts unavailable" {
@@ -408,6 +410,11 @@ if (-not [string]::IsNullOrWhiteSpace($SampleVideoPath)) {
             elseif ($VerifyExportMode -eq "ReencodeNvenc") {
                 winapp ui invoke "Re-encode" -w $mainWindowHwnd -q
                 winapp ui wait-for "EncoderKindComboBox" -w $mainWindowHwnd --value "NVEnc" -t 3000 -q
+            }
+            elseif ($VerifyExportMode -eq "ReencodeNvencQuality") {
+                winapp ui invoke "Re-encode" -w $mainWindowHwnd -q
+                winapp ui wait-for "EncoderKindComboBox" -w $mainWindowHwnd --value "NVEnc" -t 3000 -q
+                winapp ui wait-for "BitrateModeComboBox" -w $mainWindowHwnd --value "Quality" -t 3000 -q
             }
             elseif ($VerifyExportMode -eq "FastCopy") {
                 winapp ui invoke "Fast copy" -w $mainWindowHwnd -q

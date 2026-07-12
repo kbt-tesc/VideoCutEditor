@@ -1,5 +1,5 @@
 param(
-    [ValidateSet("FastCopy", "Reencode", "ReencodeNvenc", "NormalizeAudio", "NormalizeNoAudio")]
+    [ValidateSet("FastCopy", "Reencode", "ReencodeNvenc", "ReencodeNvencQuality", "NormalizeAudio", "NormalizeNoAudio")]
     [string]$Mode = "FastCopy",
     [string]$FfmpegPath = "",
     [string]$FfprobePath = ""
@@ -22,16 +22,21 @@ try {
     & powershell -ExecutionPolicy Bypass -File (Join-Path $root "scripts\New-SampleMedia.ps1") -OutputDirectory $mediaDirectory -FfmpegPath $ffmpeg -DurationSeconds 4 -Force
     if ($LASTEXITCODE -ne 0) { throw "Sample media generation failed." }
 
-    if ($Mode -eq "ReencodeNvenc") {
+    $isNvenc = $Mode -in @("ReencodeNvenc", "ReencodeNvencQuality")
+    $isReencode = $Mode -in @("Reencode", "ReencodeNvenc", "ReencodeNvencQuality")
+    $isQuality = $Mode -eq "ReencodeNvencQuality"
+
+    if ($isNvenc) {
         $encoders = & $ffmpeg -hide_banner -encoders 2>&1
         if ($LASTEXITCODE -ne 0 -or -not ($encoders -match "\bh264_nvenc\b")) {
             throw "The selected ffmpeg build does not expose h264_nvenc."
         }
     }
 
-    $encoderKind = if ($Mode -eq "Reencode") { "Software" } elseif ($Mode -eq "ReencodeNvenc") { "Nvenc" } else { "Auto" }
-    $videoBitrate = if ($Mode -in @("Reencode", "ReencodeNvenc")) { 1500 } else { 2500 }
-    $exportMode = if ($Mode -in @("Reencode", "ReencodeNvenc")) { "Reencode" } else { "FastCopy" }
+    $encoderKind = if ($Mode -eq "Reencode") { "Software" } elseif ($isNvenc) { "Nvenc" } else { "Auto" }
+    $videoBitrate = if ($isReencode) { 1500 } else { 2500 }
+    $exportMode = if ($isReencode) { "Reencode" } else { "FastCopy" }
+    $bitrateMode = if ($isQuality) { "Quality" } else { "Bitrate" }
     $normalizeAudio = $Mode -in @("NormalizeAudio", "NormalizeNoAudio")
 
     @{
@@ -41,8 +46,9 @@ try {
         lastExportMode = $exportMode
         lastCodecFamily = "H264"
         lastEncoderKind = $encoderKind
-        lastBitrateMode = "Bitrate"
+        lastBitrateMode = $bitrateMode
         lastVideoBitrateKbps = $videoBitrate
+        lastQualityValue = 23
         normalizeAudio = $normalizeAudio
     } | ConvertTo-Json | Set-Content -Encoding utf8 (Join-Path $settingsDirectory "settings.json")
 

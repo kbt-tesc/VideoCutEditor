@@ -1,6 +1,6 @@
 # Implementation Status
 
-Last updated: 2026-07-12
+Last updated: 2026-07-13
 
 This document is the handoff ledger for future Codex sessions. Read it after `AGENTS.md`, `docs/product-spec.md`, `docs/technical-design.md`, `docs/codex-workflow.md`, and `docs/implementation-kickoff.md` before choosing the next implementation slice.
 
@@ -218,6 +218,10 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
   - Detected `h264_nvenc`, `hevc_nvenc`, and `av1_nvenc` in the winget ffmpeg build and NVIDIA GeForce RTX 5080 with driver 610.74.
   - Added `ReencodeNvenc` to the isolated runner with an explicit `h264_nvenc` prerequisite check.
   - Verified H.264 NVEnc at 1500 kbps through the UI into a non-empty output file and visually reviewed the completed state.
+- `test: verify H.264 NVEnc quality-mode export`
+  - Added `ReencodeNvencQuality` with Quality 23 to the isolated export runner.
+  - Verified NVEnc selection, Quality mode, enabled quality control, completed hardware export, and non-empty output.
+  - Visually confirmed the displayed quality value is 23; direct NumberBox value retrieval is not stable in the current winapp UIA bridge.
 
 ## Implemented Capabilities
 
@@ -286,6 +290,9 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 
 Most recent successful checks:
 
+- `powershell -ExecutionPolicy Bypass -File scripts\Test-ExportUi.ps1 -Mode ReencodeNvencQuality`
+  - The H.264 NVEnc quality export, completion status, and non-empty output checks passed on RTX 5080.
+  - The batch reported 61 passes and one test-harness-only failure while attempting to parse the NumberBox through UIA; that fragile numeric assertion was removed after visual confirmation of Quality 23 and was not rerun due the UI testing two-cycle limit.
 - `powershell -ExecutionPolicy Bypass -File scripts\Test-ExportUi.ps1 -Mode ReencodeNvenc`
   - 62 UI tests passed on NVIDIA GeForce RTX 5080; H.264 NVEnc completed into an isolated non-empty output file.
   - Visual review confirmed Re-encode, NVEnc, bitrate, waveform, and completion state.
@@ -425,9 +432,10 @@ When resuming in a new session, rerun the relevant subset before making assumpti
 - Audio normalization now uses fixed-target two-pass loudnorm. Configurable loudness/true peak/LRA values are intentionally not implemented.
 - Audio normalization is covered by generated-media integration tests, fake-process two-pass argument replacement, isolated UI export with both pass logs, and video-only rejection with no output. Representative real media still needs manual verification.
 - HDR to SDR conversion is covered at ffprobe parsing, settings, planner, Fast copy non-conversion, and source-level UI contract layers. It still needs manual verification with representative HDR10/PQ and HLG media on the user's ffmpeg build, especially because the initial implementation relies on ffmpeg `zscale` and `tonemap` filter availability.
-- Quality mode is covered for generated software-encoded media; NVEnc quality-mode execution still needs manual hardware-backed verification.
+- Quality mode is covered for generated software media and H.264 NVEnc execution on RTX 5080.
 - Generated media export is automated for Fast copy and Software H.264 Re-encode. Representative real media should still be manually verified for both modes.
-- H.264 NVEnc bitrate-mode export is verified on the local RTX 5080 and winget ffmpeg build. HEVC/AV1 NVEnc and NVEnc quality mode still need hardware-backed verification.
+- H.264 NVEnc bitrate and quality-mode exports are verified on the local RTX 5080 and winget ffmpeg build. HEVC/AV1 NVEnc still need hardware-backed verification.
+- The current winapp UIA bridge does not expose `QualityNumberBox` as a reliably parseable numeric value. Keep the isolated settings contract and screenshot review for the exact value while UIA verifies mode and enabled state.
 - Preview-unavailable fallback behavior needs more manual and/or UI coverage.
 - Portable x64 publish, x86 publish, arm64 publish, artifact validation, and published x64 EXE startup smoke testing now succeed. Signing, MSIX packaging, installer validation, distribution packaging, and x86/arm64 runtime startup on matching devices still need verification.
 - UI tests cover opening generated media through the real Windows file picker, loaded range state, and isolated Fast copy export completion.

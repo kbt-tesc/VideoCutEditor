@@ -47,8 +47,8 @@ public sealed class VerificationMediaScriptTests
         Assert.True(File.Exists(runnerPath));
         string runner = File.ReadAllText(runnerPath);
         Assert.Contains("VIDEOCUTEDITOR_TEST_SETTINGS_DIRECTORY", runner);
-        Assert.Contains("ValidateSet(\"FastCopy\", \"Reencode\", \"ReencodeNvenc\", \"NormalizeAudio\", \"NormalizeNoAudio\")", runner);
-        Assert.Contains("elseif ($Mode -eq \"ReencodeNvenc\") { \"Nvenc\" }", runner);
+        Assert.Contains("ValidateSet(\"FastCopy\", \"Reencode\", \"ReencodeNvenc\", \"ReencodeNvencQuality\", \"NormalizeAudio\", \"NormalizeNoAudio\")", runner);
+        Assert.Contains("elseif ($isNvenc) { \"Nvenc\" }", runner);
         Assert.Contains("h264_nvenc", runner);
         Assert.Contains("normalizeAudio = $normalizeAudio", runner);
         Assert.Contains("NormalizeAudioCheckBox", uiScript);
@@ -56,6 +56,8 @@ public sealed class VerificationMediaScriptTests
         Assert.Contains("Applying audio normalization...", uiScript);
         Assert.Contains("NormalizeNoAudio", uiScript);
         Assert.Contains("ReencodeNvenc", uiScript);
+        Assert.Contains("ReencodeNvencQuality", uiScript);
+        Assert.Contains("lastQualityValue = 23", runner);
     }
 
     private static (int ExitCode, string Output) RunSampleMediaDryRun(string outputDirectory)
