@@ -295,7 +295,7 @@ Test-UI "Codec defaults to H.264 in Re-encode mode" {
     winapp ui wait-for "CodecFamilyComboBox" -a $AppPid --value "H.264" -t 3000 -q
 }
 
-$expectedInitialEncoder = if ($VerifyExportMode -eq "Reencode") { "Software" } else { "Auto" }
+$expectedInitialEncoder = if ($VerifyExportMode -eq "Reencode") { "Software" } elseif ($VerifyExportMode -eq "ReencodeNvenc") { "NVEnc" } else { "Auto" }
 Test-UI "Encoder matches expected Re-encode setting" {
     winapp ui wait-for "EncoderKindComboBox" -a $AppPid --value $expectedInitialEncoder -t 3000 -q
 }
@@ -304,7 +304,7 @@ Test-UI "Rate control defaults to video bitrate in Re-encode mode" {
     winapp ui wait-for "BitrateModeComboBox" -a $AppPid --value "Video bitrate" -t 3000 -q
 }
 
-$expectedInitialVideoBitrate = if ($VerifyExportMode -eq "Reencode") { "1500" } else { "2500" }
+$expectedInitialVideoBitrate = if ($VerifyExportMode -in @("Reencode", "ReencodeNvenc")) { "1500" } else { "2500" }
 Test-UI "Video bitrate matches expected Re-encode setting" {
     winapp ui wait-for "VideoBitrateTextBox" -a $AppPid --value $expectedInitialVideoBitrate -t 3000 -q
 }
@@ -404,6 +404,10 @@ if (-not [string]::IsNullOrWhiteSpace($SampleVideoPath)) {
             if ($VerifyExportMode -eq "Reencode") {
                 winapp ui invoke "Re-encode" -w $mainWindowHwnd -q
                 winapp ui wait-for "EncoderKindComboBox" -w $mainWindowHwnd --value "Software" -t 3000 -q
+            }
+            elseif ($VerifyExportMode -eq "ReencodeNvenc") {
+                winapp ui invoke "Re-encode" -w $mainWindowHwnd -q
+                winapp ui wait-for "EncoderKindComboBox" -w $mainWindowHwnd --value "NVEnc" -t 3000 -q
             }
             elseif ($VerifyExportMode -eq "FastCopy") {
                 winapp ui invoke "Fast copy" -w $mainWindowHwnd -q

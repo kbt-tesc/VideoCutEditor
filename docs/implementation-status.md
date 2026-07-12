@@ -214,6 +214,10 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
   - Added `NormalizeNoAudio` coverage using generated video-only media.
   - Localized the planner error to `音声ストリームがないため、音量正規化を使用できません`.
   - Verified the visible error, absence of an output file, and the video-only UI state.
+- `test: verify H.264 NVEnc on local hardware`
+  - Detected `h264_nvenc`, `hevc_nvenc`, and `av1_nvenc` in the winget ffmpeg build and NVIDIA GeForce RTX 5080 with driver 610.74.
+  - Added `ReencodeNvenc` to the isolated runner with an explicit `h264_nvenc` prerequisite check.
+  - Verified H.264 NVEnc at 1500 kbps through the UI into a non-empty output file and visually reviewed the completed state.
 
 ## Implemented Capabilities
 
@@ -282,6 +286,11 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 
 Most recent successful checks:
 
+- `powershell -ExecutionPolicy Bypass -File scripts\Test-ExportUi.ps1 -Mode ReencodeNvenc`
+  - 62 UI tests passed on NVIDIA GeForce RTX 5080; H.264 NVEnc completed into an isolated non-empty output file.
+  - Visual review confirmed Re-encode, NVEnc, bitrate, waveform, and completion state.
+- `ffmpeg -hide_banner -loglevel error -f lavfi -i "testsrc2=size=320x180:rate=30" -t 1 -c:v h264_nvenc -f null -`
+  - Direct one-second hardware encode succeeded before the app E2E run.
 - `powershell -ExecutionPolicy Bypass -File scripts\Test-ExportUi.ps1 -Mode NormalizeNoAudio`
   - 62 UI tests passed; video-only media produced the localized normalization error and no output file.
   - Visual review confirmed the error state and video-only timeline remained readable.
@@ -418,7 +427,7 @@ When resuming in a new session, rerun the relevant subset before making assumpti
 - HDR to SDR conversion is covered at ffprobe parsing, settings, planner, Fast copy non-conversion, and source-level UI contract layers. It still needs manual verification with representative HDR10/PQ and HLG media on the user's ffmpeg build, especially because the initial implementation relies on ffmpeg `zscale` and `tonemap` filter availability.
 - Quality mode is covered for generated software-encoded media; NVEnc quality-mode execution still needs manual hardware-backed verification.
 - Generated media export is automated for Fast copy and Software H.264 Re-encode. Representative real media should still be manually verified for both modes.
-- NVEnc behavior should be manually verified on hardware and ffmpeg builds that expose NVEnc.
+- H.264 NVEnc bitrate-mode export is verified on the local RTX 5080 and winget ffmpeg build. HEVC/AV1 NVEnc and NVEnc quality mode still need hardware-backed verification.
 - Preview-unavailable fallback behavior needs more manual and/or UI coverage.
 - Portable x64 publish, x86 publish, arm64 publish, artifact validation, and published x64 EXE startup smoke testing now succeed. Signing, MSIX packaging, installer validation, distribution packaging, and x86/arm64 runtime startup on matching devices still need verification.
 - UI tests cover opening generated media through the real Windows file picker, loaded range state, and isolated Fast copy export completion.
@@ -435,7 +444,7 @@ When resuming in a new session, rerun the relevant subset before making assumpti
 
 1. Continue end-to-end verification.
    - Generate local verification inputs with `scripts/New-SampleMedia.ps1` when real sample media is not available.
-   - Add manual verification notes for representative real preview/normalization/NVEnc/package runs.
+   - Add manual verification notes for representative real preview/normalization and package runs.
 2. Deepen audio normalization verification.
    - Manually verify representative real media and no-audio media.
    - Consider configurable loudness/true peak/LRA only if real users need targets other than `-14 LUFS`.
