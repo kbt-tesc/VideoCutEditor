@@ -291,11 +291,16 @@ Test-UI "Normalize audio remains available in Re-encode mode" {
     winapp ui wait-for "NormalizeAudioCheckBox" -a $AppPid -p IsEnabled --value "True" -t 3000 -q
 }
 
-Test-UI "Codec defaults to H.264 in Re-encode mode" {
-    winapp ui wait-for "CodecFamilyComboBox" -a $AppPid --value "H.264" -t 3000 -q
+$expectedCodec = switch ($VerifyExportMode) {
+    "ReencodeNvencHevc" { "H.265" }
+    "ReencodeNvencAv1" { "AV1" }
+    default { "H.264" }
+}
+Test-UI "Codec matches expected Re-encode setting" {
+    winapp ui wait-for "CodecFamilyComboBox" -a $AppPid --value $expectedCodec -t 3000 -q
 }
 
-$expectedInitialEncoder = if ($VerifyExportMode -eq "Reencode") { "Software" } elseif ($VerifyExportMode -in @("ReencodeNvenc", "ReencodeNvencQuality")) { "NVEnc" } else { "Auto" }
+$expectedInitialEncoder = if ($VerifyExportMode -eq "Reencode") { "Software" } elseif ($VerifyExportMode -like "ReencodeNvenc*") { "NVEnc" } else { "Auto" }
 Test-UI "Encoder matches expected Re-encode setting" {
     winapp ui wait-for "EncoderKindComboBox" -a $AppPid --value $expectedInitialEncoder -t 3000 -q
 }
@@ -305,7 +310,7 @@ Test-UI "Rate control matches expected Re-encode setting" {
     winapp ui wait-for "BitrateModeComboBox" -a $AppPid --value $expectedRateControl -t 3000 -q
 }
 
-$expectedInitialVideoBitrate = if ($VerifyExportMode -in @("Reencode", "ReencodeNvenc", "ReencodeNvencQuality")) { "1500" } else { "2500" }
+$expectedInitialVideoBitrate = if ($VerifyExportMode -eq "Reencode" -or $VerifyExportMode -like "ReencodeNvenc*") { "1500" } else { "2500" }
 Test-UI "Video bitrate matches expected Re-encode setting" {
     winapp ui wait-for "VideoBitrateTextBox" -a $AppPid --value $expectedInitialVideoBitrate -t 3000 -q
 }
@@ -415,6 +420,11 @@ if (-not [string]::IsNullOrWhiteSpace($SampleVideoPath)) {
                 winapp ui invoke "Re-encode" -w $mainWindowHwnd -q
                 winapp ui wait-for "EncoderKindComboBox" -w $mainWindowHwnd --value "NVEnc" -t 3000 -q
                 winapp ui wait-for "BitrateModeComboBox" -w $mainWindowHwnd --value "Quality" -t 3000 -q
+            }
+            elseif ($VerifyExportMode -in @("ReencodeNvencHevc", "ReencodeNvencAv1")) {
+                winapp ui invoke "Re-encode" -w $mainWindowHwnd -q
+                winapp ui wait-for "CodecFamilyComboBox" -w $mainWindowHwnd --value $expectedCodec -t 3000 -q
+                winapp ui wait-for "EncoderKindComboBox" -w $mainWindowHwnd --value "NVEnc" -t 3000 -q
             }
             elseif ($VerifyExportMode -eq "FastCopy") {
                 winapp ui invoke "Fast copy" -w $mainWindowHwnd -q

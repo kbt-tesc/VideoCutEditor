@@ -222,6 +222,10 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
   - Added `ReencodeNvencQuality` with Quality 23 to the isolated export runner.
   - Verified NVEnc selection, Quality mode, enabled quality control, completed hardware export, and non-empty output.
   - Visually confirmed the displayed quality value is 23; direct NumberBox value retrieval is not stable in the current winapp UIA bridge.
+- `test: verify HEVC and AV1 NVEnc exports`
+  - Added isolated `ReencodeNvencHevc` and `ReencodeNvencAv1` modes with explicit `hevc_nvenc` and `av1_nvenc` prerequisite checks.
+  - Verified each matching codec selection, NVEnc selection, 1500 kbps bitrate, completed hardware export, and non-empty output on RTX 5080.
+  - Visually reviewed both completed states and confirmed the timeline, waveform, and export controls remained readable.
 
 ## Implemented Capabilities
 
@@ -290,6 +294,22 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 
 Most recent successful checks:
 
+- `dotnet test VideoCutEditor.slnx`
+  - 135 Core tests and 8 app-layer tests passed with no failures or skips after the HEVC/AV1 NVEnc runner extension.
+- `powershell -ExecutionPolicy Bypass -File .agents\skills\winui-dev-workflow\BuildAndRun.ps1 .\src\VideoCutEditor\VideoCutEditor.csproj -SkipRun`
+  - Debug x64 build passed with the Windows App SDK analyzer enabled, with zero warnings and zero errors.
+- `dotnet build src\VideoCutEditor\VideoCutEditor.csproj -c Release -p:Platform=x64 -p:WindowsPackageType=None`
+  - Release x64 unpackaged build passed with zero warnings and zero errors.
+- `dotnet format VideoCutEditor.slnx --verify-no-changes --verbosity minimal`
+  - Exited successfully without file changes; the known WinUI workspace-load warning remained informational.
+- `powershell -ExecutionPolicy Bypass -File scripts\Test-ExportUi.ps1 -Mode ReencodeNvencHevc`
+  - 62 UI tests passed on NVIDIA GeForce RTX 5080; HEVC NVEnc completed into an isolated non-empty output file.
+  - Visual review confirmed H.265, NVEnc, 1500 kbps, waveform, and completion state.
+- `powershell -ExecutionPolicy Bypass -File scripts\Test-ExportUi.ps1 -Mode ReencodeNvencAv1`
+  - 62 UI tests passed on NVIDIA GeForce RTX 5080; AV1 NVEnc completed into an isolated non-empty output file.
+  - Visual review confirmed AV1, NVEnc, 1500 kbps, waveform, and completion state.
+- `ffmpeg -hide_banner -loglevel error -f lavfi -i "testsrc2=size=320x180:rate=30" -t 1 -c:v hevc_nvenc -f null -` and the equivalent `av1_nvenc` command
+  - Direct one-second HEVC and AV1 hardware encodes succeeded before the app E2E runs.
 - `powershell -ExecutionPolicy Bypass -File scripts\Test-ExportUi.ps1 -Mode ReencodeNvencQuality`
   - The H.264 NVEnc quality export, completion status, and non-empty output checks passed on RTX 5080.
   - The batch reported 61 passes and one test-harness-only failure while attempting to parse the NumberBox through UIA; that fragile numeric assertion was removed after visual confirmation of Quality 23 and was not rerun due the UI testing two-cycle limit.
@@ -432,9 +452,9 @@ When resuming in a new session, rerun the relevant subset before making assumpti
 - Audio normalization now uses fixed-target two-pass loudnorm. Configurable loudness/true peak/LRA values are intentionally not implemented.
 - Audio normalization is covered by generated-media integration tests, fake-process two-pass argument replacement, isolated UI export with both pass logs, and video-only rejection with no output. Representative real media still needs manual verification.
 - HDR to SDR conversion is covered at ffprobe parsing, settings, planner, Fast copy non-conversion, and source-level UI contract layers. It still needs manual verification with representative HDR10/PQ and HLG media on the user's ffmpeg build, especially because the initial implementation relies on ffmpeg `zscale` and `tonemap` filter availability.
-- Quality mode is covered for generated software media and H.264 NVEnc execution on RTX 5080.
+- Quality mode is covered for generated software media and H.264 NVEnc execution on RTX 5080. HEVC/AV1 quality-mode execution is not separately covered.
 - Generated media export is automated for Fast copy and Software H.264 Re-encode. Representative real media should still be manually verified for both modes.
-- H.264 NVEnc bitrate and quality-mode exports are verified on the local RTX 5080 and winget ffmpeg build. HEVC/AV1 NVEnc still need hardware-backed verification.
+- H.264, HEVC, and AV1 NVEnc bitrate exports plus H.264 NVEnc quality-mode export are verified on the local RTX 5080 and winget ffmpeg build. Representative real media still needs manual verification for these hardware paths.
 - The current winapp UIA bridge does not expose `QualityNumberBox` as a reliably parseable numeric value. Keep the isolated settings contract and screenshot review for the exact value while UIA verifies mode and enabled state.
 - Preview-unavailable fallback behavior needs more manual and/or UI coverage.
 - Portable x64 publish, x86 publish, arm64 publish, artifact validation, and published x64 EXE startup smoke testing now succeed. Signing, MSIX packaging, installer validation, distribution packaging, and x86/arm64 runtime startup on matching devices still need verification.

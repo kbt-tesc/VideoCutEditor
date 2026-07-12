@@ -1,5 +1,5 @@
 param(
-    [ValidateSet("FastCopy", "Reencode", "ReencodeNvenc", "ReencodeNvencQuality", "NormalizeAudio", "NormalizeNoAudio")]
+    [ValidateSet("FastCopy", "Reencode", "ReencodeNvenc", "ReencodeNvencQuality", "ReencodeNvencHevc", "ReencodeNvencAv1", "NormalizeAudio", "NormalizeNoAudio")]
     [string]$Mode = "FastCopy",
     [string]$FfmpegPath = "",
     [string]$FfprobePath = ""
@@ -22,14 +22,19 @@ try {
     & powershell -ExecutionPolicy Bypass -File (Join-Path $root "scripts\New-SampleMedia.ps1") -OutputDirectory $mediaDirectory -FfmpegPath $ffmpeg -DurationSeconds 4 -Force
     if ($LASTEXITCODE -ne 0) { throw "Sample media generation failed." }
 
-    $isNvenc = $Mode -in @("ReencodeNvenc", "ReencodeNvencQuality")
-    $isReencode = $Mode -in @("Reencode", "ReencodeNvenc", "ReencodeNvencQuality")
+    $isNvenc = $Mode -like "ReencodeNvenc*"
+    $isReencode = $Mode -eq "Reencode" -or $isNvenc
     $isQuality = $Mode -eq "ReencodeNvencQuality"
 
     if ($isNvenc) {
         $encoders = & $ffmpeg -hide_banner -encoders 2>&1
-        if ($LASTEXITCODE -ne 0 -or -not ($encoders -match "\bh264_nvenc\b")) {
-            throw "The selected ffmpeg build does not expose h264_nvenc."
+        $requiredEncoder = switch ($Mode) {
+            "ReencodeNvencHevc" { "hevc_nvenc" }
+            "ReencodeNvencAv1" { "av1_nvenc" }
+            default { "h264_nvenc" }
+        }
+        if ($LASTEXITCODE -ne 0 -or -not ($encoders -match "\b$requiredEncoder\b")) {
+            throw "The selected ffmpeg build does not expose $requiredEncoder."
         }
     }
 
@@ -38,13 +43,18 @@ try {
     $exportMode = if ($isReencode) { "Reencode" } else { "FastCopy" }
     $bitrateMode = if ($isQuality) { "Quality" } else { "Bitrate" }
     $normalizeAudio = $Mode -in @("NormalizeAudio", "NormalizeNoAudio")
+    $codecFamily = switch ($Mode) {
+        "ReencodeNvencHevc" { "H265" }
+        "ReencodeNvencAv1" { "Av1" }
+        default { "H264" }
+    }
 
     @{
         ffmpegPath = $ffmpeg
         ffprobePath = $ffprobe
         outputDirectory = $outputDirectory
         lastExportMode = $exportMode
-        lastCodecFamily = "H264"
+        lastCodecFamily = $codecFamily
         lastEncoderKind = $encoderKind
         lastBitrateMode = $bitrateMode
         lastVideoBitrateKbps = $videoBitrate
