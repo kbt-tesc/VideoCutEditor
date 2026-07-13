@@ -146,6 +146,11 @@ public sealed class PublishProfileTests
         string readme = File.ReadAllText(readmePath);
 
         Assert.Contains("## 初回起動", readme);
+        Assert.Contains("## おすすめポイント", readme);
+        Assert.Contains("再エンコードなしで高速にカット", readme);
+        Assert.Contains("映像はそのままで音量だけ正規化", readme);
+        Assert.Contains("目標ファイルサイズ", readme);
+        Assert.Contains("HDR動画をSDRへ変換", readme);
         Assert.Contains("## Fast copy（エンコードなし）", readme);
         Assert.Contains("## Re-encode（エンコードあり）", readme);
         Assert.DoesNotContain("開発者向け情報", readme);

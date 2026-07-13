@@ -259,6 +259,9 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
   - Replaced the minimal portable `README.txt` with a user-only `README.md` containing first-launch, Fast copy, Re-encode, HDR, normalization, and output instructions.
   - Added release-contract tests that require the user sections and reject developer commands from the packaged guide.
   - Kept release version `0.2.0` for the requested replacement archive.
+- `docs: highlight the main user benefits`
+  - Added concise README highlights for fast stream-copy cuts, video-copy audio normalization, target-size Re-encode with fades, and HDR-to-SDR conversion.
+  - Kept the repository README and packaged user-only README aligned.
 
 ## Implemented Capabilities
 
