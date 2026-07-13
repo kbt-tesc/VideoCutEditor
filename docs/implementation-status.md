@@ -335,7 +335,7 @@ Most recent successful checks:
 
 - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\New-PortableRelease.ps1 -Version 0.2.0 -Platform x64 -Configuration Release`
   - Created `artifacts\releases\VideoCutEditor-0.2.0-win-x64.zip` and its `.sha256` file after portable artifact validation.
-  - Replacement SHA-256 is `084af74639ad281e53910f82720e73045802e9cd787190ad0fb21bf698894d0a`; extraction, user-only README section validation, product-version inspection, and startup smoke testing passed.
+  - Final replacement SHA-256 is `2be7bc72d3683e1197005620be552264640888bfae53a310b6b4854b15486456`; extraction, user-only README section and recommendation validation, product-version inspection, and startup smoke testing passed.
 - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\New-PortableRelease.ps1 -Version 0.1.0 -Platform x64 -Configuration Release`
   - Created `artifacts\releases\VideoCutEditor-0.1.0-win-x64.zip` and its `.sha256` file after portable artifact validation.
   - The ZIP contains only `VideoCutEditor.exe` and `README.txt`; checksum verification, product-version inspection, extraction, and startup smoke testing passed.
