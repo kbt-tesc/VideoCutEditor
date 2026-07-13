@@ -247,10 +247,11 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
   - Both full paths are filled and individual controls remain hidden when the pair is found together.
   - Missing tools or previously configured paths in different directories reveal the existing separate executable selectors without discarding a tool that was found.
   - Added Core directory-resolution tests, app-layer state-transition tests, and source-level settings UI contracts.
-- `chore: prepare portable release 0.2.0`
+- `chore: release portable 0.2.0`
   - Bumped the app and default portable release version from `0.1.0` to `0.2.0` after the HDR information and shared ffmpeg-folder features.
   - Updated release naming contracts and README commands for `0.2.0`.
   - Replaced asynchronous `Progress<T>` in the fade integration assertion with deterministic inline progress after a release-gate run exposed a callback race; the focused retry and full suite passed.
+  - Created the x64 portable ZIP and SHA-256 file, confirmed the archive contains only `VideoCutEditor.exe` and `README.txt`, verified product version `0.2.0`, and smoke-launched the extracted EXE.
 
 ## Implemented Capabilities
 
@@ -322,6 +323,9 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 
 Most recent successful checks:
 
+- `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\New-PortableRelease.ps1 -Version 0.2.0 -Platform x64 -Configuration Release`
+  - Created `artifacts\releases\VideoCutEditor-0.2.0-win-x64.zip` and its `.sha256` file after portable artifact validation.
+  - SHA-256 is `ae1fdc6e94aaab1decf2a54dcf9a5bd1028576637d00c026f27d7e7e49d266e5`; extraction, archive-content validation, product-version inspection, and startup smoke testing passed.
 - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\New-PortableRelease.ps1 -Version 0.1.0 -Platform x64 -Configuration Release`
   - Created `artifacts\releases\VideoCutEditor-0.1.0-win-x64.zip` and its `.sha256` file after portable artifact validation.
   - The ZIP contains only `VideoCutEditor.exe` and `README.txt`; checksum verification, product-version inspection, extraction, and startup smoke testing passed.
