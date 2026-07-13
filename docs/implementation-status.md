@@ -268,6 +268,10 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
   - Rejected Inno Setup after its current toolchain identified the compiler as non-commercial use only, and selected NSIS because its official zlib/libpng terms explicitly allow commercial applications.
   - Added test-first packaging contracts for versioning, license presence, per-user installation, Start menu registration, uninstall support, and release checksums.
   - Code signing is not yet configured, so public artifacts may trigger unknown-publisher or SmartScreen warnings.
+- `design: apply VideoCutEditor product icon`
+  - Imported the owner-provided ChatGPT Image source, detected that its checkerboard was rendered RGB rather than transparency, and added a reproducible ImageMagick conversion script.
+  - Generated a transparent 1024px master, nine standard ICO frames, all existing WinUI square/wide/splash assets, and explicit PE `ApplicationIcon` embedding.
+  - Added tests for every PNG dimension/alpha channel, standard ICO sizes, and app-project icon embedding.
 
 ## Implemented Capabilities
 
@@ -510,13 +514,18 @@ Most recent successful checks:
 - Silent install/launch/uninstall smoke for `VideoCutEditor-0.3.0-win-x64-setup.exe`
   - Installed version `0.3.0` under `%LocalAppData%/Programs/VideoCutEditor` with no elevation, verified app/dependency/NSIS license files, Start menu shortcut, and HKCU uninstall registration.
   - The installed app remained running for 5 seconds, then silent uninstall returned 0 and removed the install directory, shortcut, and uninstall registry key.
+- `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\New-AppIconAssets.ps1`
+  - Generated the transparent icon master, nine ICO frames, and all WinUI asset dimensions from the owner-provided source.
+- `dotnet test VideoCutEditor.slnx -c Release`
+  - 154 Core tests and 12 app-layer tests passed after product-icon generation and PE icon embedding.
+- `dotnet build src\VideoCutEditor\VideoCutEditor.csproj -c Release -p:Platform=x64 -p:WindowsPackageType=None`
+  - Build succeeded with 0 warnings and 0 errors after applying the product icon.
 
 When resuming in a new session, rerun the relevant subset before making assumptions if files have changed.
 
 ## Known Gaps
 
 - A 2026-07-13 source/license audit found no exact online matches for sampled VideoCutEditor-specific class names, error messages, or workflow code. This is a best-effort search, not proof that no similar implementation exists.
-- The repository and installer still use the original template-generated icon assets. Generate and apply a distinctive VideoCutEditor icon across the ICO and WinUI logo assets before the first GitHub release.
 - Public EXE/ZIP artifacts are not Authenticode-signed and can trigger unknown-publisher or SmartScreen warnings. A trusted production code-signing certificate is still needed for warning-free installation.
 - Waveform generation process success, failure, missing-output, cancellation, and cleanup paths are automated, and repeatable generated sample media is available. Rendering quality and usefulness should still be manually verified with representative real videos that have audio streams.
 - Fade controls and fade-triggered Re-encode are covered by generated audio/video integration tests and can be exercised with generated sample media, but should still be manually verified on representative real media.

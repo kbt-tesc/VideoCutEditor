@@ -55,6 +55,15 @@ public sealed class PublishProfileTests
     }
 
     [Fact]
+    public void App_project_embeds_the_product_icon_in_the_executable()
+    {
+        string projectPath = Path.Combine(FindRepositoryRoot(), "src", "VideoCutEditor", "VideoCutEditor.csproj");
+        XDocument project = XDocument.Load(projectPath);
+
+        Assert.Equal("Assets\\AppIcon.ico", project.Descendants("ApplicationIcon").Single().Value);
+    }
+
+    [Fact]
     public void App_project_version_matches_current_portable_release()
     {
         string projectPath = Path.Combine(FindRepositoryRoot(), "src", "VideoCutEditor", "VideoCutEditor.csproj");
@@ -202,6 +211,58 @@ public sealed class PublishProfileTests
         Assert.Contains("Get-FileHash", releaseScript);
         Assert.Contains("[string]$Version = \"0.3.0\"", releaseScript);
     }
+
+    public static TheoryData<string, int, int> AppIconPngAssets => new()
+    {
+        { "design/VideoCutEditor-icon-master.png", 1024, 1024 },
+        { "src/VideoCutEditor/Assets/LockScreenLogo.scale-200.png", 48, 48 },
+        { "src/VideoCutEditor/Assets/SplashScreen.scale-200.png", 1240, 600 },
+        { "src/VideoCutEditor/Assets/Square150x150Logo.scale-200.png", 300, 300 },
+        { "src/VideoCutEditor/Assets/Square44x44Logo.scale-200.png", 88, 88 },
+        { "src/VideoCutEditor/Assets/Square44x44Logo.targetsize-24_altform-unplated.png", 24, 24 },
+        { "src/VideoCutEditor/Assets/Square44x44Logo.targetsize-48_altform-lightunplated.png", 48, 48 },
+        { "src/VideoCutEditor/Assets/StoreLogo.png", 50, 50 },
+        { "src/VideoCutEditor/Assets/Wide310x150Logo.scale-200.png", 620, 300 },
+    };
+
+    [Theory]
+    [MemberData(nameof(AppIconPngAssets))]
+    public void App_icon_png_assets_have_expected_dimensions_and_alpha(string relativePath, int width, int height)
+    {
+        byte[] bytes = File.ReadAllBytes(Path.Combine(FindRepositoryRoot(), relativePath));
+
+        Assert.Equal(width, ReadBigEndianInt32(bytes, 16));
+        Assert.Equal(height, ReadBigEndianInt32(bytes, 20));
+        Assert.Contains(bytes[25], new byte[] { 4, 6 });
+    }
+
+    [Fact]
+    public void App_icon_ico_contains_standard_windows_sizes()
+    {
+        byte[] bytes = File.ReadAllBytes(Path.Combine(
+            FindRepositoryRoot(),
+            "src",
+            "VideoCutEditor",
+            "Assets",
+            "AppIcon.ico"));
+        int imageCount = BitConverter.ToUInt16(bytes, 4);
+        var sizes = new HashSet<int>();
+
+        for (int index = 0; index < imageCount; index++)
+        {
+            int entryOffset = 6 + (index * 16);
+            sizes.Add(bytes[entryOffset] == 0 ? 256 : bytes[entryOffset]);
+        }
+
+        Assert.Subset(sizes, new HashSet<int> { 16, 20, 24, 32, 40, 48, 64, 128, 256 });
+        Assert.True(imageCount >= 9);
+    }
+
+    private static int ReadBigEndianInt32(byte[] bytes, int offset) =>
+        (bytes[offset] << 24) |
+        (bytes[offset + 1] << 16) |
+        (bytes[offset + 2] << 8) |
+        bytes[offset + 3];
 
     private static (int ExitCode, string Output) RunPortableValidation(string publishDirectory)
     {
