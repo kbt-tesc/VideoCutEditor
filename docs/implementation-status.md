@@ -272,6 +272,8 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
   - Imported the owner-provided ChatGPT Image source, detected that its checkerboard was rendered RGB rather than transparency, and added a reproducible ImageMagick conversion script.
   - Generated a transparent 1024px master, nine standard ICO frames, all existing WinUI square/wide/splash assets, and explicit PE `ApplicationIcon` embedding.
   - Added tests for every PNG dimension/alpha channel, standard ICO sizes, and app-project icon embedding.
+- `docs: credit development tools and models`
+  - Added an opening README credit identifying Microsoft WinApp CLI, WinUI 3, OpenAI GPT-5.5, and OpenAI GPT-5.6 as the development tools and models used for the app.
 
 ## Implemented Capabilities
 

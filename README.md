@@ -2,6 +2,8 @@
 
 VideoCutEditorは、動画から必要な範囲を1つだけ切り出すWindows向けアプリです。
 
+本アプリは、Microsoft WinApp CLIとWinUI 3を使用し、OpenAI GPT-5.5およびGPT-5.6との協働で開発しました。
+
 ## おすすめポイント
 
 - **再エンコードなしで高速にカット**: Fast copyなら映像と音声を原則そのままコピーし、画質を変えずに素早く切り出せます。
