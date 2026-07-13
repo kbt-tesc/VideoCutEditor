@@ -498,6 +498,10 @@ When resuming in a new session, rerun the relevant subset before making assumpti
 
 ## Known Gaps
 
+- A 2026-07-13 source/license audit found no exact online matches for sampled VideoCutEditor-specific class names, error messages, or workflow code. This is a best-effort search, not proof that no similar implementation exists.
+- The tracked Microsoft WinUI skill files under `.agents/skills/winui-*` are sourced from `microsoft/win-dev-skills` commit `c98bc78c427910838e97c70bdcd7678a0331fad3`, but this repository does not currently carry that upstream MIT `LICENSE` or `THIRD_PARTY_NOTICES.md`. Add the required notices or stop vendoring those files before publishing the repository.
+- The portable self-contained ZIP currently contains only `VideoCutEditor.exe` and the Japanese `README.md`. It embeds .NET/Windows App SDK runtime components and CommunityToolkit.Mvvm, but does not include dependency license/third-party notice text or application distribution terms. Complete a dependency-by-dependency notice review and include the resulting notice/EULA files before the next public release.
+- The repository itself has no root `LICENSE`, so downstream users have no explicit permission to copy, modify, or redistribute VideoCutEditor source. Choose and add an application license before publishing the repository; this choice requires the owner's decision and is separate from third-party notices.
 - Waveform generation process success, failure, missing-output, cancellation, and cleanup paths are automated, and repeatable generated sample media is available. Rendering quality and usefulness should still be manually verified with representative real videos that have audio streams.
 - Fade controls and fade-triggered Re-encode are covered by generated audio/video integration tests and can be exercised with generated sample media, but should still be manually verified on representative real media.
 - Audio fade behavior for generated video-only inputs is covered, and `scripts/New-SampleMedia.ps1` can generate a local `video-only.mp4`; still verify representative real video-only media manually.
@@ -531,6 +535,8 @@ When resuming in a new session, rerun the relevant subset before making assumpti
    - Consider configurable loudness/true peak/LRA only if real users need targets other than `-14 LUFS`.
 3. Continue packaging and release preparation.
    - Use the repo-local `winui-packaging` skill.
+   - Choose the VideoCutEditor source/distribution license and add a root `LICENSE`.
+   - Add third-party notices for vendored WinUI skills and self-contained runtime/package dependencies, and include the distribution notices in release ZIPs.
    - Verify x86/ARM64 published EXE startup on matching devices when available.
    - Add signing/MSIX packaging later if an installer-based distribution is chosen.
 
