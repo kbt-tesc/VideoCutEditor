@@ -4,7 +4,7 @@ Use this document to start the implementation in a fresh Codex session.
 
 ## Fresh Session Checklist
 
-1. Start Codex from the repository root: `C:\Users\owner\Documents\VideoCutEditor`.
+1. Start Codex from the cloned repository root (`<repository-root>`).
 2. Confirm Codex loaded `AGENTS.md`.
 3. Confirm repo-local skills are visible, especially:
    - `video-cut-editor`

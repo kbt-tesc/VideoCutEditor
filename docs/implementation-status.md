@@ -520,6 +520,10 @@ Most recent successful checks:
   - 154 Core tests and 12 app-layer tests passed after product-icon generation and PE icon embedding.
 - `dotnet build src\VideoCutEditor\VideoCutEditor.csproj -c Release -p:Platform=x64 -p:WindowsPackageType=None`
   - Build succeeded with 0 warnings and 0 errors after applying the product icon.
+- Final icon-bearing `0.3.0` installer and portable release regeneration
+  - Installer SHA-256: `14691e0f0b245d5655a252f0e7d3153b62f7ac22f01ad1c4c9357ef1c949c41d`.
+  - Portable ZIP SHA-256: `0edb3de64e200135a37a7c70cee50fea3fbde48237ee5588f590590139c829ba`.
+  - The final installer again installed version `0.3.0` per-user, launched for 5 seconds, and uninstalled cleanly. Extracting the associated icon from the published EXE showed the new product design at 16px.
 
 When resuming in a new session, rerun the relevant subset before making assumptions if files have changed.
 
@@ -567,7 +571,7 @@ When resuming in a new session, rerun the relevant subset before making assumpti
 
 ## Resume Checklist
 
-1. Start from `C:\Users\owner\Documents\VideoCutEditor`.
+1. Start from the cloned repository root (`<repository-root>`).
 2. Read `AGENTS.md` and all docs it lists, including this file.
 3. Check `git status --short`; do not overwrite uncommitted user changes.
 4. Check the latest commits with `git log --oneline --max-count=10`.
