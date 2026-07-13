@@ -60,7 +60,7 @@ public sealed class PublishProfileTests
         string projectPath = Path.Combine(FindRepositoryRoot(), "src", "VideoCutEditor", "VideoCutEditor.csproj");
         XDocument project = XDocument.Load(projectPath);
 
-        Assert.Equal("0.2.0", project.Descendants("Version").Single().Value);
+        Assert.Equal("0.3.0", project.Descendants("Version").Single().Value);
     }
 
     [Fact]
@@ -132,10 +132,12 @@ public sealed class PublishProfileTests
 
         Assert.Contains("Publish-Portable.ps1", script);
         Assert.Contains("-Version $Version", script);
-        Assert.Contains("[string]$Version = \"0.2.0\"", script);
+        Assert.Contains("[string]$Version = \"0.3.0\"", script);
         Assert.Contains("Compress-Archive", script);
         Assert.Contains("Get-FileHash", script);
         Assert.Contains("README.md", script);
+        Assert.Contains("LICENSE", script);
+        Assert.Contains("licenses", script);
         Assert.DoesNotContain("README.txt", script);
     }
 
@@ -165,6 +167,40 @@ public sealed class PublishProfileTests
         Assert.Equal(0, exitCode);
         Assert.Contains("VideoCutEditor-0.2.0-win-x64.zip", output);
         Assert.Contains("VideoCutEditor-0.2.0-win-x64.zip.sha256", output);
+    }
+
+    [Fact]
+    public void Repository_contains_official_license_and_dependency_notices()
+    {
+        string root = FindRepositoryRoot();
+
+        Assert.True(File.Exists(Path.Combine(root, "LICENSE")));
+        Assert.True(File.Exists(Path.Combine(root, "third-party", "Microsoft.WindowsAppSDK.txt")));
+        Assert.True(File.Exists(Path.Combine(root, "third-party", "CommunityToolkit.Mvvm.txt")));
+        Assert.True(File.Exists(Path.Combine(root, "third-party", "dotnet-Windows.txt")));
+        Assert.True(File.Exists(Path.Combine(root, "third-party", "dotnet-ThirdPartyNotices.txt")));
+        Assert.True(File.Exists(Path.Combine(root, "third-party", "NSIS.txt")));
+        Assert.True(File.Exists(Path.Combine(root, "third-party", "microsoft-win-dev-skills.txt")));
+        Assert.True(File.Exists(Path.Combine(root, "third-party", "microsoft-win-dev-skills-ThirdPartyNotices.md")));
+    }
+
+    [Fact]
+    public void Installer_is_per_user_and_supports_normal_uninstall()
+    {
+        string root = FindRepositoryRoot();
+        string installerDefinition = File.ReadAllText(Path.Combine(root, "installer", "VideoCutEditor.nsi"));
+        string releaseScript = File.ReadAllText(Path.Combine(root, "scripts", "New-InstallerRelease.ps1"));
+
+        Assert.Contains("RequestExecutionLevel user", installerDefinition);
+        Assert.Contains("InstallDir \"$LOCALAPPDATA\\Programs\\VideoCutEditor\"", installerDefinition);
+        Assert.Contains("WriteUninstaller", installerDefinition);
+        Assert.Contains("$SMPROGRAMS\\VideoCutEditor", installerDefinition);
+        Assert.Contains("MUI_PAGE_LICENSE", installerDefinition);
+        Assert.Contains("Microsoft.WindowsAppSDK.txt", installerDefinition);
+        Assert.Contains("Publish-Portable.ps1", releaseScript);
+        Assert.Contains("makensis", releaseScript, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Get-FileHash", releaseScript);
+        Assert.Contains("[string]$Version = \"0.3.0\"", releaseScript);
     }
 
     private static (int ExitCode, string Output) RunPortableValidation(string publishDirectory)

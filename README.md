@@ -92,11 +92,17 @@ If VS Code still shows stale `VideoCutEditor.Core` or generated MVVM warnings af
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\Publish-Portable.ps1 -Platform x64 -Configuration Release
 powershell -ExecutionPolicy Bypass -File scripts\Publish-AllPortable.ps1 -Configuration Release
-powershell -ExecutionPolicy Bypass -File scripts\New-PortableRelease.ps1 -Version 0.2.0 -Platform x64
+powershell -ExecutionPolicy Bypass -File scripts\New-PortableRelease.ps1 -Version 0.3.0 -Platform x64
+powershell -ExecutionPolicy Bypass -File scripts\New-InstallerRelease.ps1 -Version 0.3.0 -Platform x64
 ```
 
 The portable publish output is written under `src\VideoCutEditor\bin\Release\...\publish`.
 The WinUI app is built self-contained so packaged debug launches and portable output do not depend on a machine-wide .NET runtime probe.
 `Publish-Portable.ps1` also runs `scripts\Test-PortablePublish.ps1` to verify that the output contains `VideoCutEditor.exe`, does not include sidecar runtime files, and does not bundle ffmpeg or ffprobe.
 `Publish-AllPortable.ps1` runs the same publish and validation flow for x64, x86, and arm64.
-`New-PortableRelease.ps1` creates a versioned ZIP plus a SHA-256 checksum under `artifacts\releases`. The ZIP contains the single-file EXE and a Japanese portable-use README; ffmpeg and ffprobe remain external.
+`New-PortableRelease.ps1` creates a versioned ZIP plus a SHA-256 checksum under `artifacts\releases`. The ZIP contains the single-file EXE, Japanese usage guidance, and official license notices; ffmpeg and ffprobe remain external.
+`New-InstallerRelease.ps1` creates an NSIS installer and checksum. The installer requires no administrator privileges and installs for the current user under `%LocalAppData%\Programs\VideoCutEditor`.
+
+### License
+
+VideoCutEditor source is available under the [MIT License](LICENSE). Official dependency license and notice files are retained under [`third-party`](third-party).

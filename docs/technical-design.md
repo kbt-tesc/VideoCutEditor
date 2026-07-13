@@ -241,6 +241,7 @@ End-to-end export UI verification uses `scripts/Test-ExportUi.ps1` with `-Mode F
 
 - Prefer unpackaged Windows App SDK deployment.
 - Publish as a self-contained single-file EXE for Windows.
+- Build the public x64 installer with NSIS using `RequestExecutionLevel user` and `%LocalAppData%/Programs/VideoCutEditor` so installation and removal are scoped to the current user. NSIS is selected over Inno Setup because the NSIS zlib/libpng license explicitly permits commercial use and better matches the permissive MIT source distribution.
 - Do not bundle ffmpeg in the first implementation.
 - Document any runtime prerequisites discovered during WinUI 3 packaging work.
 
@@ -250,4 +251,8 @@ Portable publish uses the `win-x64`, `win-x86`, and `win-arm64` publish profiles
 
 `scripts/Publish-AllPortable.ps1` runs the validated portable publish flow across x64, x86, and arm64. It supports a `-WhatIf` dry run for CI/script checks and accepts either multiple platform arguments or comma-separated platform names.
 
-`scripts/New-PortableRelease.ps1` creates an installer-free distribution ZIP from a validated portable publish. Release names follow `VideoCutEditor-<version>-win-<platform>.zip`; each ZIP contains `VideoCutEditor.exe` and a user-only Japanese `README.md`, and is accompanied by a `.zip.sha256` file. The initial release is `0.1.0` for x64, and the current release line is `0.2.0`. Release archives remain local ignored artifacts and do not bundle ffmpeg or ffprobe.
+`scripts/New-PortableRelease.ps1` creates an installer-free distribution ZIP from a validated portable publish. Release names follow `VideoCutEditor-<version>-win-<platform>.zip`; each ZIP contains `VideoCutEditor.exe`, a user-only Japanese `README.md`, the app MIT license, and applicable official dependency licenses/notices, and is accompanied by a `.zip.sha256` file.
+
+`scripts/New-InstallerRelease.ps1` reuses the validated x64 portable publish and compiles `installer/VideoCutEditor.nsi` with NSIS 3. Release names follow `VideoCutEditor-<version>-win-x64-setup.exe` with a matching SHA-256 file. The installer uses stable per-user registry keys for upgrades, presents the official Windows App SDK terms, installs the EXE/readme/licenses under the current user's LocalAppData, registers a Start menu shortcut and uninstall entry, and does not bundle ffmpeg/ffprobe. The current release line is `0.3.0`. Public artifacts remain unsigned until a trusted production code-signing certificate is available.
+
+The repository root `LICENSE` uses the standard SPDX MIT text for VideoCutEditor-owned source. Unmodified official license and notice documents for the self-contained .NET runtime, Windows App SDK, CommunityToolkit.Mvvm, and vendored Microsoft WinUI development skills are retained under `third-party`. Runtime-related files are copied into application distributions; development-skill notices remain source-repository-only.

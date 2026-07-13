@@ -80,6 +80,16 @@ The first screen should be the usable editor, not a landing page or marketing sc
 - The normalize audio option analyzes audio loudness before the final export, then applies an audio filter and therefore re-encodes audio. In Fast copy mode it should not re-encode video when video stream copy is possible; in Re-encode mode it combines with the selected video encode settings.
 - HDR to SDR conversion requires video filtering and is available only in Re-encode mode. Fast copy exports preserve HDR video unchanged and only show an informational notice.
 
+## Distribution
+
+- Provide an x64 installer that installs for the current Windows user without requesting administrator privileges.
+- The default install location is `%LocalAppData%/Programs/VideoCutEditor` rather than `Program Files`.
+- Register a Start menu shortcut and a standard per-user uninstall entry.
+- Continue providing the portable ZIP for users who do not want installation.
+- Include the VideoCutEditor license and applicable official third-party license/notice files in both installer and portable distributions.
+- ffmpeg and ffprobe remain external and are not bundled.
+- Until production code signing is available, clearly disclose that Windows may show an unknown-publisher or SmartScreen warning.
+
 ## Settings
 
 Persist these settings in the user's AppData folder:

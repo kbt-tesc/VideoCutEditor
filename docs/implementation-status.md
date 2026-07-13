@@ -262,6 +262,12 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 - `docs: highlight the main user benefits`
   - Added concise README highlights for fast stream-copy cuts, video-copy audio normalization, target-size Re-encode with fades, and HDR-to-SDR conversion.
   - Kept the repository README and packaged user-only README aligned.
+- `chore: add per-user installer and official license notices`
+  - Selected the standard SPDX MIT license for VideoCutEditor-owned source and retained unmodified official dependency and vendored-skill license documents under `third-party`.
+  - Bumped the release line to `0.3.0`, added license files to portable archives, and added an NSIS x64 installer that installs without elevation under `%LocalAppData%/Programs/VideoCutEditor`.
+  - Rejected Inno Setup after its current toolchain identified the compiler as non-commercial use only, and selected NSIS because its official zlib/libpng terms explicitly allow commercial applications.
+  - Added test-first packaging contracts for versioning, license presence, per-user installation, Start menu registration, uninstall support, and release checksums.
+  - Code signing is not yet configured, so public artifacts may trigger unknown-publisher or SmartScreen warnings.
 
 ## Implemented Capabilities
 
@@ -493,15 +499,25 @@ Most recent successful checks:
 - `powershell -ExecutionPolicy Bypass -File tests\ui-tests.ps1 -AppPid <pid>`
   - 55 UI tests passed for packaged Debug launch.
   - 55 UI tests passed for the published unpackaged x64 EXE.
+- `dotnet test VideoCutEditor.slnx -c Release`
+  - 143 Core tests and 12 app-layer tests passed for the `0.3.0` license and installer slice.
+- `dotnet build src\VideoCutEditor\VideoCutEditor.csproj -c Release -p:Platform=x64 -p:WindowsPackageType=None`
+  - Build succeeded with 0 warnings and 0 errors for `0.3.0`.
+- `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\New-PortableRelease.ps1 -Version 0.3.0 -Platform x64 -Configuration Release`
+  - Created the portable ZIP and SHA-256 file with the app license and official runtime/package notices.
+- `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\New-InstallerRelease.ps1 -Version 0.3.0 -Platform x64 -Configuration Release`
+  - NSIS compiled the per-user installer with warnings treated as errors and generated its SHA-256 file.
+- Silent install/launch/uninstall smoke for `VideoCutEditor-0.3.0-win-x64-setup.exe`
+  - Installed version `0.3.0` under `%LocalAppData%/Programs/VideoCutEditor` with no elevation, verified app/dependency/NSIS license files, Start menu shortcut, and HKCU uninstall registration.
+  - The installed app remained running for 5 seconds, then silent uninstall returned 0 and removed the install directory, shortcut, and uninstall registry key.
 
 When resuming in a new session, rerun the relevant subset before making assumptions if files have changed.
 
 ## Known Gaps
 
 - A 2026-07-13 source/license audit found no exact online matches for sampled VideoCutEditor-specific class names, error messages, or workflow code. This is a best-effort search, not proof that no similar implementation exists.
-- The tracked Microsoft WinUI skill files under `.agents/skills/winui-*` are sourced from `microsoft/win-dev-skills` commit `c98bc78c427910838e97c70bdcd7678a0331fad3`, but this repository does not currently carry that upstream MIT `LICENSE` or `THIRD_PARTY_NOTICES.md`. Add the required notices or stop vendoring those files before publishing the repository.
-- The portable self-contained ZIP currently contains only `VideoCutEditor.exe` and the Japanese `README.md`. It embeds .NET/Windows App SDK runtime components and CommunityToolkit.Mvvm, but does not include dependency license/third-party notice text or application distribution terms. Complete a dependency-by-dependency notice review and include the resulting notice/EULA files before the next public release.
-- The repository itself has no root `LICENSE`, so downstream users have no explicit permission to copy, modify, or redistribute VideoCutEditor source. Choose and add an application license before publishing the repository; this choice requires the owner's decision and is separate from third-party notices.
+- The repository and installer still use the original template-generated icon assets. Generate and apply a distinctive VideoCutEditor icon across the ICO and WinUI logo assets before the first GitHub release.
+- Public EXE/ZIP artifacts are not Authenticode-signed and can trigger unknown-publisher or SmartScreen warnings. A trusted production code-signing certificate is still needed for warning-free installation.
 - Waveform generation process success, failure, missing-output, cancellation, and cleanup paths are automated, and repeatable generated sample media is available. Rendering quality and usefulness should still be manually verified with representative real videos that have audio streams.
 - Fade controls and fade-triggered Re-encode are covered by generated audio/video integration tests and can be exercised with generated sample media, but should still be manually verified on representative real media.
 - Audio fade behavior for generated video-only inputs is covered, and `scripts/New-SampleMedia.ps1` can generate a local `video-only.mp4`; still verify representative real video-only media manually.
@@ -515,6 +531,7 @@ When resuming in a new session, rerun the relevant subset before making assumpti
 - The current winapp UIA bridge does not expose `QualityNumberBox` as a reliably parseable numeric value. Keep the isolated settings contract and screenshot review for the exact value while UIA verifies mode and enabled state.
 - Preview-unavailable fallback behavior needs more manual and/or UI coverage.
 - Portable x64 publish, x86 publish, arm64 publish, artifact validation, x64 ZIP distribution packaging, checksum verification, and distributed x64 EXE startup smoke testing now succeed. Signing, MSIX/installer validation, and x86/arm64 runtime startup on matching devices still need verification.
+- The x64 per-user installer definition and release script are implemented. Full install/launch/uninstall verification is part of the `0.3.0` release gate; production code signing remains unresolved.
 - UI tests cover opening generated media through the real Windows file picker, loaded range state, and isolated Fast copy export completion.
 - The picker workflow supports the current legacy filename field ID `1148` and the newer `FileNameControlHost` ID. Future Windows picker UIA changes may require updating these selectors.
 - VS Code F5 now has an explicit x64 unpackaged launch path, but the user should manually confirm breakpoint attachment from VS Code because automated tests can only validate the configuration files and build output.
@@ -535,8 +552,7 @@ When resuming in a new session, rerun the relevant subset before making assumpti
    - Consider configurable loudness/true peak/LRA only if real users need targets other than `-14 LUFS`.
 3. Continue packaging and release preparation.
    - Use the repo-local `winui-packaging` skill.
-   - Choose the VideoCutEditor source/distribution license and add a root `LICENSE`.
-   - Add third-party notices for vendored WinUI skills and self-contained runtime/package dependencies, and include the distribution notices in release ZIPs.
+   - Obtain a trusted production code-signing certificate when warning-free public installation becomes necessary.
    - Verify x86/ARM64 published EXE startup on matching devices when available.
    - Add signing/MSIX packaging later if an installer-based distribution is chosen.
 

@@ -1,6 +1,6 @@
 param(
     [ValidatePattern("^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$")]
-    [string]$Version = "0.2.0",
+    [string]$Version = "0.3.0",
 
     [ValidateSet("x64", "x86", "arm64")]
     [string]$Platform = "x64",
@@ -56,6 +56,19 @@ try {
         throw "Portable release README was not found at '$readmePath'."
     }
     Copy-Item -LiteralPath $readmePath -Destination (Join-Path $stagingDirectory "README.md")
+
+    Copy-Item -LiteralPath (Join-Path $repoRoot "LICENSE") -Destination (Join-Path $stagingDirectory "LICENSE")
+    $licenseDirectory = Join-Path $stagingDirectory "licenses"
+    New-Item -ItemType Directory -Path $licenseDirectory | Out-Null
+    @(
+        "Microsoft.WindowsAppSDK.txt"
+        "CommunityToolkit.Mvvm.txt"
+        "CommunityToolkit.Mvvm-ThirdPartyNotices.txt"
+        "dotnet-Windows.txt"
+        "dotnet-ThirdPartyNotices.txt"
+    ) | ForEach-Object {
+        Copy-Item -LiteralPath (Join-Path $repoRoot "third-party\$_") -Destination (Join-Path $licenseDirectory $_)
+    }
 
     Remove-Item -LiteralPath $zipPath -Force -ErrorAction SilentlyContinue
     Remove-Item -LiteralPath $checksumPath -Force -ErrorAction SilentlyContinue
