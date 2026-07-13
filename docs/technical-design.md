@@ -250,4 +250,4 @@ Portable publish uses the `win-x64`, `win-x86`, and `win-arm64` publish profiles
 
 `scripts/Publish-AllPortable.ps1` runs the validated portable publish flow across x64, x86, and arm64. It supports a `-WhatIf` dry run for CI/script checks and accepts either multiple platform arguments or comma-separated platform names.
 
-`scripts/New-PortableRelease.ps1` creates an installer-free distribution ZIP from a validated portable publish. Release names follow `VideoCutEditor-<version>-win-<platform>.zip`; each ZIP contains `VideoCutEditor.exe` and `README.txt`, and is accompanied by a `.zip.sha256` file. The initial release is `0.1.0` for x64. Release archives remain local ignored artifacts and do not bundle ffmpeg or ffprobe.
+`scripts/New-PortableRelease.ps1` creates an installer-free distribution ZIP from a validated portable publish. Release names follow `VideoCutEditor-<version>-win-<platform>.zip`; each ZIP contains `VideoCutEditor.exe` and `README.txt`, and is accompanied by a `.zip.sha256` file. The initial release is `0.1.0` for x64, and the current release line is `0.2.0`. Release archives remain local ignored artifacts and do not bundle ffmpeg or ffprobe.

@@ -215,7 +215,7 @@ public sealed class FfmpegRunnerIntegrationTests
             var progressEvents = new List<ExportProgress>();
             ExportResult result = await new FfmpegRunner().RunAsync(
                 plan,
-                new Progress<ExportProgress>(progressEvents.Add));
+                new InlineProgress<ExportProgress>(progressEvents.Add));
 
             Assert.True(result.Succeeded, result.ErrorMessage);
             Assert.True(File.Exists(outputPath));
@@ -232,6 +232,11 @@ public sealed class FfmpegRunnerIntegrationTests
         {
             Directory.Delete(workingDirectory, recursive: true);
         }
+    }
+
+    private sealed class InlineProgress<T>(Action<T> handler) : IProgress<T>
+    {
+        public void Report(T value) => handler(value);
     }
 
     [SkippableFact]

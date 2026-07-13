@@ -247,6 +247,10 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
   - Both full paths are filled and individual controls remain hidden when the pair is found together.
   - Missing tools or previously configured paths in different directories reveal the existing separate executable selectors without discarding a tool that was found.
   - Added Core directory-resolution tests, app-layer state-transition tests, and source-level settings UI contracts.
+- `chore: prepare portable release 0.2.0`
+  - Bumped the app and default portable release version from `0.1.0` to `0.2.0` after the HDR information and shared ffmpeg-folder features.
+  - Updated release naming contracts and README commands for `0.2.0`.
+  - Replaced asynchronous `Progress<T>` in the fade integration assertion with deterministic inline progress after a release-gate run exposed a callback race; the focused retry and full suite passed.
 
 ## Implemented Capabilities
 

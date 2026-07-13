@@ -41,7 +41,7 @@ If VS Code still shows stale `VideoCutEditor.Core` or generated MVVM warnings af
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\Publish-Portable.ps1 -Platform x64 -Configuration Release
 powershell -ExecutionPolicy Bypass -File scripts\Publish-AllPortable.ps1 -Configuration Release
-powershell -ExecutionPolicy Bypass -File scripts\New-PortableRelease.ps1 -Version 0.1.0 -Platform x64
+powershell -ExecutionPolicy Bypass -File scripts\New-PortableRelease.ps1 -Version 0.2.0 -Platform x64
 ```
 
 The portable publish output is written under `src\VideoCutEditor\bin\Release\...\publish`.

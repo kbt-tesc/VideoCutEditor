@@ -55,12 +55,12 @@ public sealed class PublishProfileTests
     }
 
     [Fact]
-    public void App_project_version_matches_initial_portable_release()
+    public void App_project_version_matches_current_portable_release()
     {
         string projectPath = Path.Combine(FindRepositoryRoot(), "src", "VideoCutEditor", "VideoCutEditor.csproj");
         XDocument project = XDocument.Load(projectPath);
 
-        Assert.Equal("0.1.0", project.Descendants("Version").Single().Value);
+        Assert.Equal("0.2.0", project.Descendants("Version").Single().Value);
     }
 
     [Fact]
@@ -132,6 +132,7 @@ public sealed class PublishProfileTests
 
         Assert.Contains("Publish-Portable.ps1", script);
         Assert.Contains("-Version $Version", script);
+        Assert.Contains("[string]$Version = \"0.2.0\"", script);
         Assert.Contains("Compress-Archive", script);
         Assert.Contains("Get-FileHash", script);
         Assert.Contains("README.txt", script);
@@ -140,11 +141,11 @@ public sealed class PublishProfileTests
     [Fact]
     public void Portable_release_script_dry_run_reports_versioned_x64_artifacts()
     {
-        (int exitCode, string output) = RunPortableReleaseDryRun("0.1.0", "x64");
+        (int exitCode, string output) = RunPortableReleaseDryRun("0.2.0", "x64");
 
         Assert.Equal(0, exitCode);
-        Assert.Contains("VideoCutEditor-0.1.0-win-x64.zip", output);
-        Assert.Contains("VideoCutEditor-0.1.0-win-x64.zip.sha256", output);
+        Assert.Contains("VideoCutEditor-0.2.0-win-x64.zip", output);
+        Assert.Contains("VideoCutEditor-0.2.0-win-x64.zip.sha256", output);
     }
 
     private static (int ExitCode, string Output) RunPortableValidation(string publishDirectory)
