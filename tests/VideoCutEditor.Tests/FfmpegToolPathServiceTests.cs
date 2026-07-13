@@ -73,6 +73,33 @@ public sealed class FfmpegToolPathServiceTests
         Assert.Equal(expected, actual);
     }
 
+    [Fact]
+    public void ResolveDirectory_finds_ffmpeg_and_ffprobe_together()
+    {
+        string directory = CreateTempDirectory();
+        string ffmpeg = CreateFile(directory, "ffmpeg.exe");
+        string ffprobe = CreateFile(directory, "ffprobe.exe");
+        var service = new FfmpegToolPathService();
+
+        FfmpegToolPaths paths = service.ResolveDirectory(directory);
+
+        Assert.Equal(ffmpeg, paths.FfmpegPath);
+        Assert.Equal(ffprobe, paths.FfprobePath);
+    }
+
+    [Fact]
+    public void ResolveDirectory_returns_only_the_executable_that_exists()
+    {
+        string directory = CreateTempDirectory();
+        string ffmpeg = CreateFile(directory, "ffmpeg.exe");
+        var service = new FfmpegToolPathService();
+
+        FfmpegToolPaths paths = service.ResolveDirectory(directory);
+
+        Assert.Equal(ffmpeg, paths.FfmpegPath);
+        Assert.Null(paths.FfprobePath);
+    }
+
     private static string CreateFile(string directory, string fileName)
     {
         string filePath = Path.Combine(directory, fileName);

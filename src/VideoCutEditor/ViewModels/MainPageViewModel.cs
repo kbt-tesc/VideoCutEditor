@@ -94,6 +94,12 @@ public partial class MainPageViewModel : ObservableObject
     public partial string? FfprobePath { get; set; }
 
     [ObservableProperty]
+    public partial string? ToolDirectoryPath { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsIndividualToolPathSelectionVisible { get; set; }
+
+    [ObservableProperty]
     public partial string? OutputDirectory { get; set; }
 
     [ObservableProperty]
@@ -305,6 +311,7 @@ public partial class MainPageViewModel : ObservableObject
 
         FfmpegPath = paths.FfmpegPath;
         FfprobePath = paths.FfprobePath;
+        ConfigureInitialToolSelection(paths);
         OutputDirectory = settings.OutputDirectory;
         ApplyExportSettings(settings);
         StatusMessage = settingsLoadFailed
@@ -440,6 +447,54 @@ public partial class MainPageViewModel : ObservableObject
 
     private bool CanOpenOutputDirectory() =>
         !string.IsNullOrWhiteSpace(OutputDirectory) && Directory.Exists(OutputDirectory);
+
+    [RelayCommand]
+    private async Task BrowseToolDirectoryAsync()
+    {
+        var picker = new FolderPicker
+        {
+            SuggestedStartLocation = PickerLocationId.ComputerFolder,
+        };
+        picker.FileTypeFilter.Add("*");
+
+        StorageFolder? folder;
+        try
+        {
+            WinRT.Interop.InitializeWithWindow.Initialize(picker, App.WindowHandle);
+            folder = await picker.PickSingleFolderAsync();
+        }
+        catch (COMException exception)
+        {
+            StatusMessage = "ffmpegフォルダーの選択を完了できませんでした";
+            AppLogger.Error("FFmpeg folder picker failed", exception);
+            return;
+        }
+
+        if (folder is null)
+        {
+            return;
+        }
+
+        ApplyToolDirectorySelection(folder.Path);
+        await DetectEncoderCapabilitiesAsync();
+    }
+
+    public void ApplyToolDirectorySelection(string directoryPath)
+    {
+        FfmpegToolPaths paths = toolPathService.ResolveDirectory(directoryPath);
+        ToolDirectoryPath = directoryPath;
+        FfmpegPath = paths.FfmpegPath;
+        FfprobePath = paths.FfprobePath;
+        IsIndividualToolPathSelectionVisible = paths.FfmpegPath is null || paths.FfprobePath is null;
+
+        StatusMessage = (paths.FfmpegPath, paths.FfprobePath) switch
+        {
+            ({ Length: > 0 }, { Length: > 0 }) => "ffmpeg と ffprobe をフォルダーから検出しました",
+            ({ Length: > 0 }, _) => "ffmpeg を検出しました。ffprobe.exe を個別に指定してください",
+            (_, { Length: > 0 }) => "ffprobe を検出しました。ffmpeg.exe を個別に指定してください",
+            _ => "ffmpeg.exe と ffprobe.exe が見つかりません。個別に指定してください",
+        };
+    }
 
     [RelayCommand]
     private async Task BrowseFfmpegPathAsync()
@@ -1189,6 +1244,21 @@ public partial class MainPageViewModel : ObservableObject
             (_, { Length: > 0 }) => "ffprobe を検出しました。ffmpeg が見つかりません",
             _ => "準備完了",
         };
+    }
+
+    private void ConfigureInitialToolSelection(FfmpegToolPaths paths)
+    {
+        string? ffmpegDirectory = Path.GetDirectoryName(paths.FfmpegPath);
+        string? ffprobeDirectory = Path.GetDirectoryName(paths.FfprobePath);
+        bool hasBothInSameDirectory =
+            !string.IsNullOrWhiteSpace(ffmpegDirectory)
+            && !string.IsNullOrWhiteSpace(ffprobeDirectory)
+            && string.Equals(ffmpegDirectory, ffprobeDirectory, StringComparison.OrdinalIgnoreCase);
+
+        ToolDirectoryPath = hasBothInSameDirectory ? ffmpegDirectory : null;
+        IsIndividualToolPathSelectionVisible =
+            (paths.FfmpegPath is not null || paths.FfprobePath is not null)
+            && !hasBothInSameDirectory;
     }
 
     private static bool OpenDirectoryInShell(string path)

@@ -40,6 +40,37 @@ public sealed class MainPageViewModelTests
     }
 
     [Fact]
+    public void Tool_directory_selection_sets_both_paths_and_keeps_individual_fields_hidden()
+    {
+        string directory = CreateTempDirectory();
+        string ffmpeg = CreateFile(directory, "ffmpeg.exe");
+        string ffprobe = CreateFile(directory, "ffprobe.exe");
+        MainPageViewModel viewModel = CreateViewModel(toolPathService: new FfmpegToolPathService());
+
+        viewModel.ApplyToolDirectorySelection(directory);
+
+        Assert.Equal(directory, viewModel.ToolDirectoryPath);
+        Assert.Equal(ffmpeg, viewModel.FfmpegPath);
+        Assert.Equal(ffprobe, viewModel.FfprobePath);
+        Assert.False(viewModel.IsIndividualToolPathSelectionVisible);
+    }
+
+    [Fact]
+    public void Tool_directory_selection_reveals_individual_fields_when_ffprobe_is_missing()
+    {
+        string directory = CreateTempDirectory();
+        string ffmpeg = CreateFile(directory, "ffmpeg.exe");
+        MainPageViewModel viewModel = CreateViewModel(toolPathService: new FfmpegToolPathService());
+
+        viewModel.ApplyToolDirectorySelection(directory);
+
+        Assert.Equal(ffmpeg, viewModel.FfmpegPath);
+        Assert.Null(viewModel.FfprobePath);
+        Assert.True(viewModel.IsIndividualToolPathSelectionVisible);
+        Assert.Contains("ffprobe.exe を個別に指定", viewModel.StatusMessage);
+    }
+
+    [Fact]
     public void Time_inputs_update_and_clamp_the_selected_range()
     {
         MainPageViewModel viewModel = CreateViewModel();
@@ -183,11 +214,12 @@ public sealed class MainPageViewModelTests
 
     private static MainPageViewModel CreateViewModel(
         ISettingsService? settingsService = null,
-        IFfmpegRunner? ffmpegRunner = null) =>
+        IFfmpegRunner? ffmpegRunner = null,
+        IFfmpegToolPathService? toolPathService = null) =>
         new(
             settingsService ?? new StubSettingsService(),
             new OutputPathService(),
-            new StubToolPathService(),
+            toolPathService ?? new StubToolPathService(),
             ffmpegRunner ?? new RecordingFfmpegRunner(),
             new StubMediaProbeService(),
             new StubCapabilityService());
@@ -203,6 +235,13 @@ public sealed class MainPageViewModelTests
     {
         string path = Path.Combine(directory, fileName);
         await File.WriteAllTextAsync(path, string.Empty);
+        return path;
+    }
+
+    private static string CreateFile(string directory, string fileName)
+    {
+        string path = Path.Combine(directory, fileName);
+        File.WriteAllText(path, string.Empty);
         return path;
     }
 
@@ -247,6 +286,8 @@ public sealed class MainPageViewModelTests
     private sealed class StubToolPathService : IFfmpegToolPathService
     {
         public FfmpegToolPaths Resolve(AppSettings settings) => new(null, null);
+
+        public FfmpegToolPaths ResolveDirectory(string directoryPath) => new(null, null);
     }
 
     private sealed class RecordingFfmpegRunner : IFfmpegRunner

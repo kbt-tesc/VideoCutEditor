@@ -28,6 +28,15 @@ public sealed class FfmpegToolPathService : IFfmpegToolPathService
         return FindOnPath(executableName);
     }
 
+    public FfmpegToolPaths ResolveDirectory(string directoryPath)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(directoryPath);
+
+        return new FfmpegToolPaths(
+            ResolveFileInDirectory(directoryPath, "ffmpeg.exe"),
+            ResolveFileInDirectory(directoryPath, "ffprobe.exe"));
+    }
+
     public string? FindOnPath(string executableName)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(executableName);
@@ -66,5 +75,11 @@ public sealed class FfmpegToolPathService : IFfmpegToolPathService
         }
 
         return [executableName];
+    }
+
+    private static string? ResolveFileInDirectory(string directoryPath, string fileName)
+    {
+        string candidatePath = Path.Combine(directoryPath, fileName);
+        return File.Exists(candidatePath) ? candidatePath : null;
     }
 }

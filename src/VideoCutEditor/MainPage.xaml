@@ -646,6 +646,31 @@
                         </Grid.ColumnDefinitions>
 
                         <TextBox
+                            AutomationProperties.AutomationId="ToolDirectoryPathTextBox"
+                            Header="ffmpeg / ffprobe フォルダー"
+                            IsReadOnly="True"
+                            Text="{x:Bind ViewModel.ToolDirectoryPath, Mode=OneWay}" />
+                        <Button
+                            Grid.Column="1"
+                            AutomationProperties.AutomationId="BrowseToolDirectoryButton"
+                            AutomationProperties.Name="ffmpegとffprobeのフォルダーを選択"
+                            VerticalAlignment="Bottom"
+                            Command="{x:Bind ViewModel.BrowseToolDirectoryCommand}"
+                            ToolTipService.ToolTip="ffmpeg.exeとffprobe.exeがあるフォルダーを選択">
+                            <FontIcon FontSize="16" Glyph="&#xE8B7;" />
+                        </Button>
+                    </Grid>
+
+                    <StackPanel
+                        Spacing="16"
+                        Visibility="{x:Bind local:MainPage.BoolToVisibility(ViewModel.IsIndividualToolPathSelectionVisible), Mode=OneWay}">
+                    <Grid ColumnSpacing="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <TextBox
                             AutomationProperties.AutomationId="FfmpegPathTextBox"
                             Header="ffmpeg"
                             Text="{x:Bind ViewModel.FfmpegPath, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
@@ -680,6 +705,7 @@
                             <FontIcon FontSize="16" Glyph="&#xE8E5;" />
                         </Button>
                     </Grid>
+                    </StackPanel>
 
                     <Grid ColumnSpacing="8">
                         <Grid.ColumnDefinitions>

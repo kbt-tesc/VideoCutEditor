@@ -41,7 +41,7 @@ Only one keep range is supported per export.
   - Fade controls
   - Codec and encoder controls
   - Bitrate, target size, or quality controls
-- Keep ffmpeg, ffprobe, and output-folder path configuration in a settings surface rather than the main editing surface.
+- Keep ffmpeg, ffprobe, and output-folder path configuration in a settings surface rather than the main editing surface. Tool configuration first asks for one folder containing both `ffmpeg.exe` and `ffprobe.exe`. When either executable is missing from that folder, reveal separate file selectors so the missing or nonstandard path can be configured individually.
 - The main export surface shows an editable output file name initialized from the generated output name, plus the read-only full planned output path.
 - The main export surface provides an output-folder open button beside the planned output controls.
 - Show encoder information, media information, and export logs in a non-modal INFO window owned by the main window, with its own scrolling area so logs do not expand or block the main editor layout. Media information identifies HDR10/PQ or HLG and shows the probed color space, transfer characteristic, and color primaries. Reuse the open INFO window instead of opening duplicates, keep it associated with the main window for normal stacking/minimize behavior, and keep its displayed values synchronized while export continues.

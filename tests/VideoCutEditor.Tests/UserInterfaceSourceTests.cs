@@ -132,6 +132,9 @@ public sealed class UserInterfaceSourceTests
         Assert.Contains("AutomationProperties.AutomationId=\"ShowInfoButton\"", xaml);
         Assert.Contains("x:Name=\"SettingsDialog\"", xaml);
         Assert.DoesNotContain("x:Name=\"InfoDialog\"", xaml);
+        Assert.Matches(new Regex("x:Name=\"SettingsDialog\"[\\s\\S]*?AutomationProperties.AutomationId=\"ToolDirectoryPathTextBox\"", RegexOptions.None, TimeSpan.FromSeconds(1)), xaml);
+        Assert.Contains("AutomationProperties.AutomationId=\"BrowseToolDirectoryButton\"", xaml);
+        Assert.Contains("ViewModel.IsIndividualToolPathSelectionVisible", xaml);
         Assert.Matches(new Regex("x:Name=\"SettingsDialog\"[\\s\\S]*?AutomationProperties.AutomationId=\"FfmpegPathTextBox\"", RegexOptions.None, TimeSpan.FromSeconds(1)), xaml);
         Assert.Matches(new Regex("x:Name=\"SettingsDialog\"[\\s\\S]*?AutomationProperties.AutomationId=\"FfprobePathTextBox\"", RegexOptions.None, TimeSpan.FromSeconds(1)), xaml);
         Assert.Matches(new Regex("x:Name=\"SettingsDialog\"[\\s\\S]*?AutomationProperties.AutomationId=\"OutputDirectoryTextBox\"", RegexOptions.None, TimeSpan.FromSeconds(1)), xaml);

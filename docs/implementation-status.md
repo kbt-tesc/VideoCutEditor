@@ -242,11 +242,17 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
   - Kept the existing Re-encode-only HDR-to-SDR checkbox contextual to detected HDR media and default-checked for each newly opened HDR source.
   - Added tested INFO-window labels for HDR10/PQ and HLG plus ffprobe color space, transfer characteristic, and color primaries.
   - Increased the media-information field height for the additional diagnostic lines while retaining the modeless scrollable INFO layout.
+- `feat: select a shared ffmpeg tool folder`
+  - Added a primary settings picker for a folder containing both `ffmpeg.exe` and `ffprobe.exe`.
+  - Both full paths are filled and individual controls remain hidden when the pair is found together.
+  - Missing tools or previously configured paths in different directories reveal the existing separate executable selectors without discarding a tool that was found.
+  - Added Core directory-resolution tests, app-layer state-transition tests, and source-level settings UI contracts.
 
 ## Implemented Capabilities
 
 - WinUI 3 editor shell with usable first screen.
 - External `ffmpeg` and `ffprobe` path configuration with PATH discovery fallback.
+- Shared ffmpeg tool-folder selection with automatic fallback to individual ffmpeg/ffprobe file selectors.
 - File picker-based executable and output folder selection.
 - Drag and drop video opening, with confirmation when replacing an already opened video.
 - Preview area using `MediaPlayerElement`.
@@ -324,7 +330,7 @@ Most recent successful checks:
   - 62 UI tests passed and a non-empty AV1 NVEnc output was produced on RTX 5080.
   - A repeat run also passed 62 UI tests and produced a complete screenshot confirming AV1, NVEnc, Quality 23, completion state, timeline, and waveform rendering. The earlier partial-black capture did not reproduce.
 - `dotnet test VideoCutEditor.slnx`
-  - 138 Core tests and 10 app-layer tests passed with no failures or skips after adding HDR10/PQ and HLG media-summary coverage.
+  - 140 Core tests and 12 app-layer tests passed with no failures or skips after adding shared tool-folder resolution and fallback-state coverage.
 - `powershell -ExecutionPolicy Bypass -File .agents\skills\winui-dev-workflow\BuildAndRun.ps1 .\src\VideoCutEditor\VideoCutEditor.csproj -SkipRun`
   - Debug x64 build passed with the Windows App SDK analyzer enabled, with zero warnings and zero errors.
 - `dotnet build src\VideoCutEditor\VideoCutEditor.csproj -c Release -p:Platform=x64 -p:WindowsPackageType=None`

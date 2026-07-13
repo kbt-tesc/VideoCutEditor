@@ -5,4 +5,6 @@ namespace VideoCutEditor.Core.Services;
 public interface IFfmpegToolPathService
 {
     FfmpegToolPaths Resolve(AppSettings settings);
+
+    FfmpegToolPaths ResolveDirectory(string directoryPath);
 }
