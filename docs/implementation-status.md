@@ -252,6 +252,9 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
   - Updated release naming contracts and README commands for `0.2.0`.
   - Replaced asynchronous `Progress<T>` in the fade integration assertion with deterministic inline progress after a release-gate run exposed a callback race; the focused retry and full suite passed.
   - Created the x64 portable ZIP and SHA-256 file, confirmed the archive contains only `VideoCutEditor.exe` and `README.txt`, verified product version `0.2.0`, and smoke-launched the extracted EXE.
+- `docs: add concise Japanese user guide`
+  - Added user-facing README instructions for first launch, ffmpeg/ffprobe setup, range selection, Fast copy, Re-encode, HDR conversion, audio normalization, and output access.
+  - Kept repository and build guidance in a separate developer section below the user guide.
 
 ## Implemented Capabilities
 
