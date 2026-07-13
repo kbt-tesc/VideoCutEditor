@@ -251,7 +251,7 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
   - Bumped the app and default portable release version from `0.1.0` to `0.2.0` after the HDR information and shared ffmpeg-folder features.
   - Updated release naming contracts and README commands for `0.2.0`.
   - Replaced asynchronous `Progress<T>` in the fade integration assertion with deterministic inline progress after a release-gate run exposed a callback race; the focused retry and full suite passed.
-  - Created the x64 portable ZIP and SHA-256 file, confirmed the archive contains only `VideoCutEditor.exe` and `README.txt`, verified product version `0.2.0`, and smoke-launched the extracted EXE.
+  - Created the x64 portable ZIP and SHA-256 file, confirmed the replacement archive contains only `VideoCutEditor.exe` and the user-only `README.md`, verified product version `0.2.0`, and smoke-launched the extracted EXE.
 - `docs: add concise Japanese user guide`
   - Added user-facing README instructions for first launch, ffmpeg/ffprobe setup, range selection, Fast copy, Re-encode, HDR conversion, audio normalization, and output access.
   - Kept repository and build guidance in a separate developer section below the user guide.
@@ -332,7 +332,7 @@ Most recent successful checks:
 
 - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\New-PortableRelease.ps1 -Version 0.2.0 -Platform x64 -Configuration Release`
   - Created `artifacts\releases\VideoCutEditor-0.2.0-win-x64.zip` and its `.sha256` file after portable artifact validation.
-  - SHA-256 is `ae1fdc6e94aaab1decf2a54dcf9a5bd1028576637d00c026f27d7e7e49d266e5`; extraction, archive-content validation, product-version inspection, and startup smoke testing passed.
+  - Replacement SHA-256 is `084af74639ad281e53910f82720e73045802e9cd787190ad0fb21bf698894d0a`; extraction, user-only README section validation, product-version inspection, and startup smoke testing passed.
 - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\New-PortableRelease.ps1 -Version 0.1.0 -Platform x64 -Configuration Release`
   - Created `artifacts\releases\VideoCutEditor-0.1.0-win-x64.zip` and its `.sha256` file after portable artifact validation.
   - The ZIP contains only `VideoCutEditor.exe` and `README.txt`; checksum verification, product-version inspection, extraction, and startup smoke testing passed.
