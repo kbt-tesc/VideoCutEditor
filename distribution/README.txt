@@ -1,6 +1,0 @@
-VideoCutEditor portable版
-
-1. VideoCutEditor.exeを任意のフォルダーへ展開して起動してください。
-2. ffmpegとffprobeは同梱されていません。wingetなどでインストールしてPATHを通すか、設定画面から各実行ファイルを指定してください。
-3. 出力フォルダーも設定画面から指定できます。
-4. この配布物はインストーラーおよびコード署名なしの初期portableリリースです。Windowsの警告が表示される場合があります。

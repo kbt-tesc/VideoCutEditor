@@ -135,7 +135,21 @@ public sealed class PublishProfileTests
         Assert.Contains("[string]$Version = \"0.2.0\"", script);
         Assert.Contains("Compress-Archive", script);
         Assert.Contains("Get-FileHash", script);
-        Assert.Contains("README.txt", script);
+        Assert.Contains("README.md", script);
+        Assert.DoesNotContain("README.txt", script);
+    }
+
+    [Fact]
+    public void Portable_release_readme_contains_only_user_guidance()
+    {
+        string readmePath = Path.Combine(FindRepositoryRoot(), "distribution", "README.md");
+        string readme = File.ReadAllText(readmePath);
+
+        Assert.Contains("## 初回起動", readme);
+        Assert.Contains("## Fast copy（エンコードなし）", readme);
+        Assert.Contains("## Re-encode（エンコードあり）", readme);
+        Assert.DoesNotContain("開発者向け情報", readme);
+        Assert.DoesNotContain("dotnet test", readme);
     }
 
     [Fact]

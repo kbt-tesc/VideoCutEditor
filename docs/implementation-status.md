@@ -255,6 +255,10 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 - `docs: add concise Japanese user guide`
   - Added user-facing README instructions for first launch, ffmpeg/ffprobe setup, range selection, Fast copy, Re-encode, HDR conversion, audio normalization, and output access.
   - Kept repository and build guidance in a separate developer section below the user guide.
+- `chore: include the Japanese user guide in release archives`
+  - Replaced the minimal portable `README.txt` with a user-only `README.md` containing first-launch, Fast copy, Re-encode, HDR, normalization, and output instructions.
+  - Added release-contract tests that require the user sections and reject developer commands from the packaged guide.
+  - Kept release version `0.2.0` for the requested replacement archive.
 
 ## Implemented Capabilities
 
@@ -341,7 +345,7 @@ Most recent successful checks:
   - 62 UI tests passed and a non-empty AV1 NVEnc output was produced on RTX 5080.
   - A repeat run also passed 62 UI tests and produced a complete screenshot confirming AV1, NVEnc, Quality 23, completion state, timeline, and waveform rendering. The earlier partial-black capture did not reproduce.
 - `dotnet test VideoCutEditor.slnx`
-  - 140 Core tests and 12 app-layer tests passed with no failures or skips after adding shared tool-folder resolution and fallback-state coverage.
+  - 141 Core tests and 12 app-layer tests passed with no failures or skips after adding the packaged user-guide contract.
 - `powershell -ExecutionPolicy Bypass -File .agents\skills\winui-dev-workflow\BuildAndRun.ps1 .\src\VideoCutEditor\VideoCutEditor.csproj -SkipRun`
   - Debug x64 build passed with the Windows App SDK analyzer enabled, with zero warnings and zero errors.
 - `dotnet build src\VideoCutEditor\VideoCutEditor.csproj -c Release -p:Platform=x64 -p:WindowsPackageType=None`

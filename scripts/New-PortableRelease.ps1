@@ -51,11 +51,11 @@ try {
     New-Item -ItemType Directory -Path $stagingDirectory | Out-Null
     Copy-Item -LiteralPath $exePath -Destination (Join-Path $stagingDirectory "VideoCutEditor.exe")
 
-    $readmePath = Join-Path $repoRoot "distribution\README.txt"
+    $readmePath = Join-Path $repoRoot "distribution\README.md"
     if (-not (Test-Path -LiteralPath $readmePath -PathType Leaf)) {
         throw "Portable release README was not found at '$readmePath'."
     }
-    Copy-Item -LiteralPath $readmePath -Destination (Join-Path $stagingDirectory "README.txt")
+    Copy-Item -LiteralPath $readmePath -Destination (Join-Path $stagingDirectory "README.md")
 
     Remove-Item -LiteralPath $zipPath -Force -ErrorAction SilentlyContinue
     Remove-Item -LiteralPath $checksumPath -Force -ErrorAction SilentlyContinue
