@@ -18,8 +18,11 @@ Use a small MVVM-style structure:
 - `FfmpegCapabilityService` detects available encoders and encoder options.
 - `ExportService` builds export plans and ffmpeg arguments.
 - `FfmpegRunner` starts ffmpeg, parses progress, captures logs, and supports cancellation.
+- `ExportClip` captures one registered range and its output title. `ClipTitleService` normalizes titles and avoids collisions with the current registration list and existing destination MP4 files.
 
 Prefer testable command-generation code that does not require launching ffmpeg.
+
+Registered clips are kept in memory for the currently opened source video. The view model exports them sequentially using the same export settings and planner selection, creating one independent `<title>.mp4` plan per item. Opening another source clears the registration list. When the list is empty, the existing single-range export path remains available for compatibility.
 
 ## Settings Persistence
 

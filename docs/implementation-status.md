@@ -6,11 +6,16 @@ This document is the handoff ledger for future Codex sessions. Read it after `AG
 
 ## Current State
 
-VideoCutEditor has a working WinUI 3/.NET 10 editor shell with a single-range video extraction workflow. The app can detect externally installed `ffmpeg` and `ffprobe`, probe media metadata, preview videos through Windows media playback when possible, set start/end markers, suggest re-encode bitrates from metadata, configure clip-edge fades, and export Fast copy or Re-encode through bitrate/target-size/quality rate control. Two-pass audio normalization is available as an option within both export modes, and Re-encode exposes an advanced additional ffmpeg arguments field with focused guardrails.
+VideoCutEditor has a working WinUI 3/.NET 10 editor shell with video range extraction. Work is in progress on registering multiple ranges from one source and exporting each range as an independent clip. The app can detect externally installed `ffmpeg` and `ffprobe`, probe media metadata, preview videos through Windows media playback when possible, set start/end markers, suggest re-encode bitrates from metadata, configure clip-edge fades, and export Fast copy or Re-encode through bitrate/target-size/quality rate control. Two-pass audio normalization is available as an option within both export modes, and Re-encode exposes an advanced additional ffmpeg arguments field with focused guardrails.
 
 The project is being developed in small TDD slices. Keep using behavior-focused tests first, then implement the smallest production change, verify, and commit each slice.
 
 ## Completed Slices
+
+- Multi-range export registration foundation (in progress on `codex/multi-marker-export`).
+  - Added the immutable `ExportClip` range/title model.
+  - Added collision-safe title generation for blank titles, registered titles, existing MP4 files, optional `.mp4` input, and invalid filename characters.
+  - Locked the behavior with five focused core tests.
 
 - `9ac5d75 chore: add WinUI solution scaffold and repo guidance`
   - Created the WinUI 3/.NET 10 solution, app project, core project, and test project.
