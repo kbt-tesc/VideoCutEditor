@@ -1,16 +1,22 @@
 # Implementation Status
 
-Last updated: 2026-07-13
+Last updated: 2026-07-18
 
 This document is the handoff ledger for future Codex sessions. Read it after `AGENTS.md`, `docs/product-spec.md`, `docs/technical-design.md`, `docs/codex-workflow.md`, and `docs/implementation-kickoff.md` before choosing the next implementation slice.
 
 ## Current State
 
-VideoCutEditor has a working WinUI 3/.NET 10 editor shell with video range extraction. Work is in progress on registering multiple ranges from one source and exporting each range as an independent clip. The app can detect externally installed `ffmpeg` and `ffprobe`, probe media metadata, preview videos through Windows media playback when possible, set start/end markers, suggest re-encode bitrates from metadata, configure clip-edge fades, and export Fast copy or Re-encode through bitrate/target-size/quality rate control. Two-pass audio normalization is available as an option within both export modes, and Re-encode exposes an advanced additional ffmpeg arguments field with focused guardrails.
+VideoCutEditor has a working WinUI 3/.NET 10 editor with single-range extraction and multi-clip batch export from one source video. The app can detect externally installed `ffmpeg` and `ffprobe`, probe media metadata, preview videos through Windows media playback when possible, set and register start/end ranges, edit or overwrite registered clips, suggest re-encode bitrates from metadata, configure clip-edge fades, and export Fast copy or Re-encode through bitrate/target-size/quality rate control. Two-pass audio normalization is available as an option within both export modes, and Re-encode exposes an advanced additional ffmpeg arguments field with focused guardrails.
 
 The project is being developed in small TDD slices. Keep using behavior-focused tests first, then implement the smallest production change, verify, and commit each slice.
 
 ## Completed Slices
+
+- `0.4.0` release preparation.
+  - Advanced the app and release-script defaults from `0.3.0` to `0.4.0` for the merged multi-clip feature release.
+  - Updated the packaged Japanese guide with clip registration, automatic titles, list editing/deletion, confirmed overwrite, batch naming, and the current installer filename.
+  - Added release-contract assertions so packaged guidance cannot silently fall behind the implemented multi-clip workflow.
+  - Passed 29 focused packaging contract tests, the full 161 Core and 21 app-layer Release tests, and the x64 Release build with 0 warnings and 0 errors.
 
 - Multi-range export registration and batch output (`codex/multi-marker-export`).
   - Added the immutable `ExportClip` range/title model.

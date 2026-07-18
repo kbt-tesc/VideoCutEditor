@@ -69,7 +69,7 @@ public sealed class PublishProfileTests
         string projectPath = Path.Combine(FindRepositoryRoot(), "src", "VideoCutEditor", "VideoCutEditor.csproj");
         XDocument project = XDocument.Load(projectPath);
 
-        Assert.Equal("0.3.0", project.Descendants("Version").Single().Value);
+        Assert.Equal("0.4.0", project.Descendants("Version").Single().Value);
     }
 
     [Fact]
@@ -141,7 +141,7 @@ public sealed class PublishProfileTests
 
         Assert.Contains("Publish-Portable.ps1", script);
         Assert.Contains("-Version $Version", script);
-        Assert.Contains("[string]$Version = \"0.3.0\"", script);
+        Assert.Contains("[string]$Version = \"0.4.0\"", script);
         Assert.Contains("Compress-Archive", script);
         Assert.Contains("Get-FileHash", script);
         Assert.Contains("README.md", script);
@@ -164,6 +164,10 @@ public sealed class PublishProfileTests
         Assert.Contains("HDR動画をSDRへ変換", readme);
         Assert.Contains("## Fast copy（エンコードなし）", readme);
         Assert.Contains("## Re-encode（エンコードあり）", readme);
+        Assert.Contains("## 複数クリップをまとめて書き出す", readme);
+        Assert.Contains("編集", readme);
+        Assert.Contains("上書き", readme);
+        Assert.Contains("<タイトル>.mp4", readme);
         Assert.DoesNotContain("開発者向け情報", readme);
         Assert.DoesNotContain("dotnet test", readme);
     }
@@ -209,7 +213,7 @@ public sealed class PublishProfileTests
         Assert.Contains("Publish-Portable.ps1", releaseScript);
         Assert.Contains("makensis", releaseScript, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Get-FileHash", releaseScript);
-        Assert.Contains("[string]$Version = \"0.3.0\"", releaseScript);
+        Assert.Contains("[string]$Version = \"0.4.0\"", releaseScript);
     }
 
     public static TheoryData<string, int, int> AppIconPngAssets => new()
