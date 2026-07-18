@@ -19,6 +19,7 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
   - Added the main-page clip title/add controls and a reopenable modeless export-list window with fixed start/end columns, a responsive title column, and per-row deletion.
   - Added sequential batch export with registration-order `<title>.mp4` plans, destination preflight, overall progress, edit locking, cancellation, and stop-on-first-failure behavior.
   - Added reusable `FastCopyMultiClip` isolated UI verification that opens generated media, registers two ranges, verifies the owned list window, and creates two non-empty MP4 files through real ffmpeg.
+  - Moved the clip-title input, add button, and list command from the export settings panel to the timeline control row immediately after the start/end marker buttons.
   - Locked the behavior with five focused core tests.
   - Added six app-layer tests for range snapshots, placeholder/duplicate naming, list signaling, removal, invalid-range rejection, ordered plans, preflight collision handling, and failure stopping.
 
@@ -359,7 +360,7 @@ Most recent successful checks:
   - 66 UI checks passed with generated media and isolated settings/output directories.
   - The first registration opened one main-owned modeless list window, both titled ranges appeared, and real ffmpeg produced non-empty `前半.mp4` and `後半.mp4` files in one export operation.
 - `dotnet test VideoCutEditor.slnx -c Release`
-  - 160 core tests and 18 app-layer tests passed after the multi-range registration and batch export implementation.
+  - 161 core tests and 18 app-layer tests passed after the multi-range registration, batch export implementation, and timeline-toolbar title placement update.
 - `powershell -ExecutionPolicy Bypass -File .agents\skills\winui-dev-workflow\BuildAndRun.ps1 .\src\VideoCutEditor\VideoCutEditor.csproj -SkipRun`
   - The WinUI Analyzer-enabled Debug x64 build succeeded with 0 warnings and 0 errors.
 

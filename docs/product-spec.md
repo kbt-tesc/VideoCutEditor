@@ -44,7 +44,7 @@ Each registered range is exported as an independent MP4 file. Merging ranges int
   - Bitrate, target size, or quality controls
 - Keep ffmpeg, ffprobe, and output-folder path configuration in a settings surface rather than the main editing surface. Tool configuration first asks for one folder containing both `ffmpeg.exe` and `ffprobe.exe`. When either executable is missing from that folder, reveal separate file selectors so the missing or nonstandard path can be configured individually.
 - The main export surface shows an editable output file name initialized from the generated output name, plus the read-only full planned output path.
-- The main export surface also provides a clip-title text box and an add button. Adding captures the current start/end range and title without changing the source video.
+- The timeline control row places a compact clip-title text box and add button immediately to the right of the start/end marker buttons. Adding captures the current start/end range and title without changing the source video.
 - The first registered clip opens a modeless export-list window. The list shows fixed-width start and end columns and a title column that expands or contracts with the window.
 - A blank title is assigned a one-based placeholder such as `クリップ_1`. Registered titles and existing destination MP4 files are not reused; a numeric suffix is added when needed.
 - The main export surface provides an output-folder open button beside the planned output controls.

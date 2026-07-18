@@ -201,6 +201,22 @@ public sealed class UserInterfaceSourceTests
         Assert.Contains("SetOwner(ownerWindowHandle);", listCodeBehind);
     }
 
+    [Fact]
+    public void Clip_title_registration_is_placed_beside_the_range_marker_buttons()
+    {
+        string xaml = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "src", "VideoCutEditor", "MainPage.xaml"));
+
+        int markEndIndex = xaml.IndexOf("AutomationProperties.AutomationId=\"MarkEndButton\"", StringComparison.Ordinal);
+        int clipTitleIndex = xaml.IndexOf("AutomationProperties.AutomationId=\"ClipTitleTextBox\"", StringComparison.Ordinal);
+        int addClipIndex = xaml.IndexOf("AutomationProperties.AutomationId=\"AddClipButton\"", StringComparison.Ordinal);
+        int rangeInputIndex = xaml.IndexOf("AutomationProperties.AutomationId=\"RangeStartTextBox\"", StringComparison.Ordinal);
+
+        Assert.True(markEndIndex >= 0 && markEndIndex < clipTitleIndex);
+        Assert.True(clipTitleIndex < addClipIndex);
+        Assert.True(addClipIndex < rangeInputIndex);
+        Assert.Single(Regex.Matches(xaml, "AutomationProperties.AutomationId=\"ClipTitleTextBox\"").Cast<Match>());
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

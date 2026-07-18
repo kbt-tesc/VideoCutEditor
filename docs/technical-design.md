@@ -54,6 +54,8 @@ Encoder information, media information, and export logs are displayed by one mod
 
 Registered ranges are displayed by a separate modeless `ExportListWindow` owned by the main HWND. The first registration opens it automatically, and the main page can reopen the retained list while registrations exist. Start and end columns use fixed widths; the title column uses the remaining width with stretched `ListViewItem` content. Each row provides an icon delete action, and the window binds to the same in-memory collection as `MainPageViewModel`.
 
+The registration input belongs to the timeline workflow rather than the export-settings panel. The compact title field, add command, and list command sit directly after the start/end marker buttons so selecting a range and registering it remain one local operation.
+
 HDR detection treats a video stream as HDR when ffprobe reports `color_transfer=smpte2084` (HDR10/PQ) or `color_transfer=arib-std-b67` (HLG). `color_space` and `color_primaries` are retained for display/debugging and future refinement, but transfer characteristics drive the current HDR decision to avoid treating BT.2020 SDR as HDR.
 
 ## Export Modes
