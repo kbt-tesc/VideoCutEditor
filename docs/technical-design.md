@@ -18,8 +18,15 @@ Use a small MVVM-style structure:
 - `FfmpegCapabilityService` detects available encoders and encoder options.
 - `ExportService` builds export plans and ffmpeg arguments.
 - `FfmpegRunner` starts ffmpeg, parses progress, captures logs, and supports cancellation.
+- `ExportClip` captures one registered range and its output title. `ClipTitleService` normalizes titles and avoids collisions with the current registration list and existing destination MP4 files.
 
 Prefer testable command-generation code that does not require launching ffmpeg.
+
+Registered clips are kept in memory for the currently opened source video. The view model exports them sequentially using the same export settings and planner selection, creating one independent `<title>.mp4` plan per item. Opening another source clears the registration list. When the list is empty, the existing single-range export path remains available for compatibility.
+
+Explicit clip titles are normalized before matching, including trimming and optional `.mp4` removal. A match is treated as an edit target rather than passed through collision suffixing. `MainPageViewModel` stores the pending existing item and replacement range, raises a confirmation request, and replaces the immutable `ExportClip` in the observable collection only after the main-page `ContentDialog` returns approval. Canceling leaves both the original list item and current edit controls unchanged.
+
+Batch export snapshots the registration list before starting, checks every destination for an existing file before launching ffmpeg, and disables list edits while processing. Progress for each plan is mapped into one overall progress value. Cancellation or the first failed plan stops later items; already completed independent files remain in the output directory.
 
 ## Settings Persistence
 
@@ -46,6 +53,10 @@ If ffprobe cannot return a source bitrate, fall back to stream-level bitrate or 
 The initial media probing implementation runs `ffprobe -v error -show_format -show_streams -print_format json <source>` through `ProcessStartInfo.ArgumentList`, parses format and stream metadata in testable code, and uses the primary video stream frame rate for one-frame keyboard stepping when available.
 
 Encoder information, media information, and export logs are displayed by one modeless `InfoWindow`. The main page retains the window instance while it is open, activates that instance on repeated INFO commands, and releases it after `Closed`. The secondary HWND sets the main HWND as its native owner, preserving normal owner stacking and minimize behavior without making the window modal. The window binds to the same `MainPageViewModel` as the editor so export progress and logs continue updating without blocking the main window. `MediaSummaryFormatter` labels `smpte2084` as `HDR10 (PQ)`, labels `arib-std-b67` as `HLG`, and displays raw ffprobe color space, transfer, and primaries values for diagnosis. Unloading the main page closes the secondary window to keep application lifetime predictable.
+
+Registered ranges are displayed by a separate modeless `ExportListWindow` owned by the main HWND. The first registration opens it automatically, and the main page can reopen the retained list while registrations exist. Start and end columns use fixed widths; the title column uses the remaining width with stretched `ListViewItem` content. Each row provides icon edit and delete actions, and the window binds to the same in-memory collection as `MainPageViewModel`. Edit restores the selected item's range/title through the view model and activates the main owner window.
+
+The registration input belongs to the timeline workflow rather than the export-settings panel. The compact title field, add command, and list command sit directly after the start/end marker buttons so selecting a range and registering it remain one local operation.
 
 HDR detection treats a video stream as HDR when ffprobe reports `color_transfer=smpte2084` (HDR10/PQ) or `color_transfer=arib-std-b67` (HLG). `color_space` and `color_primaries` are retained for display/debugging and future refinement, but transfer characteristics drive the current HDR decision to avoid treating BT.2020 SDR as HDR.
 
@@ -215,6 +226,8 @@ If media metadata confirms there is no audio stream, the planner rejects the exp
 `OutputPathService` creates automatic default output names from the source stem using `<source>_cut<extension>`. When that default path already exists, it probes one-based suffixes in order: `<source>_cut_1<extension>`, `<source>_cut_2<extension>`, and so on.
 
 Manual output filename edits are owned by `MainPageViewModel`. The view model keeps the typed filename, rebuilds the planned output path from the configured output directory and source extension, and exposes `IsManualOutputFileNameCollision` when the manual destination already exists. The warning is informational and non-blocking; `FfmpegRunner` remains the final overwrite guard by refusing to promote the temporary export output when the final path exists.
+
+Registered clip paths are built from the configured output directory and the collision-safe title as `<title>.mp4`. A second preflight immediately before a batch starts catches files created after registration so no batch begins with a known destination collision.
 
 ## Process Execution
 

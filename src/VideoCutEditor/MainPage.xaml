@@ -129,6 +129,9 @@
                                 <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
 
                             <Button
@@ -169,14 +172,46 @@
                                 <TextBlock Text="]" />
                             </Button>
 
-                            <TextBlock
+                            <TextBox
                                 Grid.Column="4"
+                                AutomationProperties.AutomationId="ClipTitleTextBox"
+                                MinWidth="120"
+                                VerticalAlignment="Center"
+                                PlaceholderText="クリップタイトル（空欄は自動）"
+                                Text="{x:Bind ViewModel.ClipTitleText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+
+                            <Button
+                                Grid.Column="5"
+                                AutomationProperties.AutomationId="AddClipButton"
+                                AutomationProperties.Name="{x:Bind ViewModel.ClipRegistrationActionText, Mode=OneWay}"
+                                VerticalAlignment="Center"
+                                Command="{x:Bind ViewModel.AddClipCommand}"
+                                IsEnabled="{x:Bind ViewModel.CanEditRegisteredClips, Mode=OneWay}">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <FontIcon FontSize="16" Glyph="{x:Bind ViewModel.ClipRegistrationActionGlyph, Mode=OneWay}" />
+                                    <TextBlock Text="{x:Bind ViewModel.ClipRegistrationActionText, Mode=OneWay}" />
+                                </StackPanel>
+                            </Button>
+
+                            <Button
+                                Grid.Column="6"
+                                AutomationProperties.AutomationId="ShowExportListButton"
+                                AutomationProperties.Name="登録クリップ一覧を表示"
+                                VerticalAlignment="Center"
+                                Click="ShowExportListButton_Click"
+                                ToolTipService.ToolTip="登録クリップ一覧を表示"
+                                Visibility="{x:Bind local:MainPage.BoolToVisibility(ViewModel.HasRegisteredClips), Mode=OneWay}">
+                                <FontIcon FontSize="16" Glyph="&#xE8FD;" />
+                            </Button>
+
+                            <TextBlock
+                                Grid.Column="7"
                                 VerticalAlignment="Center"
                                 Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                 Text="{x:Bind ViewModel.PositionText, Mode=OneWay}" />
 
                             <TextBlock
-                                Grid.Column="5"
+                                Grid.Column="8"
                                 VerticalAlignment="Center"
                                 Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                 Text="{x:Bind ViewModel.DurationText, Mode=OneWay}" />
@@ -627,6 +662,18 @@
                 </Grid>
             </Grid>
         </Grid>
+
+        <ContentDialog
+            x:Name="OverwriteClipDialog"
+            Grid.RowSpan="3"
+            CloseButtonText="キャンセル"
+            DefaultButton="Primary"
+            PrimaryButtonText="上書き"
+            Title="登録済みクリップを上書きしますか？">
+            <TextBlock
+                x:Name="OverwriteClipMessageText"
+                TextWrapping="Wrap" />
+        </ContentDialog>
 
         <ContentDialog
             x:Name="SettingsDialog"

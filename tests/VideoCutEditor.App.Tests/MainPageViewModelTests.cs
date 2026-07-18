@@ -113,6 +113,143 @@ public sealed class MainPageViewModelTests
     }
 
     [Fact]
+    public void AddClip_captures_range_assigns_placeholder_and_requests_list_once()
+    {
+        string directory = CreateTempDirectory();
+        MainPageViewModel viewModel = CreateViewModel();
+        viewModel.SelectedSourcePath = Path.Combine(directory, "source.mp4");
+        viewModel.OutputDirectory = directory;
+        viewModel.RangeStartSeconds = 2.5;
+        viewModel.RangeEndSeconds = 8.75;
+        int listRequestCount = 0;
+        viewModel.ExportListRequested += (_, _) => listRequestCount++;
+
+        viewModel.AddClipCommand.Execute(null);
+        viewModel.RangeStartSeconds = 10;
+        viewModel.RangeEndSeconds = 12;
+        viewModel.AddClipCommand.Execute(null);
+
+        Assert.Collection(
+            viewModel.RegisteredClips,
+            first =>
+            {
+                Assert.Equal("クリップ_1", first.Title);
+                Assert.Equal(TimeSpan.FromSeconds(2.5), first.Range.Start);
+                Assert.Equal(TimeSpan.FromSeconds(8.75), first.Range.End);
+            },
+            second => Assert.Equal("クリップ_2", second.Title));
+        Assert.Equal(1, listRequestCount);
+        Assert.Equal(string.Empty, viewModel.ClipTitleText);
+        Assert.True(viewModel.HasRegisteredClips);
+        Assert.Equal("登録クリップ: 2件", viewModel.RegisteredClipCountText);
+    }
+
+    [Fact]
+    public void Duplicate_clip_title_requests_confirmation_and_confirm_overwrites_the_range()
+    {
+        string directory = CreateTempDirectory();
+        MainPageViewModel viewModel = CreateViewModel();
+        viewModel.SelectedSourcePath = Path.Combine(directory, "source.mp4");
+        viewModel.OutputDirectory = directory;
+        viewModel.RangeEndSeconds = 1;
+        viewModel.ClipTitleText = "見どころ";
+        viewModel.AddClipCommand.Execute(null);
+        viewModel.RangeStartSeconds = 3;
+        viewModel.RangeEndSeconds = 7;
+        viewModel.ClipTitleText = " 見どころ.MP4 ";
+        int confirmationRequestCount = 0;
+        viewModel.ClipOverwriteConfirmationRequested += (_, _) => confirmationRequestCount++;
+
+        Assert.Equal("上書き", viewModel.ClipRegistrationActionText);
+        viewModel.AddClipCommand.Execute(null);
+
+        ExportClip pending = Assert.Single(viewModel.RegisteredClips);
+        Assert.Equal(TimeSpan.Zero, pending.Range.Start);
+        Assert.Equal(TimeSpan.FromSeconds(1), pending.Range.End);
+        Assert.Equal(1, confirmationRequestCount);
+
+        viewModel.ConfirmClipOverwrite();
+
+        ExportClip overwritten = Assert.Single(viewModel.RegisteredClips);
+        Assert.Equal("見どころ", overwritten.Title);
+        Assert.Equal(TimeSpan.FromSeconds(3), overwritten.Range.Start);
+        Assert.Equal(TimeSpan.FromSeconds(7), overwritten.Range.End);
+        Assert.Equal(string.Empty, viewModel.ClipTitleText);
+        Assert.Equal("追加", viewModel.ClipRegistrationActionText);
+        Assert.Contains("上書きしました", viewModel.StatusMessage);
+    }
+
+    [Fact]
+    public void EditClip_restores_title_and_range_without_changing_the_list()
+    {
+        MainPageViewModel viewModel = CreateViewModel();
+        var clip = new ExportClip(
+            new ClipRange(TimeSpan.FromSeconds(12.5), TimeSpan.FromSeconds(18.75)),
+            "編集対象");
+        viewModel.RegisteredClips.Add(clip);
+
+        viewModel.EditClipCommand.Execute(clip);
+
+        Assert.Equal("編集対象", viewModel.ClipTitleText);
+        Assert.Equal(12.5, viewModel.RangeStartSeconds);
+        Assert.Equal(18.75, viewModel.RangeEndSeconds);
+        Assert.Equal("0:12.500", viewModel.RangeStartText);
+        Assert.Equal("0:18.750", viewModel.RangeEndText);
+        Assert.Equal("上書き", viewModel.ClipRegistrationActionText);
+        Assert.Same(clip, Assert.Single(viewModel.RegisteredClips));
+    }
+
+    [Fact]
+    public void CancelClipOverwrite_keeps_the_original_clip_and_edit_values()
+    {
+        string directory = CreateTempDirectory();
+        MainPageViewModel viewModel = CreateViewModel();
+        viewModel.SelectedSourcePath = Path.Combine(directory, "source.mp4");
+        viewModel.OutputDirectory = directory;
+        viewModel.RangeEndSeconds = 2;
+        viewModel.ClipTitleText = "残す";
+        viewModel.AddClipCommand.Execute(null);
+        viewModel.RangeEndSeconds = 4;
+        viewModel.ClipTitleText = "残す";
+        viewModel.AddClipCommand.Execute(null);
+
+        viewModel.CancelClipOverwrite();
+
+        ExportClip clip = Assert.Single(viewModel.RegisteredClips);
+        Assert.Equal(TimeSpan.FromSeconds(2), clip.Range.End);
+        Assert.Equal("残す", viewModel.ClipTitleText);
+        Assert.Equal(4, viewModel.RangeEndSeconds);
+    }
+
+    [Fact]
+    public void Remove_clip_updates_registered_state()
+    {
+        MainPageViewModel viewModel = CreateViewModel();
+        var clip = new ExportClip(new ClipRange(TimeSpan.Zero, TimeSpan.FromSeconds(1)), "削除対象");
+        viewModel.RegisteredClips.Add(clip);
+
+        viewModel.RemoveClipCommand.Execute(clip);
+
+        Assert.Empty(viewModel.RegisteredClips);
+        Assert.False(viewModel.HasRegisteredClips);
+        Assert.Equal("登録クリップはありません", viewModel.RegisteredClipCountText);
+    }
+
+    [Fact]
+    public void AddClip_rejects_invalid_range()
+    {
+        MainPageViewModel viewModel = CreateViewModel();
+        viewModel.SelectedSourcePath = "source.mp4";
+        viewModel.RangeStartSeconds = 5;
+        viewModel.RangeEndSeconds = 5;
+
+        viewModel.AddClipCommand.Execute(null);
+
+        Assert.Empty(viewModel.RegisteredClips);
+        Assert.Equal("終了時刻は開始時刻より後にしてください", viewModel.StatusMessage);
+    }
+
+    [Fact]
     public async Task Export_validation_reports_missing_source_before_starting_runner()
     {
         var runner = new RecordingFfmpegRunner();
@@ -170,6 +307,95 @@ public sealed class MainPageViewModelTests
         Assert.False(viewModel.IsExporting);
         Assert.Contains("書き出しが完了しました", viewModel.StatusMessage);
         Assert.NotNull(settings.SavedSettings);
+    }
+
+    [Fact]
+    public async Task ExportAsync_writes_registered_clips_in_order_as_title_mp4_files()
+    {
+        string directory = CreateTempDirectory();
+        string sourcePath = await CreateFileAsync(directory, "source.mkv");
+        string ffmpegPath = await CreateFileAsync(directory, "ffmpeg.exe");
+        var runner = new SuccessfulFfmpegRunner();
+        MainPageViewModel viewModel = CreateViewModel(ffmpegRunner: runner);
+        viewModel.SelectedSourcePath = sourcePath;
+        viewModel.FfmpegPath = ffmpegPath;
+        viewModel.OutputDirectory = directory;
+        viewModel.RangeStartSeconds = 1;
+        viewModel.RangeEndSeconds = 3;
+        viewModel.ClipTitleText = "前半";
+        viewModel.AddClipCommand.Execute(null);
+        viewModel.RangeStartSeconds = 5;
+        viewModel.RangeEndSeconds = 9;
+        viewModel.ClipTitleText = "後半";
+        viewModel.AddClipCommand.Execute(null);
+
+        await viewModel.ExportCommand.ExecuteAsync(null);
+
+        Assert.Collection(
+            runner.Plans,
+            first =>
+            {
+                Assert.Equal(Path.Combine(directory, "前半.mp4"), first.FinalOutputPath);
+                Assert.Contains("00:00:01.000", first.Arguments);
+                Assert.Contains("00:00:02.000", first.Arguments);
+            },
+            second =>
+            {
+                Assert.Equal(Path.Combine(directory, "後半.mp4"), second.FinalOutputPath);
+                Assert.Contains("00:00:05.000", second.Arguments);
+                Assert.Contains("00:00:04.000", second.Arguments);
+            });
+        Assert.Equal(1, viewModel.ExportProgressValue);
+        Assert.Equal("2件の書き出しが完了しました", viewModel.StatusMessage);
+        Assert.Contains("[1/2] 前半.mp4", viewModel.ExportLogText);
+        Assert.Contains("[2/2] 後半.mp4", viewModel.ExportLogText);
+    }
+
+    [Fact]
+    public async Task ExportAsync_preflights_registered_output_collisions_before_starting_runner()
+    {
+        string directory = CreateTempDirectory();
+        string sourcePath = await CreateFileAsync(directory, "source.mp4");
+        string ffmpegPath = await CreateFileAsync(directory, "ffmpeg.exe");
+        var runner = new RecordingFfmpegRunner();
+        MainPageViewModel viewModel = CreateViewModel(ffmpegRunner: runner);
+        viewModel.SelectedSourcePath = sourcePath;
+        viewModel.FfmpegPath = ffmpegPath;
+        viewModel.OutputDirectory = directory;
+        viewModel.RangeEndSeconds = 2;
+        viewModel.ClipTitleText = "予約済み";
+        viewModel.AddClipCommand.Execute(null);
+        await File.WriteAllTextAsync(Path.Combine(directory, "予約済み.mp4"), "existing");
+
+        await viewModel.ExportCommand.ExecuteAsync(null);
+
+        Assert.False(runner.WasCalled);
+        Assert.Equal("同名の出力ファイルが既に存在します: 予約済み.mp4", viewModel.StatusMessage);
+    }
+
+    [Fact]
+    public async Task ExportAsync_stops_batch_after_a_failed_clip()
+    {
+        string directory = CreateTempDirectory();
+        string sourcePath = await CreateFileAsync(directory, "source.mp4");
+        string ffmpegPath = await CreateFileAsync(directory, "ffmpeg.exe");
+        var runner = new FailOnSecondFfmpegRunner();
+        MainPageViewModel viewModel = CreateViewModel(ffmpegRunner: runner);
+        viewModel.SelectedSourcePath = sourcePath;
+        viewModel.FfmpegPath = ffmpegPath;
+        viewModel.OutputDirectory = directory;
+        viewModel.RangeEndSeconds = 1;
+        foreach (string title in new[] { "one", "two", "three" })
+        {
+            viewModel.ClipTitleText = title;
+            viewModel.AddClipCommand.Execute(null);
+        }
+
+        await viewModel.ExportCommand.ExecuteAsync(null);
+
+        Assert.Equal(2, runner.CallCount);
+        Assert.Equal("1/3件を書き出した後に停止しました: テスト失敗", viewModel.StatusMessage);
+        Assert.False(viewModel.IsExporting);
     }
 
     [Fact]
@@ -308,12 +534,15 @@ public sealed class MainPageViewModelTests
     {
         public ExportPlan? Plan { get; private set; }
 
+        public List<ExportPlan> Plans { get; } = [];
+
         public Task<ExportResult> RunAsync(
             ExportPlan plan,
             IProgress<ExportProgress>? progress = null,
             CancellationToken cancellationToken = default)
         {
             Plan = plan;
+            Plans.Add(plan);
             progress?.Report(new ExportProgress(TimeSpan.FromSeconds(1), null, "書き出し進捗"));
             return Task.FromResult(new ExportResult(true, null));
         }
@@ -343,6 +572,22 @@ public sealed class MainPageViewModelTests
             }
 
             throw new InvalidOperationException("The blocking export runner should be canceled.");
+        }
+    }
+
+    private sealed class FailOnSecondFfmpegRunner : IFfmpegRunner
+    {
+        public int CallCount { get; private set; }
+
+        public Task<ExportResult> RunAsync(
+            ExportPlan plan,
+            IProgress<ExportProgress>? progress = null,
+            CancellationToken cancellationToken = default)
+        {
+            CallCount++;
+            return Task.FromResult(CallCount == 2
+                ? new ExportResult(false, "テスト失敗")
+                : new ExportResult(true, null));
         }
     }
 

@@ -173,6 +173,59 @@ public sealed class UserInterfaceSourceTests
         Assert.Contains("ConvertHdrToSdr = CurrentExportMode == ExportMode.Reencode && IsHdrToSdrOptionVisible && ConvertHdrToSdrEnabled", viewModel);
     }
 
+    [Fact]
+    public void Multi_clip_registration_uses_a_modeless_responsive_list_window()
+    {
+        string root = FindRepositoryRoot();
+        string mainXaml = File.ReadAllText(Path.Combine(root, "src", "VideoCutEditor", "MainPage.xaml"));
+        string mainCodeBehind = File.ReadAllText(Path.Combine(root, "src", "VideoCutEditor", "MainPage.xaml.cs"));
+        string listXaml = File.ReadAllText(Path.Combine(root, "src", "VideoCutEditor", "ExportListWindow.xaml"));
+        string listCodeBehind = File.ReadAllText(Path.Combine(root, "src", "VideoCutEditor", "ExportListWindow.xaml.cs"));
+
+        Assert.Contains("AutomationProperties.AutomationId=\"ClipTitleTextBox\"", mainXaml);
+        Assert.Contains("ViewModel.ClipTitleText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged", mainXaml);
+        Assert.Contains("AutomationProperties.AutomationId=\"AddClipButton\"", mainXaml);
+        Assert.Contains("Command=\"{x:Bind ViewModel.AddClipCommand}\"", mainXaml);
+        Assert.Contains("ViewModel.ClipRegistrationActionText, Mode=OneWay", mainXaml);
+        Assert.Contains("ViewModel.ClipRegistrationActionGlyph, Mode=OneWay", mainXaml);
+        Assert.Contains("AutomationProperties.AutomationId=\"ShowExportListButton\"", mainXaml);
+        Assert.Contains("ViewModel.ExportListRequested += ViewModelExportListRequested;", mainCodeBehind);
+        Assert.Contains("exportListWindow ??= new ExportListWindow(ViewModel, App.WindowHandle);", mainCodeBehind);
+        Assert.Contains("exportListWindow.Activate();", mainCodeBehind);
+
+        Assert.Contains("x:Class=\"VideoCutEditor.ExportListWindow\"", listXaml);
+        Assert.Contains("ItemsSource=\"{x:Bind ViewModel.RegisteredClips, Mode=OneWay}\"", listXaml);
+        Assert.True(Regex.Matches(listXaml, "<ColumnDefinition Width=\"120\" />").Count >= 4);
+        Assert.Contains("<ColumnDefinition Width=\"*\" />", listXaml);
+        Assert.Contains("<Setter Property=\"HorizontalContentAlignment\" Value=\"Stretch\" />", listXaml);
+        Assert.Contains("AutomationProperties.AutomationId=\"RemoveClipButton\"", listXaml);
+        Assert.Contains("AutomationProperties.AutomationId=\"EditClipButton\"", listXaml);
+        Assert.Contains("Click=\"EditClipButton_Click\"", listXaml);
+        Assert.Contains("public ExportListWindow(MainPageViewModel viewModel, nint ownerWindowHandle)", listCodeBehind);
+        Assert.Contains("SetOwner(ownerWindowHandle);", listCodeBehind);
+        Assert.Contains("ViewModel.EditClipCommand.Execute(clip);", listCodeBehind);
+        Assert.Contains("App.Window.Activate();", listCodeBehind);
+        Assert.Contains("x:Name=\"OverwriteClipDialog\"", mainXaml);
+        Assert.Contains("PrimaryButtonText=\"上書き\"", mainXaml);
+        Assert.Contains("ClipOverwriteConfirmationRequested", mainCodeBehind);
+    }
+
+    [Fact]
+    public void Clip_title_registration_is_placed_beside_the_range_marker_buttons()
+    {
+        string xaml = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "src", "VideoCutEditor", "MainPage.xaml"));
+
+        int markEndIndex = xaml.IndexOf("AutomationProperties.AutomationId=\"MarkEndButton\"", StringComparison.Ordinal);
+        int clipTitleIndex = xaml.IndexOf("AutomationProperties.AutomationId=\"ClipTitleTextBox\"", StringComparison.Ordinal);
+        int addClipIndex = xaml.IndexOf("AutomationProperties.AutomationId=\"AddClipButton\"", StringComparison.Ordinal);
+        int rangeInputIndex = xaml.IndexOf("AutomationProperties.AutomationId=\"RangeStartTextBox\"", StringComparison.Ordinal);
+
+        Assert.True(markEndIndex >= 0 && markEndIndex < clipTitleIndex);
+        Assert.True(clipTitleIndex < addClipIndex);
+        Assert.True(addClipIndex < rangeInputIndex);
+        Assert.Single(Regex.Matches(xaml, "AutomationProperties.AutomationId=\"ClipTitleTextBox\"").Cast<Match>());
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

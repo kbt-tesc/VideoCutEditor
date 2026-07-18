@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using VideoCutEditor.Core.Models;
@@ -20,6 +21,7 @@ public partial class MainPageViewModel : ObservableObject
     private readonly IMediaProbeService mediaProbeService;
     private readonly IFfmpegCapabilityService ffmpegCapabilityService;
     private readonly BitrateSuggestionService bitrateSuggestionService;
+    private readonly ClipTitleService clipTitleService;
     private readonly Func<string, bool> outputDirectoryLauncher;
     private CancellationTokenSource? mediaProbeCancellation;
     private CancellationTokenSource? exportCancellation;
@@ -34,6 +36,45 @@ public partial class MainPageViewModel : ObservableObject
     private string plannedOutputFileName = string.Empty;
     private string? lastCompletedOutputPath;
     private bool convertHdrToSdrEnabled;
+    private string clipTitleText = string.Empty;
+    private ExportClip? pendingOverwriteClip;
+    private ClipRange? pendingOverwriteRange;
+
+    public event EventHandler? ExportListRequested;
+
+    public event EventHandler? ClipOverwriteConfirmationRequested;
+
+    public ObservableCollection<ExportClip> RegisteredClips { get; } = [];
+
+    public string ClipTitleText
+    {
+        get => clipTitleText;
+        set
+        {
+            if (SetProperty(ref clipTitleText, value))
+            {
+                NotifyClipRegistrationActionChanged();
+            }
+        }
+    }
+
+    public bool HasRegisteredClips => RegisteredClips.Count > 0;
+
+    public bool CanEditRegisteredClips => !IsExporting;
+
+    public string RegisteredClipCountText => HasRegisteredClips
+        ? $"登録クリップ: {RegisteredClips.Count}件"
+        : "登録クリップはありません";
+
+    public string ClipRegistrationActionText => FindRegisteredClipByTitle() is null
+        ? "追加"
+        : "上書き";
+
+    public string ClipRegistrationActionGlyph => FindRegisteredClipByTitle() is null
+        ? "\uE710"
+        : "\uE74E";
+
+    public string PendingClipOverwriteTitle => pendingOverwriteClip?.Title ?? string.Empty;
 
     [ObservableProperty]
     public partial string? SelectedSourcePath { get; set; }
@@ -279,7 +320,8 @@ public partial class MainPageViewModel : ObservableObject
         IMediaProbeService? mediaProbeService = null,
         IFfmpegCapabilityService? ffmpegCapabilityService = null,
         BitrateSuggestionService? bitrateSuggestionService = null,
-        Func<string, bool>? outputDirectoryLauncher = null)
+        Func<string, bool>? outputDirectoryLauncher = null,
+        ClipTitleService? clipTitleService = null)
     {
         this.settingsService = settingsService;
         this.outputPathService = outputPathService;
@@ -289,6 +331,7 @@ public partial class MainPageViewModel : ObservableObject
         this.ffmpegCapabilityService = ffmpegCapabilityService ?? new FfmpegCapabilityService();
         this.bitrateSuggestionService = bitrateSuggestionService ?? new BitrateSuggestionService();
         this.outputDirectoryLauncher = outputDirectoryLauncher ?? OpenDirectoryInShell;
+        this.clipTitleService = clipTitleService ?? new ClipTitleService();
     }
 
     public async Task InitializeAsync()
@@ -359,6 +402,10 @@ public partial class MainPageViewModel : ObservableObject
     {
         AppLogger.Info($"OpenVideoFileAsync: {file.Path}");
         mediaProbeCancellation?.Cancel();
+        CancelClipOverwrite();
+        RegisteredClips.Clear();
+        ClipTitleText = string.Empty;
+        NotifyRegisteredClipsChanged();
         SelectedSourcePath = file.Path;
         SelectedFileName = file.Name;
         PreviewSource = MediaSource.CreateFromStorageFile(file);
@@ -531,6 +578,116 @@ public partial class MainPageViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private void AddClip()
+    {
+        if (IsExporting)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(SelectedSourcePath))
+        {
+            StatusMessage = "登録前に動画を開いてください";
+            return;
+        }
+
+        var range = new ClipRange(
+            TimeSpan.FromSeconds(RangeStartSeconds),
+            TimeSpan.FromSeconds(RangeEndSeconds));
+        if (!range.IsValid)
+        {
+            StatusMessage = "終了時刻は開始時刻より後にしてください";
+            return;
+        }
+
+        ExportClip? existingClip = FindRegisteredClipByTitle();
+        if (existingClip is not null)
+        {
+            pendingOverwriteClip = existingClip;
+            pendingOverwriteRange = range;
+            StatusMessage = $"上書き確認待ち: {existingClip.Title}";
+            ClipOverwriteConfirmationRequested?.Invoke(this, EventArgs.Empty);
+            return;
+        }
+
+        string title = clipTitleService.CreateAvailableTitle(
+            ClipTitleText,
+            OutputDirectory,
+            RegisteredClips.Select(clip => clip.Title));
+        RegisteredClips.Add(new ExportClip(range, title));
+        ClipTitleText = string.Empty;
+        NotifyRegisteredClipsChanged();
+        StatusMessage = $"クリップを登録しました: {title}";
+
+        if (RegisteredClips.Count == 1)
+        {
+            ExportListRequested?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    [RelayCommand]
+    private void EditClip(ExportClip? clip)
+    {
+        if (IsExporting || clip is null || !RegisteredClips.Contains(clip))
+        {
+            return;
+        }
+
+        RangeStartSeconds = clip.Range.Start.TotalSeconds;
+        RangeEndSeconds = clip.Range.End.TotalSeconds;
+        SetRangeTextWithoutParsing(clip.Range.Start, clip.Range.End);
+        ClipTitleText = clip.Title;
+        StatusMessage = $"クリップを編集中: {clip.Title}";
+    }
+
+    public void ConfirmClipOverwrite()
+    {
+        if (pendingOverwriteClip is null || pendingOverwriteRange is null)
+        {
+            return;
+        }
+
+        int index = RegisteredClips.IndexOf(pendingOverwriteClip);
+        if (index < 0)
+        {
+            CancelClipOverwrite();
+            StatusMessage = "上書き対象のクリップが見つかりません";
+            return;
+        }
+
+        string title = pendingOverwriteClip.Title;
+        RegisteredClips[index] = new ExportClip(pendingOverwriteRange.Value, title);
+        pendingOverwriteClip = null;
+        pendingOverwriteRange = null;
+        ClipTitleText = string.Empty;
+        NotifyRegisteredClipsChanged();
+        StatusMessage = $"クリップを上書きしました: {title}";
+    }
+
+    public void CancelClipOverwrite()
+    {
+        pendingOverwriteClip = null;
+        pendingOverwriteRange = null;
+    }
+
+    [RelayCommand]
+    private void RemoveClip(ExportClip? clip)
+    {
+        if (IsExporting || clip is null || !RegisteredClips.Remove(clip))
+        {
+            return;
+        }
+
+        if (Equals(pendingOverwriteClip, clip))
+        {
+            CancelClipOverwrite();
+        }
+
+        NotifyRegisteredClipsChanged();
+        StatusMessage = $"登録を削除しました: {clip.Title}";
+    }
+
+    [RelayCommand]
     private async Task ExportAsync()
     {
         AppLogger.Info("Export requested");
@@ -540,7 +697,8 @@ public partial class MainPageViewModel : ObservableObject
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(SelectedSourcePath) || !File.Exists(SelectedSourcePath))
+        string? sourcePath = SelectedSourcePath;
+        if (string.IsNullOrWhiteSpace(sourcePath) || !File.Exists(sourcePath))
         {
             StatusMessage = "書き出し前に動画を開いてください";
             return;
@@ -552,38 +710,63 @@ public partial class MainPageViewModel : ObservableObject
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(OutputDirectory) || !Directory.Exists(OutputDirectory))
+        string? outputDirectory = OutputDirectory;
+        if (string.IsNullOrWhiteSpace(outputDirectory) || !Directory.Exists(outputDirectory))
         {
             StatusMessage = "書き出し前に有効な出力フォルダーを選択してください";
             return;
         }
 
-        ClipRange range = new(
+        ClipRange currentRange = new(
             TimeSpan.FromSeconds(RangeStartSeconds),
             TimeSpan.FromSeconds(RangeEndSeconds));
 
-        if (!range.IsValid)
+        List<ExportWorkItem> workItems;
+        if (RegisteredClips.Count > 0)
         {
-            StatusMessage = "終了時刻は開始時刻より後にしてください";
+            workItems = RegisteredClips
+                .Select(clip => new ExportWorkItem(
+                    clip.Range,
+                    Path.Combine(outputDirectory, clip.OutputFileName)))
+                .ToList();
+        }
+        else
+        {
+            if (!currentRange.IsValid)
+            {
+                StatusMessage = "終了時刻は開始時刻より後にしてください";
+                return;
+            }
+
+            UpdatePlannedOutputPath();
+            if (string.IsNullOrWhiteSpace(PlannedOutputPath))
+            {
+                StatusMessage = "有効な出力ファイル名を入力してください";
+                return;
+            }
+
+            workItems = [new ExportWorkItem(currentRange, PlannedOutputPath)];
+        }
+
+        ExportWorkItem? collidingItem = workItems.FirstOrDefault(item => File.Exists(item.OutputPath));
+        if (collidingItem is not null)
+        {
+            StatusMessage = $"同名の出力ファイルが既に存在します: {Path.GetFileName(collidingItem.OutputPath)}";
             return;
         }
 
         AppSettings currentSettings = CreateCurrentSettings();
-        int? exportVideoBitrateKbps = GetEffectiveVideoBitrateKbps(range);
+        MediaInfo? mediaInfo = CurrentMediaInfo;
+        int?[] exportVideoBitrates = workItems
+            .Select(item => GetEffectiveVideoBitrateKbps(item.Range))
+            .ToArray();
         if (GetEffectiveExportMode(currentSettings) == ExportMode.Reencode
             && CurrentBitrateMode != BitrateMode.Quality
-            && exportVideoBitrateKbps is null)
+            && exportVideoBitrates.Any(bitrate => bitrate is null))
         {
             StatusMessage = CurrentBitrateMode == BitrateMode.TargetSize
                 ? "有効な目標サイズを入力してください"
                 : "有効な映像ビットレートを入力してください";
-            return;
-        }
-
-        UpdatePlannedOutputPath();
-        if (string.IsNullOrWhiteSpace(PlannedOutputPath))
-        {
-            StatusMessage = "有効な出力ファイル名を入力してください";
             return;
         }
 
@@ -594,70 +777,89 @@ public partial class MainPageViewModel : ObservableObject
         ExportLogText = "書き出しを開始しています...";
         HasExportLog = true;
         StatusMessage = "書き出し中...";
-        bool acceptsProgress = true;
 
         try
         {
             AppSettings settings = currentSettings with
             {
-                LastVideoBitrateKbps = exportVideoBitrateKbps,
+                LastVideoBitrateKbps = exportVideoBitrates[0],
             };
             await settingsService.SaveAsync(settings);
-
-            var request = new ExportRequest(SelectedSourcePath, PlannedOutputPath, range, settings, CurrentMediaInfo);
             IExportPlanner planner = new ExportPlannerFactory(currentCapabilities).CreatePlanner(GetEffectiveExportMode(settings));
-            ExportPlan plan = planner.CreatePlan(request);
-            var progress = new Progress<ExportProgress>(exportProgress =>
+            int completedCount = 0;
+
+            for (int index = 0; index < workItems.Count; index++)
             {
-                if (!acceptsProgress)
+                ExportWorkItem item = workItems[index];
+                int itemIndex = index;
+                int itemNumber = index + 1;
+                AppSettings itemSettings = settings with
                 {
+                    LastVideoBitrateKbps = exportVideoBitrates[index],
+                };
+                var request = new ExportRequest(
+                    sourcePath,
+                    item.OutputPath,
+                    item.Range,
+                    itemSettings,
+                    mediaInfo);
+                ExportPlan plan = planner.CreatePlan(request);
+                AppendExportLog($"[{itemNumber}/{workItems.Count}] {Path.GetFileName(item.OutputPath)}");
+                StatusMessage = $"書き出し中 ({itemNumber}/{workItems.Count}): {Path.GetFileName(item.OutputPath)}";
+                bool acceptsItemProgress = true;
+                var progress = new Progress<ExportProgress>(exportProgress =>
+                {
+                    if (!acceptsItemProgress)
+                    {
+                        return;
+                    }
+
+                    AppendExportLog(exportProgress.Status);
+                    double? itemProgress = exportProgress.Position is { } position && item.Range.Duration.TotalSeconds > 0
+                        ? position.TotalSeconds / item.Range.Duration.TotalSeconds
+                        : exportProgress.Percent;
+                    if (itemProgress is { } value)
+                    {
+                        IsExportProgressIndeterminate = false;
+                        ExportProgressValue = Math.Clamp((itemIndex + Math.Clamp(value, 0, 1)) / workItems.Count, 0, 1);
+                    }
+                });
+
+                ExportResult result = await ffmpegRunner.RunAsync(plan, progress, exportCancellation.Token);
+                acceptsItemProgress = false;
+                IsExportProgressIndeterminate = false;
+                AppLogger.Info($"Export completed. Success={result.Succeeded}, Output={plan.FinalOutputPath}, Error={result.ErrorMessage}");
+
+                if (!result.Succeeded)
+                {
+                    string error = result.ErrorMessage ?? "書き出しに失敗しました";
+                    StatusMessage = workItems.Count == 1
+                        ? error
+                        : $"{completedCount}/{workItems.Count}件を書き出した後に停止しました: {error}";
                     return;
                 }
 
-                AppendExportLog(exportProgress.Status);
-
-                if (exportProgress.Position is { } position)
+                completedCount++;
+                ExportProgressValue = (double)completedCount / workItems.Count;
+                if (workItems.Count == 1)
                 {
-                    StatusMessage = $"書き出し中 {FormatTime(position)}";
-                    if (range.Duration.TotalSeconds > 0)
-                    {
-                        IsExportProgressIndeterminate = false;
-                        ExportProgressValue = Math.Clamp(position.TotalSeconds / range.Duration.TotalSeconds, 0, 1);
-                    }
+                    PlannedOutputPath = plan.FinalOutputPath;
+                    lastCompletedOutputPath = plan.FinalOutputPath;
+                    UpdateManualOutputFileNameCollision();
                 }
-                else if (exportProgress.Percent is { } percent)
-                {
-                    IsExportProgressIndeterminate = false;
-                    ExportProgressValue = Math.Clamp(percent, 0, 1);
-                }
-            });
-
-            ExportResult result = await ffmpegRunner.RunAsync(plan, progress, exportCancellation.Token);
-            acceptsProgress = false;
-            StatusMessage = result.Succeeded
-                ? $"書き出しが完了しました: {Path.GetFileName(plan.FinalOutputPath)}"
-                : result.ErrorMessage ?? "書き出しに失敗しました";
-            ExportProgressValue = result.Succeeded ? 1 : ExportProgressValue;
-            IsExportProgressIndeterminate = false;
-
-            if (result.Succeeded)
-            {
-                PlannedOutputPath = plan.FinalOutputPath;
-                lastCompletedOutputPath = plan.FinalOutputPath;
-                UpdateManualOutputFileNameCollision();
             }
 
-            AppLogger.Info($"Export completed. Success={result.Succeeded}, Output={plan.FinalOutputPath}, Error={result.ErrorMessage}");
+            StatusMessage = workItems.Count == 1
+                ? $"書き出しが完了しました: {Path.GetFileName(workItems[0].OutputPath)}"
+                : $"{workItems.Count}件の書き出しが完了しました";
         }
         catch (Exception exception)
         {
-            acceptsProgress = false;
             StatusMessage = exception.Message;
             AppLogger.Error("Export failed", exception);
         }
         finally
         {
-            acceptsProgress = false;
             IsExporting = false;
             exportCancellation.Dispose();
             exportCancellation = null;
@@ -869,6 +1071,7 @@ public partial class MainPageViewModel : ObservableObject
     partial void OnIsExportingChanged(bool value)
     {
         CancelExportCommand.NotifyCanExecuteChanged();
+        OnPropertyChanged(nameof(CanEditRegisteredClips));
     }
 
     private void UpdatePlannedOutputPath()
@@ -935,6 +1138,30 @@ public partial class MainPageViewModel : ObservableObject
             && !string.Equals(PlannedOutputPath, lastCompletedOutputPath, StringComparison.OrdinalIgnoreCase)
             && File.Exists(PlannedOutputPath);
     }
+
+    private void NotifyRegisteredClipsChanged()
+    {
+        OnPropertyChanged(nameof(HasRegisteredClips));
+        OnPropertyChanged(nameof(RegisteredClipCountText));
+        NotifyClipRegistrationActionChanged();
+    }
+
+    private ExportClip? FindRegisteredClipByTitle()
+    {
+        string normalizedTitle = clipTitleService.NormalizeTitle(ClipTitleText);
+        return string.IsNullOrWhiteSpace(normalizedTitle)
+            ? null
+            : RegisteredClips.FirstOrDefault(clip =>
+                string.Equals(clip.Title, normalizedTitle, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private void NotifyClipRegistrationActionChanged()
+    {
+        OnPropertyChanged(nameof(ClipRegistrationActionText));
+        OnPropertyChanged(nameof(ClipRegistrationActionGlyph));
+    }
+
+    private sealed record ExportWorkItem(ClipRange Range, string OutputPath);
 
     private ExportMode CurrentExportMode => SelectedExportModeIndex switch
     {

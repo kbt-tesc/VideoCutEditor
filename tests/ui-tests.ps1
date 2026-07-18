@@ -229,6 +229,8 @@ $expectedElements = @(
     "RangeEndTextBox",
     "ExportModeRadioButtons",
     "NormalizeAudioCheckBox",
+    "ClipTitleTextBox",
+    "AddClipButton",
     "OutputFileNameTextBox",
     "OpenOutputDirectoryButton",
     "PlannedOutputTextBox",
@@ -242,6 +244,10 @@ foreach ($element in $expectedElements) {
     Test-UI "$element exists" {
         winapp ui wait-for $element -a $AppPid -t 3000 -q
     }
+}
+
+Test-UI "Registered clip list button is hidden before registration" {
+    winapp ui wait-for "ShowExportListButton" -a $AppPid --gone -t 3000 -q
 }
 
 Test-UI "Export mode selector is enabled" {
@@ -423,7 +429,7 @@ if (-not [string]::IsNullOrWhiteSpace($SampleVideoPath)) {
                 winapp ui wait-for "EncoderKindComboBox" -w $mainWindowHwnd --value "NVEnc" -t 3000 -q
                 winapp ui wait-for "BitrateModeComboBox" -w $mainWindowHwnd --value $expectedRateControl -t 3000 -q
             }
-            elseif ($VerifyExportMode -eq "FastCopy") {
+            elseif ($VerifyExportMode -in @("FastCopy", "FastCopyMultiClip")) {
                 winapp ui invoke "Fast copy" -w $mainWindowHwnd -q
             }
             elseif ($VerifyExportMode -eq "NormalizeAudio") {
@@ -439,19 +445,91 @@ if (-not [string]::IsNullOrWhiteSpace($SampleVideoPath)) {
             }
         }
 
+        if ($VerifyExportMode -eq "FastCopyMultiClip") {
+            Test-UI "FastCopyMultiClip registers two titled ranges in one owned list window" {
+                $firstTitle = -join [char[]]@(0x524D, 0x534A)
+                $secondTitle = -join [char[]]@(0x5F8C, 0x534A)
+                $exportListTitle = -join [char[]]@(0x66F8, 0x304D, 0x51FA, 0x3057, 0x30EA, 0x30B9, 0x30C8)
+                $clips = @(
+                    @{ Start = "00:00:00"; End = "00:00:01.500"; Title = $firstTitle },
+                    @{ Start = "00:00:02"; End = "00:00:04"; Title = $secondTitle }
+                )
+                foreach ($clip in $clips) {
+                    winapp ui set-value "RangeStartTextBox" $clip.Start -w $mainWindowHwnd -q
+                    winapp ui set-value "RangeEndTextBox" $clip.End -w $mainWindowHwnd -q
+                    winapp ui set-value "ClipTitleTextBox" $clip.Title -w $mainWindowHwnd -q
+                    winapp ui invoke "AddClipButton" -w $mainWindowHwnd -q
+                }
+
+                Start-Sleep -Milliseconds 500
+                $listWindows = @(Get-AppWindows | Where-Object {
+                    $_.title -eq $exportListTitle -and $_.ownerHwnd -eq $mainWindowHwnd
+                })
+                if ($listWindows.Count -ne 1) {
+                    throw "Expected one owned export list window; found $($listWindows.Count)."
+                }
+                winapp ui wait-for "ExportClipListView" -w $listWindows[0].hwnd -t 3000 -q
+                foreach ($title in @($firstTitle, $secondTitle)) {
+                    $matches = winapp ui search $title -w $listWindows[0].hwnd --json 2>$null | ConvertFrom-Json
+                    if ($matches.matchCount -lt 1) {
+                        throw "Registered title '$title' was not shown in the export list."
+                    }
+                }
+
+                $editSearch = winapp ui search "EditClipButton" -w $listWindows[0].hwnd --json 2>$null | ConvertFrom-Json
+                $editButton = @($editSearch.matches) | Where-Object {
+                    $_.automationId -eq "EditClipButton" -and $_.type -eq "Button"
+                } | Select-Object -First 1
+                if ($null -eq $editButton) {
+                    throw "The first registered clip edit button was not found."
+                }
+                winapp ui invoke $editButton.selector -w $listWindows[0].hwnd -q
+                winapp ui wait-for "ClipTitleTextBox" -w $mainWindowHwnd --value $firstTitle -t 3000 -q
+                winapp ui wait-for "RangeStartTextBox" -w $mainWindowHwnd --value "0:00.000" -t 3000 -q
+                winapp ui wait-for "RangeEndTextBox" -w $mainWindowHwnd --value "0:01.500" -t 3000 -q
+
+                $overwriteText = -join [char[]]@(0x4E0A, 0x66F8, 0x304D)
+                winapp ui wait-for "AddClipButton" -w $mainWindowHwnd -p Name --value $overwriteText -t 3000 -q
+                winapp ui set-value "RangeEndTextBox" "0:01.250" -w $mainWindowHwnd -q
+                winapp ui invoke "AddClipButton" -w $mainWindowHwnd -q
+                winapp ui wait-for "Primary" -w $mainWindowHwnd -t 3000 -q
+                winapp ui invoke "Primary" -w $mainWindowHwnd -q
+
+                $overwrittenStatus = -join [char[]]@(0x30AF, 0x30EA, 0x30C3, 0x30D7, 0x3092, 0x4E0A, 0x66F8, 0x304D, 0x3057, 0x307E, 0x3057, 0x305F)
+                Wait-ForTextValue -AutomationId "StatusMessageText" -ExpectedText $overwrittenStatus -WindowHwnd ([long]$mainWindowHwnd)
+                $updatedEnd = winapp ui search "00:00:01.250" -w $listWindows[0].hwnd --json 2>$null | ConvertFrom-Json
+                if ($updatedEnd.matchCount -lt 1) {
+                    throw "The edited clip end time was not overwritten in the export list."
+                }
+            }
+        }
+
         Test-UI "$VerifyExportMode output uses isolated directory" {
             if ([string]::IsNullOrWhiteSpace($ExpectedOutputDirectory)) {
                 throw "ExpectedOutputDirectory is required for export verification."
             }
 
-            $planned = winapp ui get-value "PlannedOutputTextBox" -w $mainWindowHwnd --json 2>$null | ConvertFrom-Json
-            $script:plannedExportPath = $planned.text
             $expected = (Resolve-Path -LiteralPath $ExpectedOutputDirectory).Path
-            if (-not [string]::Equals([System.IO.Path]::GetDirectoryName($plannedExportPath), $expected, [StringComparison]::OrdinalIgnoreCase)) {
-                throw "Planned output is outside the isolated directory: '$plannedExportPath'."
+            if ($VerifyExportMode -eq "FastCopyMultiClip") {
+                $firstTitle = -join [char[]]@(0x524D, 0x534A)
+                $secondTitle = -join [char[]]@(0x5F8C, 0x534A)
+                $script:plannedExportPaths = @(
+                    [System.IO.Path]::Combine($expected, "$firstTitle.mp4"),
+                    [System.IO.Path]::Combine($expected, "$secondTitle.mp4")
+                )
+                if (@($plannedExportPaths | Where-Object { [System.IO.File]::Exists($_) }).Count -gt 0) {
+                    throw "A registered batch output already exists before export."
+                }
             }
-            if ([System.IO.File]::Exists($plannedExportPath)) {
-                throw "Planned output already exists before export."
+            else {
+                $planned = winapp ui get-value "PlannedOutputTextBox" -w $mainWindowHwnd --json 2>$null | ConvertFrom-Json
+                $script:plannedExportPath = $planned.text
+                if (-not [string]::Equals([System.IO.Path]::GetDirectoryName($plannedExportPath), $expected, [StringComparison]::OrdinalIgnoreCase)) {
+                    throw "Planned output is outside the isolated directory: '$plannedExportPath'."
+                }
+                if ([System.IO.File]::Exists($plannedExportPath)) {
+                    throw "Planned output already exists before export."
+                }
             }
         }
 
@@ -462,6 +540,15 @@ if (-not [string]::IsNullOrWhiteSpace($SampleVideoPath)) {
                 Wait-ForTextValue -AutomationId "StatusMessageText" -ExpectedText $noAudioText -WindowHwnd ([long]$mainWindowHwnd)
                 if ([System.IO.File]::Exists($plannedExportPath)) {
                     throw "No-audio normalization unexpectedly created an output file."
+                }
+            }
+            elseif ($VerifyExportMode -eq "FastCopyMultiClip") {
+                $completedText = "2" + (-join [char[]]@(0x4EF6, 0x306E, 0x66F8, 0x304D, 0x51FA, 0x3057, 0x304C, 0x5B8C, 0x4E86, 0x3057, 0x307E, 0x3057, 0x305F))
+                Wait-ForTextValue -AutomationId "StatusMessageText" -ExpectedText $completedText -WindowHwnd ([long]$mainWindowHwnd) -TimeoutMilliseconds 60000
+                foreach ($outputPath in $plannedExportPaths) {
+                    if (-not [System.IO.File]::Exists($outputPath) -or (Get-Item -LiteralPath $outputPath).Length -eq 0) {
+                        throw "FastCopyMultiClip did not create a non-empty output file: '$outputPath'."
+                    }
                 }
             }
             else {
