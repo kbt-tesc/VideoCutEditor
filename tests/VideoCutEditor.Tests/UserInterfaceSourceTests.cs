@@ -173,6 +173,34 @@ public sealed class UserInterfaceSourceTests
         Assert.Contains("ConvertHdrToSdr = CurrentExportMode == ExportMode.Reencode && IsHdrToSdrOptionVisible && ConvertHdrToSdrEnabled", viewModel);
     }
 
+    [Fact]
+    public void Multi_clip_registration_uses_a_modeless_responsive_list_window()
+    {
+        string root = FindRepositoryRoot();
+        string mainXaml = File.ReadAllText(Path.Combine(root, "src", "VideoCutEditor", "MainPage.xaml"));
+        string mainCodeBehind = File.ReadAllText(Path.Combine(root, "src", "VideoCutEditor", "MainPage.xaml.cs"));
+        string listXaml = File.ReadAllText(Path.Combine(root, "src", "VideoCutEditor", "ExportListWindow.xaml"));
+        string listCodeBehind = File.ReadAllText(Path.Combine(root, "src", "VideoCutEditor", "ExportListWindow.xaml.cs"));
+
+        Assert.Contains("AutomationProperties.AutomationId=\"ClipTitleTextBox\"", mainXaml);
+        Assert.Contains("ViewModel.ClipTitleText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged", mainXaml);
+        Assert.Contains("AutomationProperties.AutomationId=\"AddClipButton\"", mainXaml);
+        Assert.Contains("Command=\"{x:Bind ViewModel.AddClipCommand}\"", mainXaml);
+        Assert.Contains("AutomationProperties.AutomationId=\"ShowExportListButton\"", mainXaml);
+        Assert.Contains("ViewModel.ExportListRequested += ViewModelExportListRequested;", mainCodeBehind);
+        Assert.Contains("exportListWindow ??= new ExportListWindow(ViewModel, App.WindowHandle);", mainCodeBehind);
+        Assert.Contains("exportListWindow.Activate();", mainCodeBehind);
+
+        Assert.Contains("x:Class=\"VideoCutEditor.ExportListWindow\"", listXaml);
+        Assert.Contains("ItemsSource=\"{x:Bind ViewModel.RegisteredClips, Mode=OneWay}\"", listXaml);
+        Assert.True(Regex.Matches(listXaml, "<ColumnDefinition Width=\"120\" />").Count >= 4);
+        Assert.Contains("<ColumnDefinition Width=\"*\" />", listXaml);
+        Assert.Contains("<Setter Property=\"HorizontalContentAlignment\" Value=\"Stretch\" />", listXaml);
+        Assert.Contains("AutomationProperties.AutomationId=\"RemoveClipButton\"", listXaml);
+        Assert.Contains("public ExportListWindow(MainPageViewModel viewModel, nint ownerWindowHandle)", listCodeBehind);
+        Assert.Contains("SetOwner(ownerWindowHandle);", listCodeBehind);
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

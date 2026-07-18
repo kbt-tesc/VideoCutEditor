@@ -523,6 +523,48 @@
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <TextBox
+                                AutomationProperties.AutomationId="ClipTitleTextBox"
+                                Header="クリップタイトル"
+                                PlaceholderText="空欄の場合は自動で設定"
+                                Text="{x:Bind ViewModel.ClipTitleText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                            <Button
+                                Grid.Column="1"
+                                AutomationProperties.AutomationId="AddClipButton"
+                                VerticalAlignment="Bottom"
+                                Command="{x:Bind ViewModel.AddClipCommand}">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <FontIcon FontSize="16" Glyph="&#xE710;" />
+                                    <TextBlock Text="追加" />
+                                </StackPanel>
+                            </Button>
+                            <TextBlock
+                                Grid.Row="1"
+                                VerticalAlignment="Center"
+                                Style="{StaticResource CaptionTextBlockStyle}"
+                                Text="{x:Bind ViewModel.RegisteredClipCountText, Mode=OneWay}" />
+                            <Button
+                                Grid.Row="1"
+                                Grid.Column="1"
+                                AutomationProperties.AutomationId="ShowExportListButton"
+                                AutomationProperties.Name="登録クリップ一覧を表示"
+                                Click="ShowExportListButton_Click"
+                                ToolTipService.ToolTip="登録クリップ一覧を表示"
+                                Visibility="{x:Bind local:MainPage.BoolToVisibility(ViewModel.HasRegisteredClips), Mode=OneWay}">
+                                <FontIcon FontSize="16" Glyph="&#xE8FD;" />
+                            </Button>
+                        </Grid>
+
+                        <Grid ColumnSpacing="8" RowSpacing="8">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
                             <Grid.ColumnDefinitions>

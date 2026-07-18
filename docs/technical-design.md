@@ -50,6 +50,8 @@ The initial media probing implementation runs `ffprobe -v error -show_format -sh
 
 Encoder information, media information, and export logs are displayed by one modeless `InfoWindow`. The main page retains the window instance while it is open, activates that instance on repeated INFO commands, and releases it after `Closed`. The secondary HWND sets the main HWND as its native owner, preserving normal owner stacking and minimize behavior without making the window modal. The window binds to the same `MainPageViewModel` as the editor so export progress and logs continue updating without blocking the main window. `MediaSummaryFormatter` labels `smpte2084` as `HDR10 (PQ)`, labels `arib-std-b67` as `HLG`, and displays raw ffprobe color space, transfer, and primaries values for diagnosis. Unloading the main page closes the secondary window to keep application lifetime predictable.
 
+Registered ranges are displayed by a separate modeless `ExportListWindow` owned by the main HWND. The first registration opens it automatically, and the main page can reopen the retained list while registrations exist. Start and end columns use fixed widths; the title column uses the remaining width with stretched `ListViewItem` content. Each row provides an icon delete action, and the window binds to the same in-memory collection as `MainPageViewModel`.
+
 HDR detection treats a video stream as HDR when ffprobe reports `color_transfer=smpte2084` (HDR10/PQ) or `color_transfer=arib-std-b67` (HLG). `color_space` and `color_primaries` are retained for display/debugging and future refinement, but transfer characteristics drive the current HDR decision to avoid treating BT.2020 SDR as HDR.
 
 ## Export Modes

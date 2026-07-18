@@ -48,6 +48,7 @@ public sealed partial class MainPage : Page
     private readonly IWaveformGenerator waveformGenerator = new WaveformGenerator();
     private CancellationTokenSource? waveformCancellation;
     private InfoWindow? infoWindow;
+    private ExportListWindow? exportListWindow;
     private bool isDraggingTimeline;
 
     public MainPageViewModel ViewModel { get; } = new();
@@ -71,6 +72,7 @@ public sealed partial class MainPage : Page
         PreviewPlayer.SetMediaPlayer(new MediaPlayer());
         AppLogger.Info("Preview MediaPlayer assigned");
         ViewModel.PropertyChanged += ViewModelPropertyChanged;
+        ViewModel.ExportListRequested += ViewModelExportListRequested;
         ConfigureTimelineControls();
         AppLogger.Info("Timeline controls configured");
         PreviewPlayer.MediaPlayer.MediaOpened += PreviewPlayerMediaOpened;
@@ -107,7 +109,15 @@ public sealed partial class MainPage : Page
             infoWindow = null;
         }
 
+        if (exportListWindow is not null)
+        {
+            exportListWindow.Closed -= ExportListWindowClosed;
+            exportListWindow.Close();
+            exportListWindow = null;
+        }
+
         ViewModel.PropertyChanged -= ViewModelPropertyChanged;
+        ViewModel.ExportListRequested -= ViewModelExportListRequested;
         PreviewPlayer.MediaPlayer.CurrentStateChanged -= PreviewPlayerCurrentStateChanged;
         PreviewPlayer.MediaPlayer.Pause();
     }
@@ -269,6 +279,29 @@ public sealed partial class MainPage : Page
         }
 
         infoWindow = null;
+    }
+
+    private void ViewModelExportListRequested(object? sender, EventArgs e) => ShowExportListWindow();
+
+    private void ShowExportListButton_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e) =>
+        ShowExportListWindow();
+
+    private void ShowExportListWindow()
+    {
+        exportListWindow ??= new ExportListWindow(ViewModel, App.WindowHandle);
+        exportListWindow.Closed -= ExportListWindowClosed;
+        exportListWindow.Closed += ExportListWindowClosed;
+        exportListWindow.Activate();
+    }
+
+    private void ExportListWindowClosed(object sender, Microsoft.UI.Xaml.WindowEventArgs args)
+    {
+        if (sender is ExportListWindow closedWindow)
+        {
+            closedWindow.Closed -= ExportListWindowClosed;
+        }
+
+        exportListWindow = null;
     }
 
     private void TimelineCanvas_PointerPressed(object sender, PointerRoutedEventArgs e)
