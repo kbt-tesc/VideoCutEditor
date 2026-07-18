@@ -17,6 +17,10 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
   - Updated the packaged Japanese guide with clip registration, automatic titles, list editing/deletion, confirmed overwrite, batch naming, and the current installer filename.
   - Added release-contract assertions so packaged guidance cannot silently fall behind the implemented multi-clip workflow.
   - Passed 29 focused packaging contract tests, the full 161 Core and 21 app-layer Release tests, and the x64 Release build with 0 warnings and 0 errors.
+  - Generated and validated the unsigned x64 Portable ZIP and per-user NSIS installer, including checksums, packaged guide, official license notices, external ffmpeg/ffprobe policy, and embedded EXE product version `0.4.0`.
+  - Portable ZIP SHA-256: `ceb32f25579d890f5c4982e2b3979d71f1afefca85b77351219401351fb51a08`.
+  - Installer SHA-256: `1265a5e52ceb78f1fe0171feeace7e0acb100ca133475b6ad95e86c77cfde3f9`.
+  - Upgraded the installed `0.3.0` copy to `0.4.0`, kept the installed app running for 5 seconds, verified clean silent uninstall, and reinstalled `0.4.0` successfully for the current user.
 
 - Multi-range export registration and batch output (`codex/multi-marker-export`).
   - Added the immutable `ExportClip` range/title model.
@@ -577,7 +581,7 @@ When resuming in a new session, rerun the relevant subset before making assumpti
 - The current winapp UIA bridge does not expose `QualityNumberBox` as a reliably parseable numeric value. Keep the isolated settings contract and screenshot review for the exact value while UIA verifies mode and enabled state.
 - Preview-unavailable fallback behavior needs more manual and/or UI coverage.
 - Portable x64 publish, x86 publish, arm64 publish, artifact validation, x64 ZIP distribution packaging, checksum verification, and distributed x64 EXE startup smoke testing now succeed. Signing, MSIX/installer validation, and x86/arm64 runtime startup on matching devices still need verification.
-- The x64 per-user installer definition and release script are implemented. Full install/launch/uninstall verification is part of the `0.3.0` release gate; production code signing remains unresolved.
+- The x64 per-user installer was verified through upgrade, launch, uninstall, and clean reinstall for `0.4.0`; production code signing remains unresolved.
 - UI tests cover opening generated media through the real Windows file picker, loaded range state, and isolated Fast copy export completion.
 - The picker workflow supports the current legacy filename field ID `1148` and the newer `FileNameControlHost` ID. Future Windows picker UIA changes may require updating these selectors.
 - VS Code F5 now has an explicit x64 unpackaged launch path, but the user should manually confirm breakpoint attachment from VS Code because automated tests can only validate the configuration files and build output.
