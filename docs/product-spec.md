@@ -127,6 +127,7 @@ Show clear recoverable errors for:
 - Additional ffmpeg arguments that conflict with app-managed export options
 - Export process failure
 - Export cancellation
+- Registered clip title or destination collision
 - Start/end range errors
 - Unreadable or damaged settings data
 

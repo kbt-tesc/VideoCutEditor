@@ -31,7 +31,7 @@ Use `docs/product-spec.md` as the source of truth for user-facing behavior. Use 
 
 ## Guardrails
 
-- Keep the app focused on one-range extraction.
+- Keep the app focused on extracting one or more independent ranges from one source video; do not turn the registration list into clip merging or multi-track editing.
 - Keep fast stream-copy export as the default.
 - Do not add active `.codex/rules` unless the repo guidance is explicitly updated.
 - Prefer detecting ffmpeg, ffprobe, and NVEnc capabilities from the local environment over assuming support.

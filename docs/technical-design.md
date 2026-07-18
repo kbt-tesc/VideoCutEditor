@@ -24,6 +24,8 @@ Prefer testable command-generation code that does not require launching ffmpeg.
 
 Registered clips are kept in memory for the currently opened source video. The view model exports them sequentially using the same export settings and planner selection, creating one independent `<title>.mp4` plan per item. Opening another source clears the registration list. When the list is empty, the existing single-range export path remains available for compatibility.
 
+Batch export snapshots the registration list before starting, checks every destination for an existing file before launching ffmpeg, and disables list edits while processing. Progress for each plan is mapped into one overall progress value. Cancellation or the first failed plan stops later items; already completed independent files remain in the output directory.
+
 ## Settings Persistence
 
 `JsonSettingsService` stores settings in `%AppData%/VideoCutEditor/settings.json`. Saving first serializes to a unique temporary file in the same directory, flushes and closes it, then replaces the destination with a same-volume move. Cancellation or failure removes the temporary file and leaves the previous settings file unchanged.
@@ -220,6 +222,8 @@ If media metadata confirms there is no audio stream, the planner rejects the exp
 `OutputPathService` creates automatic default output names from the source stem using `<source>_cut<extension>`. When that default path already exists, it probes one-based suffixes in order: `<source>_cut_1<extension>`, `<source>_cut_2<extension>`, and so on.
 
 Manual output filename edits are owned by `MainPageViewModel`. The view model keeps the typed filename, rebuilds the planned output path from the configured output directory and source extension, and exposes `IsManualOutputFileNameCollision` when the manual destination already exists. The warning is informational and non-blocking; `FfmpegRunner` remains the final overwrite guard by refusing to promote the temporary export output when the final path exists.
+
+Registered clip paths are built from the configured output directory and the collision-safe title as `<title>.mp4`. A second preflight immediately before a batch starts catches files created after registration so no batch begins with a known destination collision.
 
 ## Process Execution
 

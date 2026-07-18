@@ -12,13 +12,15 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 
 ## Completed Slices
 
-- Multi-range export registration foundation (in progress on `codex/multi-marker-export`).
+- Multi-range export registration and batch output (`codex/multi-marker-export`).
   - Added the immutable `ExportClip` range/title model.
   - Added collision-safe title generation for blank titles, registered titles, existing MP4 files, optional `.mp4` input, and invalid filename characters.
   - Added view-model registration/removal commands, count state, first-registration window request signaling, and registration reset when a new source opens.
   - Added the main-page clip title/add controls and a reopenable modeless export-list window with fixed start/end columns, a responsive title column, and per-row deletion.
+  - Added sequential batch export with registration-order `<title>.mp4` plans, destination preflight, overall progress, edit locking, cancellation, and stop-on-first-failure behavior.
+  - Added reusable `FastCopyMultiClip` isolated UI verification that opens generated media, registers two ranges, verifies the owned list window, and creates two non-empty MP4 files through real ffmpeg.
   - Locked the behavior with five focused core tests.
-  - Added three app-layer tests for range snapshots, placeholder/duplicate naming, list signaling, removal, and invalid-range rejection.
+  - Added six app-layer tests for range snapshots, placeholder/duplicate naming, list signaling, removal, invalid-range rejection, ordered plans, preflight collision handling, and failure stopping.
 
 - `9ac5d75 chore: add WinUI solution scaffold and repo guidance`
   - Created the WinUI 3/.NET 10 solution, app project, core project, and test project.
@@ -353,6 +355,14 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 
 Most recent successful checks:
 
+- `powershell -ExecutionPolicy Bypass -File scripts\Test-ExportUi.ps1 -Mode FastCopyMultiClip`
+  - 66 UI checks passed with generated media and isolated settings/output directories.
+  - The first registration opened one main-owned modeless list window, both titled ranges appeared, and real ffmpeg produced non-empty `前半.mp4` and `後半.mp4` files in one export operation.
+- `dotnet test VideoCutEditor.slnx -c Release`
+  - 160 core tests and 18 app-layer tests passed after the multi-range registration and batch export implementation.
+- `powershell -ExecutionPolicy Bypass -File .agents\skills\winui-dev-workflow\BuildAndRun.ps1 .\src\VideoCutEditor\VideoCutEditor.csproj -SkipRun`
+  - The WinUI Analyzer-enabled Debug x64 build succeeded with 0 warnings and 0 errors.
+
 - `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\New-PortableRelease.ps1 -Version 0.2.0 -Platform x64 -Configuration Release`
   - Created `artifacts\releases\VideoCutEditor-0.2.0-win-x64.zip` and its `.sha256` file after portable artifact validation.
   - Final replacement SHA-256 is `2be7bc72d3683e1197005620be552264640888bfae53a310b6b4854b15486456`; extraction, user-only README section and recommendation validation, product-version inspection, and startup smoke testing passed.
@@ -538,6 +548,8 @@ Most recent successful checks:
 When resuming in a new session, rerun the relevant subset before making assumptions if files have changed.
 
 ## Known Gaps
+
+- Multi-clip Fast copy is covered end to end with generated media. Batch Re-encode, audio normalization, fade, and HDR-to-SDR reuse the same per-item planner path and have unit/integration coverage individually, but multi-item combinations have not yet been exercised end to end.
 
 - A 2026-07-13 source/license audit found no exact online matches for sampled VideoCutEditor-specific class names, error messages, or workflow code. This is a best-effort search, not proof that no similar implementation exists.
 - Public EXE/ZIP artifacts are not Authenticode-signed and can trigger unknown-publisher or SmartScreen warnings. A trusted production code-signing certificate is still needed for warning-free installation.

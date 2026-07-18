@@ -538,7 +538,8 @@
                                 Grid.Column="1"
                                 AutomationProperties.AutomationId="AddClipButton"
                                 VerticalAlignment="Bottom"
-                                Command="{x:Bind ViewModel.AddClipCommand}">
+                                Command="{x:Bind ViewModel.AddClipCommand}"
+                                IsEnabled="{x:Bind ViewModel.CanEditRegisteredClips, Mode=OneWay}">
                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                     <FontIcon FontSize="16" Glyph="&#xE710;" />
                                     <TextBlock Text="追加" />

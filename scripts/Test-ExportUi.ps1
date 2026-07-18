@@ -1,5 +1,5 @@
 param(
-    [ValidateSet("FastCopy", "Reencode", "ReencodeHdrToSdr", "ReencodeNvenc", "ReencodeNvencQuality", "ReencodeNvencHevc", "ReencodeNvencHevcQuality", "ReencodeNvencAv1", "ReencodeNvencAv1Quality", "NormalizeAudio", "NormalizeNoAudio")]
+    [ValidateSet("FastCopy", "FastCopyMultiClip", "Reencode", "ReencodeHdrToSdr", "ReencodeNvenc", "ReencodeNvencQuality", "ReencodeNvencHevc", "ReencodeNvencHevcQuality", "ReencodeNvencAv1", "ReencodeNvencAv1Quality", "NormalizeAudio", "NormalizeNoAudio")]
     [string]$Mode = "FastCopy",
     [string]$FfmpegPath = "",
     [string]$FfprobePath = ""
