@@ -73,6 +73,7 @@ public sealed partial class MainPage : Page
         AppLogger.Info("Preview MediaPlayer assigned");
         ViewModel.PropertyChanged += ViewModelPropertyChanged;
         ViewModel.ExportListRequested += ViewModelExportListRequested;
+        ViewModel.ClipOverwriteConfirmationRequested += ViewModelClipOverwriteConfirmationRequested;
         ConfigureTimelineControls();
         AppLogger.Info("Timeline controls configured");
         PreviewPlayer.MediaPlayer.MediaOpened += PreviewPlayerMediaOpened;
@@ -118,6 +119,7 @@ public sealed partial class MainPage : Page
 
         ViewModel.PropertyChanged -= ViewModelPropertyChanged;
         ViewModel.ExportListRequested -= ViewModelExportListRequested;
+        ViewModel.ClipOverwriteConfirmationRequested -= ViewModelClipOverwriteConfirmationRequested;
         PreviewPlayer.MediaPlayer.CurrentStateChanged -= PreviewPlayerCurrentStateChanged;
         PreviewPlayer.MediaPlayer.Pause();
     }
@@ -282,6 +284,25 @@ public sealed partial class MainPage : Page
     }
 
     private void ViewModelExportListRequested(object? sender, EventArgs e) => ShowExportListWindow();
+
+    private async void ViewModelClipOverwriteConfirmationRequested(object? sender, EventArgs e)
+    {
+        string title = ViewModel.PendingClipOverwriteTitle;
+        OverwriteClipMessageText.Text = $"「{title}」の開始地点と終了地点を現在の選択範囲で上書きします。";
+        OverwriteClipDialog.XamlRoot = XamlRoot;
+        OverwriteClipDialog.Style = Microsoft.UI.Xaml.Application.Current.Resources["DefaultContentDialogStyle"] as Microsoft.UI.Xaml.Style;
+        ContentDialogResult result = await OverwriteClipDialog.ShowAsync();
+        if (result == ContentDialogResult.Primary)
+        {
+            ViewModel.ConfirmClipOverwrite();
+        }
+        else
+        {
+            ViewModel.CancelClipOverwrite();
+        }
+
+        EditorRoot.Focus(Microsoft.UI.Xaml.FocusState.Programmatic);
+    }
 
     private void ShowExportListButton_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e) =>
         ShowExportListWindow();

@@ -10,7 +10,7 @@ public sealed class ClipTitleService
         ArgumentNullException.ThrowIfNull(registeredTitles);
 
         var unavailableTitles = new HashSet<string>(registeredTitles, StringComparer.OrdinalIgnoreCase);
-        string normalizedTitle = Normalize(requestedTitle);
+        string normalizedTitle = NormalizeTitle(requestedTitle);
         bool isPlaceholder = string.IsNullOrWhiteSpace(normalizedTitle);
         string baseTitle = isPlaceholder ? "クリップ" : normalizedTitle;
         int suffix = isPlaceholder ? 1 : 0;
@@ -29,7 +29,7 @@ public sealed class ClipTitleService
         }
     }
 
-    private static string Normalize(string? requestedTitle)
+    public string NormalizeTitle(string? requestedTitle)
     {
         string title = requestedTitle?.Trim() ?? string.Empty;
         if (title.EndsWith(".mp4", StringComparison.OrdinalIgnoreCase))

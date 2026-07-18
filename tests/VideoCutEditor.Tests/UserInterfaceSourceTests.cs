@@ -186,6 +186,8 @@ public sealed class UserInterfaceSourceTests
         Assert.Contains("ViewModel.ClipTitleText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged", mainXaml);
         Assert.Contains("AutomationProperties.AutomationId=\"AddClipButton\"", mainXaml);
         Assert.Contains("Command=\"{x:Bind ViewModel.AddClipCommand}\"", mainXaml);
+        Assert.Contains("ViewModel.ClipRegistrationActionText, Mode=OneWay", mainXaml);
+        Assert.Contains("ViewModel.ClipRegistrationActionGlyph, Mode=OneWay", mainXaml);
         Assert.Contains("AutomationProperties.AutomationId=\"ShowExportListButton\"", mainXaml);
         Assert.Contains("ViewModel.ExportListRequested += ViewModelExportListRequested;", mainCodeBehind);
         Assert.Contains("exportListWindow ??= new ExportListWindow(ViewModel, App.WindowHandle);", mainCodeBehind);
@@ -197,8 +199,15 @@ public sealed class UserInterfaceSourceTests
         Assert.Contains("<ColumnDefinition Width=\"*\" />", listXaml);
         Assert.Contains("<Setter Property=\"HorizontalContentAlignment\" Value=\"Stretch\" />", listXaml);
         Assert.Contains("AutomationProperties.AutomationId=\"RemoveClipButton\"", listXaml);
+        Assert.Contains("AutomationProperties.AutomationId=\"EditClipButton\"", listXaml);
+        Assert.Contains("Click=\"EditClipButton_Click\"", listXaml);
         Assert.Contains("public ExportListWindow(MainPageViewModel viewModel, nint ownerWindowHandle)", listCodeBehind);
         Assert.Contains("SetOwner(ownerWindowHandle);", listCodeBehind);
+        Assert.Contains("ViewModel.EditClipCommand.Execute(clip);", listCodeBehind);
+        Assert.Contains("App.Window.Activate();", listCodeBehind);
+        Assert.Contains("x:Name=\"OverwriteClipDialog\"", mainXaml);
+        Assert.Contains("PrimaryButtonText=\"上書き\"", mainXaml);
+        Assert.Contains("ClipOverwriteConfirmationRequested", mainCodeBehind);
     }
 
     [Fact]

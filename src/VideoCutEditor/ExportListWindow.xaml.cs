@@ -39,6 +39,15 @@ public sealed partial class ExportListWindow : Window
         }
     }
 
+    private void EditClipButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { DataContext: ExportClip clip })
+        {
+            ViewModel.EditClipCommand.Execute(clip);
+            App.Window.Activate();
+        }
+    }
+
     private void SetOwner(nint ownerWindowHandle)
     {
         nint hwnd = Win32Interop.GetWindowFromWindowId(AppWindow.Id);

@@ -145,7 +145,7 @@ public sealed class MainPageViewModelTests
     }
 
     [Fact]
-    public void AddClip_suffixes_duplicate_title_and_remove_clip_updates_state()
+    public void Duplicate_clip_title_requests_confirmation_and_confirm_overwrites_the_range()
     {
         string directory = CreateTempDirectory();
         MainPageViewModel viewModel = CreateViewModel();
@@ -154,13 +154,81 @@ public sealed class MainPageViewModelTests
         viewModel.RangeEndSeconds = 1;
         viewModel.ClipTitleText = "見どころ";
         viewModel.AddClipCommand.Execute(null);
-        viewModel.ClipTitleText = "見どころ";
+        viewModel.RangeStartSeconds = 3;
+        viewModel.RangeEndSeconds = 7;
+        viewModel.ClipTitleText = " 見どころ.MP4 ";
+        int confirmationRequestCount = 0;
+        viewModel.ClipOverwriteConfirmationRequested += (_, _) => confirmationRequestCount++;
+
+        Assert.Equal("上書き", viewModel.ClipRegistrationActionText);
         viewModel.AddClipCommand.Execute(null);
 
-        Assert.Equal(["見どころ", "見どころ_1"], viewModel.RegisteredClips.Select(clip => clip.Title));
+        ExportClip pending = Assert.Single(viewModel.RegisteredClips);
+        Assert.Equal(TimeSpan.Zero, pending.Range.Start);
+        Assert.Equal(TimeSpan.FromSeconds(1), pending.Range.End);
+        Assert.Equal(1, confirmationRequestCount);
 
-        viewModel.RemoveClipCommand.Execute(viewModel.RegisteredClips[0]);
-        viewModel.RemoveClipCommand.Execute(viewModel.RegisteredClips[0]);
+        viewModel.ConfirmClipOverwrite();
+
+        ExportClip overwritten = Assert.Single(viewModel.RegisteredClips);
+        Assert.Equal("見どころ", overwritten.Title);
+        Assert.Equal(TimeSpan.FromSeconds(3), overwritten.Range.Start);
+        Assert.Equal(TimeSpan.FromSeconds(7), overwritten.Range.End);
+        Assert.Equal(string.Empty, viewModel.ClipTitleText);
+        Assert.Equal("追加", viewModel.ClipRegistrationActionText);
+        Assert.Contains("上書きしました", viewModel.StatusMessage);
+    }
+
+    [Fact]
+    public void EditClip_restores_title_and_range_without_changing_the_list()
+    {
+        MainPageViewModel viewModel = CreateViewModel();
+        var clip = new ExportClip(
+            new ClipRange(TimeSpan.FromSeconds(12.5), TimeSpan.FromSeconds(18.75)),
+            "編集対象");
+        viewModel.RegisteredClips.Add(clip);
+
+        viewModel.EditClipCommand.Execute(clip);
+
+        Assert.Equal("編集対象", viewModel.ClipTitleText);
+        Assert.Equal(12.5, viewModel.RangeStartSeconds);
+        Assert.Equal(18.75, viewModel.RangeEndSeconds);
+        Assert.Equal("0:12.500", viewModel.RangeStartText);
+        Assert.Equal("0:18.750", viewModel.RangeEndText);
+        Assert.Equal("上書き", viewModel.ClipRegistrationActionText);
+        Assert.Same(clip, Assert.Single(viewModel.RegisteredClips));
+    }
+
+    [Fact]
+    public void CancelClipOverwrite_keeps_the_original_clip_and_edit_values()
+    {
+        string directory = CreateTempDirectory();
+        MainPageViewModel viewModel = CreateViewModel();
+        viewModel.SelectedSourcePath = Path.Combine(directory, "source.mp4");
+        viewModel.OutputDirectory = directory;
+        viewModel.RangeEndSeconds = 2;
+        viewModel.ClipTitleText = "残す";
+        viewModel.AddClipCommand.Execute(null);
+        viewModel.RangeEndSeconds = 4;
+        viewModel.ClipTitleText = "残す";
+        viewModel.AddClipCommand.Execute(null);
+
+        viewModel.CancelClipOverwrite();
+
+        ExportClip clip = Assert.Single(viewModel.RegisteredClips);
+        Assert.Equal(TimeSpan.FromSeconds(2), clip.Range.End);
+        Assert.Equal("残す", viewModel.ClipTitleText);
+        Assert.Equal(4, viewModel.RangeEndSeconds);
+    }
+
+    [Fact]
+    public void Remove_clip_updates_registered_state()
+    {
+        MainPageViewModel viewModel = CreateViewModel();
+        var clip = new ExportClip(new ClipRange(TimeSpan.Zero, TimeSpan.FromSeconds(1)), "削除対象");
+        viewModel.RegisteredClips.Add(clip);
+
+        viewModel.RemoveClipCommand.Execute(clip);
 
         Assert.Empty(viewModel.RegisteredClips);
         Assert.False(viewModel.HasRegisteredClips);

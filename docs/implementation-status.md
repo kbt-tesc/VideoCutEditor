@@ -20,6 +20,9 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
   - Added sequential batch export with registration-order `<title>.mp4` plans, destination preflight, overall progress, edit locking, cancellation, and stop-on-first-failure behavior.
   - Added reusable `FastCopyMultiClip` isolated UI verification that opens generated media, registers two ranges, verifies the owned list window, and creates two non-empty MP4 files through real ffmpeg.
   - Moved the clip-title input, add button, and list command from the export settings panel to the timeline control row immediately after the start/end marker buttons.
+  - Prevented duplicate registered titles by switching the action to overwrite, requiring confirmation, and replacing only the existing item's selected range.
+  - Added per-row edit actions that restore title/start/end values to the timeline controls and reactivate the main window.
+  - Expanded the isolated Fast copy multi-clip UI flow to exercise edit, dynamic overwrite action, confirmation, in-place range replacement, and final real ffmpeg output.
   - Locked the behavior with five focused core tests.
   - Added six app-layer tests for range snapshots, placeholder/duplicate naming, list signaling, removal, invalid-range rejection, ordered plans, preflight collision handling, and failure stopping.
 
@@ -358,9 +361,9 @@ Most recent successful checks:
 
 - `powershell -ExecutionPolicy Bypass -File scripts\Test-ExportUi.ps1 -Mode FastCopyMultiClip`
   - 66 UI checks passed with generated media and isolated settings/output directories.
-  - The first registration opened one main-owned modeless list window, both titled ranges appeared, and real ffmpeg produced non-empty `前半.mp4` and `後半.mp4` files in one export operation.
+  - The first registration opened one main-owned modeless list window; edit restored the first title/range, duplicate-title action changed to overwrite, confirmation replaced the range in place, and real ffmpeg produced non-empty `前半.mp4` and `後半.mp4` files in one export operation.
 - `dotnet test VideoCutEditor.slnx -c Release`
-  - 161 core tests and 18 app-layer tests passed after the multi-range registration, batch export implementation, and timeline-toolbar title placement update.
+  - 161 core tests and 21 app-layer tests passed after duplicate-title overwrite confirmation and list-row editing were added.
 - `powershell -ExecutionPolicy Bypass -File .agents\skills\winui-dev-workflow\BuildAndRun.ps1 .\src\VideoCutEditor\VideoCutEditor.csproj -SkipRun`
   - The WinUI Analyzer-enabled Debug x64 build succeeded with 0 warnings and 0 errors.
 

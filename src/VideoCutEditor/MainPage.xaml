@@ -183,12 +183,13 @@
                             <Button
                                 Grid.Column="5"
                                 AutomationProperties.AutomationId="AddClipButton"
+                                AutomationProperties.Name="{x:Bind ViewModel.ClipRegistrationActionText, Mode=OneWay}"
                                 VerticalAlignment="Center"
                                 Command="{x:Bind ViewModel.AddClipCommand}"
                                 IsEnabled="{x:Bind ViewModel.CanEditRegisteredClips, Mode=OneWay}">
                                 <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <FontIcon FontSize="16" Glyph="&#xE710;" />
-                                    <TextBlock Text="追加" />
+                                    <FontIcon FontSize="16" Glyph="{x:Bind ViewModel.ClipRegistrationActionGlyph, Mode=OneWay}" />
+                                    <TextBlock Text="{x:Bind ViewModel.ClipRegistrationActionText, Mode=OneWay}" />
                                 </StackPanel>
                             </Button>
 
@@ -661,6 +662,18 @@
                 </Grid>
             </Grid>
         </Grid>
+
+        <ContentDialog
+            x:Name="OverwriteClipDialog"
+            Grid.RowSpan="3"
+            CloseButtonText="キャンセル"
+            DefaultButton="Primary"
+            PrimaryButtonText="上書き"
+            Title="登録済みクリップを上書きしますか？">
+            <TextBlock
+                x:Name="OverwriteClipMessageText"
+                TextWrapping="Wrap" />
+        </ContentDialog>
 
         <ContentDialog
             x:Name="SettingsDialog"

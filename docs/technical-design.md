@@ -24,6 +24,8 @@ Prefer testable command-generation code that does not require launching ffmpeg.
 
 Registered clips are kept in memory for the currently opened source video. The view model exports them sequentially using the same export settings and planner selection, creating one independent `<title>.mp4` plan per item. Opening another source clears the registration list. When the list is empty, the existing single-range export path remains available for compatibility.
 
+Explicit clip titles are normalized before matching, including trimming and optional `.mp4` removal. A match is treated as an edit target rather than passed through collision suffixing. `MainPageViewModel` stores the pending existing item and replacement range, raises a confirmation request, and replaces the immutable `ExportClip` in the observable collection only after the main-page `ContentDialog` returns approval. Canceling leaves both the original list item and current edit controls unchanged.
+
 Batch export snapshots the registration list before starting, checks every destination for an existing file before launching ffmpeg, and disables list edits while processing. Progress for each plan is mapped into one overall progress value. Cancellation or the first failed plan stops later items; already completed independent files remain in the output directory.
 
 ## Settings Persistence
@@ -52,7 +54,7 @@ The initial media probing implementation runs `ffprobe -v error -show_format -sh
 
 Encoder information, media information, and export logs are displayed by one modeless `InfoWindow`. The main page retains the window instance while it is open, activates that instance on repeated INFO commands, and releases it after `Closed`. The secondary HWND sets the main HWND as its native owner, preserving normal owner stacking and minimize behavior without making the window modal. The window binds to the same `MainPageViewModel` as the editor so export progress and logs continue updating without blocking the main window. `MediaSummaryFormatter` labels `smpte2084` as `HDR10 (PQ)`, labels `arib-std-b67` as `HLG`, and displays raw ffprobe color space, transfer, and primaries values for diagnosis. Unloading the main page closes the secondary window to keep application lifetime predictable.
 
-Registered ranges are displayed by a separate modeless `ExportListWindow` owned by the main HWND. The first registration opens it automatically, and the main page can reopen the retained list while registrations exist. Start and end columns use fixed widths; the title column uses the remaining width with stretched `ListViewItem` content. Each row provides an icon delete action, and the window binds to the same in-memory collection as `MainPageViewModel`.
+Registered ranges are displayed by a separate modeless `ExportListWindow` owned by the main HWND. The first registration opens it automatically, and the main page can reopen the retained list while registrations exist. Start and end columns use fixed widths; the title column uses the remaining width with stretched `ListViewItem` content. Each row provides icon edit and delete actions, and the window binds to the same in-memory collection as `MainPageViewModel`. Edit restores the selected item's range/title through the view model and activates the main owner window.
 
 The registration input belongs to the timeline workflow rather than the export-settings panel. The compact title field, add command, and list command sit directly after the start/end marker buttons so selecting a range and registering it remain one local operation.
 

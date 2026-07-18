@@ -17,6 +17,7 @@
                 <ColumnDefinition Width="120" />
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="40" />
+                <ColumnDefinition Width="40" />
             </Grid.ColumnDefinitions>
             <TextBlock Style="{StaticResource BodyStrongTextBlockStyle}" Text="開始地点" />
             <TextBlock Grid.Column="1" Style="{StaticResource BodyStrongTextBlockStyle}" Text="終了地点" />
@@ -42,6 +43,7 @@
                             <ColumnDefinition Width="120" />
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="40" />
+                            <ColumnDefinition Width="40" />
                         </Grid.ColumnDefinitions>
                         <TextBlock VerticalAlignment="Center" Text="{x:Bind StartText}" />
                         <TextBlock Grid.Column="1" VerticalAlignment="Center" Text="{x:Bind EndText}" />
@@ -52,6 +54,15 @@
                             TextTrimming="CharacterEllipsis" />
                         <Button
                             Grid.Column="3"
+                            AutomationProperties.AutomationId="EditClipButton"
+                            AutomationProperties.Name="登録を編集"
+                            HorizontalAlignment="Center"
+                            Click="EditClipButton_Click"
+                            ToolTipService.ToolTip="登録を編集">
+                            <FontIcon FontSize="16" Glyph="&#xE70F;" />
+                        </Button>
+                        <Button
+                            Grid.Column="4"
                             AutomationProperties.AutomationId="RemoveClipButton"
                             AutomationProperties.Name="登録を削除"
                             HorizontalAlignment="Center"

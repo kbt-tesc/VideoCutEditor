@@ -475,6 +475,32 @@ if (-not [string]::IsNullOrWhiteSpace($SampleVideoPath)) {
                         throw "Registered title '$title' was not shown in the export list."
                     }
                 }
+
+                $editSearch = winapp ui search "EditClipButton" -w $listWindows[0].hwnd --json 2>$null | ConvertFrom-Json
+                $editButton = @($editSearch.matches) | Where-Object {
+                    $_.automationId -eq "EditClipButton" -and $_.type -eq "Button"
+                } | Select-Object -First 1
+                if ($null -eq $editButton) {
+                    throw "The first registered clip edit button was not found."
+                }
+                winapp ui invoke $editButton.selector -w $listWindows[0].hwnd -q
+                winapp ui wait-for "ClipTitleTextBox" -w $mainWindowHwnd --value $firstTitle -t 3000 -q
+                winapp ui wait-for "RangeStartTextBox" -w $mainWindowHwnd --value "0:00.000" -t 3000 -q
+                winapp ui wait-for "RangeEndTextBox" -w $mainWindowHwnd --value "0:01.500" -t 3000 -q
+
+                $overwriteText = -join [char[]]@(0x4E0A, 0x66F8, 0x304D)
+                winapp ui wait-for "AddClipButton" -w $mainWindowHwnd -p Name --value $overwriteText -t 3000 -q
+                winapp ui set-value "RangeEndTextBox" "0:01.250" -w $mainWindowHwnd -q
+                winapp ui invoke "AddClipButton" -w $mainWindowHwnd -q
+                winapp ui wait-for "Primary" -w $mainWindowHwnd -t 3000 -q
+                winapp ui invoke "Primary" -w $mainWindowHwnd -q
+
+                $overwrittenStatus = -join [char[]]@(0x30AF, 0x30EA, 0x30C3, 0x30D7, 0x3092, 0x4E0A, 0x66F8, 0x304D, 0x3057, 0x307E, 0x3057, 0x305F)
+                Wait-ForTextValue -AutomationId "StatusMessageText" -ExpectedText $overwrittenStatus -WindowHwnd ([long]$mainWindowHwnd)
+                $updatedEnd = winapp ui search "00:00:01.250" -w $listWindows[0].hwnd --json 2>$null | ConvertFrom-Json
+                if ($updatedEnd.matchCount -lt 1) {
+                    throw "The edited clip end time was not overwritten in the export list."
+                }
             }
         }
 

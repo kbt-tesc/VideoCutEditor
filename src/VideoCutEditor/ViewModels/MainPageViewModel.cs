@@ -37,15 +37,25 @@ public partial class MainPageViewModel : ObservableObject
     private string? lastCompletedOutputPath;
     private bool convertHdrToSdrEnabled;
     private string clipTitleText = string.Empty;
+    private ExportClip? pendingOverwriteClip;
+    private ClipRange? pendingOverwriteRange;
 
     public event EventHandler? ExportListRequested;
+
+    public event EventHandler? ClipOverwriteConfirmationRequested;
 
     public ObservableCollection<ExportClip> RegisteredClips { get; } = [];
 
     public string ClipTitleText
     {
         get => clipTitleText;
-        set => SetProperty(ref clipTitleText, value);
+        set
+        {
+            if (SetProperty(ref clipTitleText, value))
+            {
+                NotifyClipRegistrationActionChanged();
+            }
+        }
     }
 
     public bool HasRegisteredClips => RegisteredClips.Count > 0;
@@ -55,6 +65,16 @@ public partial class MainPageViewModel : ObservableObject
     public string RegisteredClipCountText => HasRegisteredClips
         ? $"登録クリップ: {RegisteredClips.Count}件"
         : "登録クリップはありません";
+
+    public string ClipRegistrationActionText => FindRegisteredClipByTitle() is null
+        ? "追加"
+        : "上書き";
+
+    public string ClipRegistrationActionGlyph => FindRegisteredClipByTitle() is null
+        ? "\uE710"
+        : "\uE74E";
+
+    public string PendingClipOverwriteTitle => pendingOverwriteClip?.Title ?? string.Empty;
 
     [ObservableProperty]
     public partial string? SelectedSourcePath { get; set; }
@@ -382,6 +402,7 @@ public partial class MainPageViewModel : ObservableObject
     {
         AppLogger.Info($"OpenVideoFileAsync: {file.Path}");
         mediaProbeCancellation?.Cancel();
+        CancelClipOverwrite();
         RegisteredClips.Clear();
         ClipTitleText = string.Empty;
         NotifyRegisteredClipsChanged();
@@ -579,6 +600,16 @@ public partial class MainPageViewModel : ObservableObject
             return;
         }
 
+        ExportClip? existingClip = FindRegisteredClipByTitle();
+        if (existingClip is not null)
+        {
+            pendingOverwriteClip = existingClip;
+            pendingOverwriteRange = range;
+            StatusMessage = $"上書き確認待ち: {existingClip.Title}";
+            ClipOverwriteConfirmationRequested?.Invoke(this, EventArgs.Empty);
+            return;
+        }
+
         string title = clipTitleService.CreateAvailableTitle(
             ClipTitleText,
             OutputDirectory,
@@ -595,11 +626,61 @@ public partial class MainPageViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private void EditClip(ExportClip? clip)
+    {
+        if (IsExporting || clip is null || !RegisteredClips.Contains(clip))
+        {
+            return;
+        }
+
+        RangeStartSeconds = clip.Range.Start.TotalSeconds;
+        RangeEndSeconds = clip.Range.End.TotalSeconds;
+        SetRangeTextWithoutParsing(clip.Range.Start, clip.Range.End);
+        ClipTitleText = clip.Title;
+        StatusMessage = $"クリップを編集中: {clip.Title}";
+    }
+
+    public void ConfirmClipOverwrite()
+    {
+        if (pendingOverwriteClip is null || pendingOverwriteRange is null)
+        {
+            return;
+        }
+
+        int index = RegisteredClips.IndexOf(pendingOverwriteClip);
+        if (index < 0)
+        {
+            CancelClipOverwrite();
+            StatusMessage = "上書き対象のクリップが見つかりません";
+            return;
+        }
+
+        string title = pendingOverwriteClip.Title;
+        RegisteredClips[index] = new ExportClip(pendingOverwriteRange.Value, title);
+        pendingOverwriteClip = null;
+        pendingOverwriteRange = null;
+        ClipTitleText = string.Empty;
+        NotifyRegisteredClipsChanged();
+        StatusMessage = $"クリップを上書きしました: {title}";
+    }
+
+    public void CancelClipOverwrite()
+    {
+        pendingOverwriteClip = null;
+        pendingOverwriteRange = null;
+    }
+
+    [RelayCommand]
     private void RemoveClip(ExportClip? clip)
     {
         if (IsExporting || clip is null || !RegisteredClips.Remove(clip))
         {
             return;
+        }
+
+        if (Equals(pendingOverwriteClip, clip))
+        {
+            CancelClipOverwrite();
         }
 
         NotifyRegisteredClipsChanged();
@@ -1062,6 +1143,22 @@ public partial class MainPageViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(HasRegisteredClips));
         OnPropertyChanged(nameof(RegisteredClipCountText));
+        NotifyClipRegistrationActionChanged();
+    }
+
+    private ExportClip? FindRegisteredClipByTitle()
+    {
+        string normalizedTitle = clipTitleService.NormalizeTitle(ClipTitleText);
+        return string.IsNullOrWhiteSpace(normalizedTitle)
+            ? null
+            : RegisteredClips.FirstOrDefault(clip =>
+                string.Equals(clip.Title, normalizedTitle, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private void NotifyClipRegistrationActionChanged()
+    {
+        OnPropertyChanged(nameof(ClipRegistrationActionText));
+        OnPropertyChanged(nameof(ClipRegistrationActionGlyph));
     }
 
     private sealed record ExportWorkItem(ClipRange Range, string OutputPath);
