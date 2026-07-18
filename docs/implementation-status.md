@@ -23,6 +23,7 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
   - Prevented duplicate registered titles by switching the action to overwrite, requiring confirmation, and replacing only the existing item's selected range.
   - Added per-row edit actions that restore title/start/end values to the timeline controls and reactivate the main window.
   - Expanded the isolated Fast copy multi-clip UI flow to exercise edit, dynamic overwrite action, confirmation, in-place range replacement, and final real ffmpeg output.
+  - Expanded the Japanese README with a dedicated multi-clip workflow covering registration, automatic titles, list editing/deletion, confirmed overwrite, and batch output naming.
   - Locked the behavior with five focused core tests.
   - Added six app-layer tests for range snapshots, placeholder/duplicate naming, list signaling, removal, invalid-range rejection, ordered plans, preflight collision handling, and failure stopping.
 
