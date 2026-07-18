@@ -113,6 +113,75 @@ public sealed class MainPageViewModelTests
     }
 
     [Fact]
+    public void AddClip_captures_range_assigns_placeholder_and_requests_list_once()
+    {
+        string directory = CreateTempDirectory();
+        MainPageViewModel viewModel = CreateViewModel();
+        viewModel.SelectedSourcePath = Path.Combine(directory, "source.mp4");
+        viewModel.OutputDirectory = directory;
+        viewModel.RangeStartSeconds = 2.5;
+        viewModel.RangeEndSeconds = 8.75;
+        int listRequestCount = 0;
+        viewModel.ExportListRequested += (_, _) => listRequestCount++;
+
+        viewModel.AddClipCommand.Execute(null);
+        viewModel.RangeStartSeconds = 10;
+        viewModel.RangeEndSeconds = 12;
+        viewModel.AddClipCommand.Execute(null);
+
+        Assert.Collection(
+            viewModel.RegisteredClips,
+            first =>
+            {
+                Assert.Equal("クリップ_1", first.Title);
+                Assert.Equal(TimeSpan.FromSeconds(2.5), first.Range.Start);
+                Assert.Equal(TimeSpan.FromSeconds(8.75), first.Range.End);
+            },
+            second => Assert.Equal("クリップ_2", second.Title));
+        Assert.Equal(1, listRequestCount);
+        Assert.Equal(string.Empty, viewModel.ClipTitleText);
+        Assert.True(viewModel.HasRegisteredClips);
+        Assert.Equal("登録クリップ: 2件", viewModel.RegisteredClipCountText);
+    }
+
+    [Fact]
+    public void AddClip_suffixes_duplicate_title_and_remove_clip_updates_state()
+    {
+        string directory = CreateTempDirectory();
+        MainPageViewModel viewModel = CreateViewModel();
+        viewModel.SelectedSourcePath = Path.Combine(directory, "source.mp4");
+        viewModel.OutputDirectory = directory;
+        viewModel.RangeEndSeconds = 1;
+        viewModel.ClipTitleText = "見どころ";
+        viewModel.AddClipCommand.Execute(null);
+        viewModel.ClipTitleText = "見どころ";
+        viewModel.AddClipCommand.Execute(null);
+
+        Assert.Equal(["見どころ", "見どころ_1"], viewModel.RegisteredClips.Select(clip => clip.Title));
+
+        viewModel.RemoveClipCommand.Execute(viewModel.RegisteredClips[0]);
+        viewModel.RemoveClipCommand.Execute(viewModel.RegisteredClips[0]);
+
+        Assert.Empty(viewModel.RegisteredClips);
+        Assert.False(viewModel.HasRegisteredClips);
+        Assert.Equal("登録クリップはありません", viewModel.RegisteredClipCountText);
+    }
+
+    [Fact]
+    public void AddClip_rejects_invalid_range()
+    {
+        MainPageViewModel viewModel = CreateViewModel();
+        viewModel.SelectedSourcePath = "source.mp4";
+        viewModel.RangeStartSeconds = 5;
+        viewModel.RangeEndSeconds = 5;
+
+        viewModel.AddClipCommand.Execute(null);
+
+        Assert.Empty(viewModel.RegisteredClips);
+        Assert.Equal("終了時刻は開始時刻より後にしてください", viewModel.StatusMessage);
+    }
+
+    [Fact]
     public async Task Export_validation_reports_missing_source_before_starting_runner()
     {
         var runner = new RecordingFfmpegRunner();

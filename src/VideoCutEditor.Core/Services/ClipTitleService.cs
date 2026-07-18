@@ -4,10 +4,9 @@ public sealed class ClipTitleService
 {
     public string CreateAvailableTitle(
         string? requestedTitle,
-        string outputDirectory,
+        string? outputDirectory,
         IEnumerable<string> registeredTitles)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(outputDirectory);
         ArgumentNullException.ThrowIfNull(registeredTitles);
 
         var unavailableTitles = new HashSet<string>(registeredTitles, StringComparer.OrdinalIgnoreCase);
@@ -19,8 +18,9 @@ public sealed class ClipTitleService
         while (true)
         {
             string candidate = suffix == 0 ? baseTitle : $"{baseTitle}_{suffix}";
-            string outputPath = Path.Combine(outputDirectory, $"{candidate}.mp4");
-            if (!unavailableTitles.Contains(candidate) && !File.Exists(outputPath))
+            bool destinationExists = !string.IsNullOrWhiteSpace(outputDirectory)
+                && File.Exists(Path.Combine(outputDirectory, $"{candidate}.mp4"));
+            if (!unavailableTitles.Contains(candidate) && !destinationExists)
             {
                 return candidate;
             }

@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using VideoCutEditor.Core.Models;
@@ -20,6 +21,7 @@ public partial class MainPageViewModel : ObservableObject
     private readonly IMediaProbeService mediaProbeService;
     private readonly IFfmpegCapabilityService ffmpegCapabilityService;
     private readonly BitrateSuggestionService bitrateSuggestionService;
+    private readonly ClipTitleService clipTitleService;
     private readonly Func<string, bool> outputDirectoryLauncher;
     private CancellationTokenSource? mediaProbeCancellation;
     private CancellationTokenSource? exportCancellation;
@@ -34,6 +36,23 @@ public partial class MainPageViewModel : ObservableObject
     private string plannedOutputFileName = string.Empty;
     private string? lastCompletedOutputPath;
     private bool convertHdrToSdrEnabled;
+    private string clipTitleText = string.Empty;
+
+    public event EventHandler? ExportListRequested;
+
+    public ObservableCollection<ExportClip> RegisteredClips { get; } = [];
+
+    public string ClipTitleText
+    {
+        get => clipTitleText;
+        set => SetProperty(ref clipTitleText, value);
+    }
+
+    public bool HasRegisteredClips => RegisteredClips.Count > 0;
+
+    public string RegisteredClipCountText => HasRegisteredClips
+        ? $"登録クリップ: {RegisteredClips.Count}件"
+        : "登録クリップはありません";
 
     [ObservableProperty]
     public partial string? SelectedSourcePath { get; set; }
@@ -279,7 +298,8 @@ public partial class MainPageViewModel : ObservableObject
         IMediaProbeService? mediaProbeService = null,
         IFfmpegCapabilityService? ffmpegCapabilityService = null,
         BitrateSuggestionService? bitrateSuggestionService = null,
-        Func<string, bool>? outputDirectoryLauncher = null)
+        Func<string, bool>? outputDirectoryLauncher = null,
+        ClipTitleService? clipTitleService = null)
     {
         this.settingsService = settingsService;
         this.outputPathService = outputPathService;
@@ -289,6 +309,7 @@ public partial class MainPageViewModel : ObservableObject
         this.ffmpegCapabilityService = ffmpegCapabilityService ?? new FfmpegCapabilityService();
         this.bitrateSuggestionService = bitrateSuggestionService ?? new BitrateSuggestionService();
         this.outputDirectoryLauncher = outputDirectoryLauncher ?? OpenDirectoryInShell;
+        this.clipTitleService = clipTitleService ?? new ClipTitleService();
     }
 
     public async Task InitializeAsync()
@@ -359,6 +380,9 @@ public partial class MainPageViewModel : ObservableObject
     {
         AppLogger.Info($"OpenVideoFileAsync: {file.Path}");
         mediaProbeCancellation?.Cancel();
+        RegisteredClips.Clear();
+        ClipTitleText = string.Empty;
+        NotifyRegisteredClipsChanged();
         SelectedSourcePath = file.Path;
         SelectedFileName = file.Name;
         PreviewSource = MediaSource.CreateFromStorageFile(file);
@@ -528,6 +552,51 @@ public partial class MainPageViewModel : ObservableObject
     {
         await settingsService.SaveAsync(CreateCurrentSettings());
         StatusMessage = "設定を保存しました";
+    }
+
+    [RelayCommand]
+    private void AddClip()
+    {
+        if (string.IsNullOrWhiteSpace(SelectedSourcePath))
+        {
+            StatusMessage = "登録前に動画を開いてください";
+            return;
+        }
+
+        var range = new ClipRange(
+            TimeSpan.FromSeconds(RangeStartSeconds),
+            TimeSpan.FromSeconds(RangeEndSeconds));
+        if (!range.IsValid)
+        {
+            StatusMessage = "終了時刻は開始時刻より後にしてください";
+            return;
+        }
+
+        string title = clipTitleService.CreateAvailableTitle(
+            ClipTitleText,
+            OutputDirectory,
+            RegisteredClips.Select(clip => clip.Title));
+        RegisteredClips.Add(new ExportClip(range, title));
+        ClipTitleText = string.Empty;
+        NotifyRegisteredClipsChanged();
+        StatusMessage = $"クリップを登録しました: {title}";
+
+        if (RegisteredClips.Count == 1)
+        {
+            ExportListRequested?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    [RelayCommand]
+    private void RemoveClip(ExportClip? clip)
+    {
+        if (clip is null || !RegisteredClips.Remove(clip))
+        {
+            return;
+        }
+
+        NotifyRegisteredClipsChanged();
+        StatusMessage = $"登録を削除しました: {clip.Title}";
     }
 
     [RelayCommand]
@@ -934,6 +1003,12 @@ public partial class MainPageViewModel : ObservableObject
             && !string.IsNullOrWhiteSpace(PlannedOutputPath)
             && !string.Equals(PlannedOutputPath, lastCompletedOutputPath, StringComparison.OrdinalIgnoreCase)
             && File.Exists(PlannedOutputPath);
+    }
+
+    private void NotifyRegisteredClipsChanged()
+    {
+        OnPropertyChanged(nameof(HasRegisteredClips));
+        OnPropertyChanged(nameof(RegisteredClipCountText));
     }
 
     private ExportMode CurrentExportMode => SelectedExportModeIndex switch

@@ -15,7 +15,9 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 - Multi-range export registration foundation (in progress on `codex/multi-marker-export`).
   - Added the immutable `ExportClip` range/title model.
   - Added collision-safe title generation for blank titles, registered titles, existing MP4 files, optional `.mp4` input, and invalid filename characters.
+  - Added view-model registration/removal commands, count state, first-registration window request signaling, and registration reset when a new source opens.
   - Locked the behavior with five focused core tests.
+  - Added three app-layer tests for range snapshots, placeholder/duplicate naming, list signaling, removal, and invalid-range rejection.
 
 - `9ac5d75 chore: add WinUI solution scaffold and repo guidance`
   - Created the WinUI 3/.NET 10 solution, app project, core project, and test project.
