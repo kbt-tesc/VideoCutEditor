@@ -12,6 +12,13 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 
 ## Completed Slices
 
+- `0.5.1` release preparation.
+  - Advanced the app and release-script defaults from `0.5.0` to `0.5.1` for the INFO export progress and responsive log-layout update.
+  - Updated development and packaged release commands plus the current installer filename.
+  - Passed all 193 Core and 30 app-layer Release tests and the WinUI-analyzer x64 Release build with 0 warnings and 0 errors.
+  - The first test attempt hit the documented `VBCSCompiler` file lock; `dotnet build-server shutdown` cleared it and the complete rerun passed.
+  - Artifact hashes, installer smoke verification, and GitHub release URL will be recorded after generation.
+
 - Responsive fixed-order INFO layout and export-log auto-scroll (`codex/info-export-progress`).
   - Replaced the window-level scrolling stack with an `Auto/*/Auto` grid ordered as combined encoder/media information, export log, and bottom export progress.
   - Combined encoder and media summaries into one fixed-height TextBox; only the full-width log row changes height with the window.
