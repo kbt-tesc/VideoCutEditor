@@ -354,6 +354,30 @@ public partial class MainPageViewModel : ObservableObject
     public bool IsAudioRateModeVisible =>
         IsAudioEncodingSettingsVisible && CurrentOutputContainer == OutputContainer.WebM;
 
+    public bool IsVbrAudioRateSelected
+    {
+        get => CurrentAudioRateMode == AudioRateMode.Vbr;
+        set
+        {
+            if (value)
+            {
+                SelectedAudioRateModeIndex = 0;
+            }
+        }
+    }
+
+    public bool IsCbrAudioRateSelected
+    {
+        get => CurrentAudioRateMode == AudioRateMode.Cbr;
+        set
+        {
+            if (value)
+            {
+                SelectedAudioRateModeIndex = 1;
+            }
+        }
+    }
+
     public bool IsHdrToSdrOptionVisible =>
         CurrentExportMode == ExportMode.Reencode
         && CurrentMediaInfo is not null
@@ -1132,6 +1156,12 @@ public partial class MainPageViewModel : ObservableObject
         }
 
         UpdatePredictedOutputSizeText();
+    }
+
+    partial void OnSelectedAudioRateModeIndexChanged(int value)
+    {
+        OnPropertyChanged(nameof(IsVbrAudioRateSelected));
+        OnPropertyChanged(nameof(IsCbrAudioRateSelected));
     }
 
     partial void OnTargetSizeMegabytesChanged(double value)

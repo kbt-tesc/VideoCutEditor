@@ -22,6 +22,7 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
   - Passed the WinUI-specific analyzer Release x64 build with 0 warnings and 0 errors.
   - Passed the isolated NormalizeAudio WinUI workflow with all 68 UI assertions and visually confirmed the conditional audio controls in the captured loaded-media state.
   - Simplified MP4 audio encoding to a bitrate-only AAC control, limited VBR/CBR selection to WebM Opus, and top-aligned the bitrate NumberBox so it keeps its normal control height.
+  - Reduced the audio bitrate input to a stable 180px width and replaced the WebM rate selector with horizontally arranged VBR/CBR radio buttons.
 
 - WebM export Core foundation (`codex/webm-export`).
   - Added persisted MP4/WebM output-container state, container-specific extensions, and collision-safe title handling across both formats.

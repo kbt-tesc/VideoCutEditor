@@ -170,6 +170,14 @@ public sealed class MainPageViewModelTests
         Assert.Equal(192, viewModel.AudioBitrateKbps);
         Assert.Equal(0, viewModel.SelectedAudioRateModeIndex);
         Assert.True(viewModel.IsAudioRateModeVisible);
+        Assert.True(viewModel.IsVbrAudioRateSelected);
+        Assert.False(viewModel.IsCbrAudioRateSelected);
+
+        viewModel.IsCbrAudioRateSelected = true;
+
+        Assert.Equal(1, viewModel.SelectedAudioRateModeIndex);
+        Assert.False(viewModel.IsVbrAudioRateSelected);
+        Assert.True(viewModel.IsCbrAudioRateSelected);
     }
 
     [Fact]

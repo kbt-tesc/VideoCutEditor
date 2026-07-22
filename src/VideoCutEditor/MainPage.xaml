@@ -305,7 +305,7 @@
 
                         <Grid Grid.Row="2" ColumnSpacing="12">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
 
@@ -456,24 +456,35 @@
                             <NumberBox
                                 AutomationProperties.AutomationId="AudioBitrateNumberBox"
                                 Header="音声ビットレート (kbps)"
-                                HorizontalAlignment="Stretch"
+                                HorizontalAlignment="Left"
                                 Maximum="512"
                                 Minimum="32"
                                 SmallChange="16"
                                 SpinButtonPlacementMode="Compact"
                                 VerticalAlignment="Top"
-                                Value="{x:Bind ViewModel.AudioBitrateKbps, Mode=TwoWay}" />
+                                Value="{x:Bind ViewModel.AudioBitrateKbps, Mode=TwoWay}"
+                                Width="180" />
 
-                            <RadioButtons
+                            <StackPanel
                                 Grid.Column="1"
-                                AutomationProperties.AutomationId="AudioRateModeRadioButtons"
-                                Header="音声レート"
-                                MaxColumns="2"
-                                SelectedIndex="{x:Bind ViewModel.SelectedAudioRateModeIndex, Mode=TwoWay}"
+                                Spacing="4"
                                 Visibility="{x:Bind local:MainPage.BoolToVisibility(ViewModel.IsAudioRateModeVisible), Mode=OneWay}">
-                                <x:String>VBR</x:String>
-                                <x:String>CBR</x:String>
-                            </RadioButtons>
+                                <TextBlock
+                                    Style="{StaticResource BodyStrongTextBlockStyle}"
+                                    Text="音声レート" />
+                                <StackPanel Orientation="Horizontal" Spacing="16">
+                                    <RadioButton
+                                        AutomationProperties.AutomationId="AudioVbrRadioButton"
+                                        Content="VBR"
+                                        GroupName="AudioRateMode"
+                                        IsChecked="{x:Bind ViewModel.IsVbrAudioRateSelected, Mode=TwoWay}" />
+                                    <RadioButton
+                                        AutomationProperties.AutomationId="AudioCbrRadioButton"
+                                        Content="CBR"
+                                        GroupName="AudioRateMode"
+                                        IsChecked="{x:Bind ViewModel.IsCbrAudioRateSelected, Mode=TwoWay}" />
+                                </StackPanel>
+                            </StackPanel>
                         </Grid>
 
                         <StackPanel

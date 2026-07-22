@@ -123,9 +123,12 @@ public sealed class UserInterfaceSourceTests
         Assert.Contains("ViewModel.IsAudioReencodeSelected", xaml);
         Assert.Contains("ViewModel.IsAudioReencodeToggleEnabled", xaml);
         Assert.Contains("AutomationProperties.AutomationId=\"AudioBitrateNumberBox\"", xaml);
-        Assert.Contains("AutomationProperties.AutomationId=\"AudioRateModeRadioButtons\"", xaml);
+        Assert.Contains("AutomationProperties.AutomationId=\"AudioVbrRadioButton\"", xaml);
+        Assert.Contains("AutomationProperties.AutomationId=\"AudioCbrRadioButton\"", xaml);
         Assert.Contains("ViewModel.IsAudioEncodingSettingsVisible", xaml);
         Assert.Contains("ViewModel.IsAudioRateModeVisible", xaml);
+        Assert.Contains("Width=\"180\"", xaml);
+        Assert.Contains("Orientation=\"Horizontal\"", xaml);
         Assert.Contains("VerticalAlignment=\"Top\"", xaml);
     }
 
