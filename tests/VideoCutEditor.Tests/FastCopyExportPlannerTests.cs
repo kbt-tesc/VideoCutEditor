@@ -89,6 +89,8 @@ public sealed class FastCopyExportPlannerTests
                     FfmpegPath = @"C:\tools\ffmpeg.exe",
                     LastExportMode = ExportMode.FastCopy,
                     NormalizeAudio = true,
+                    AudioBitrateKbps = 128,
+                    AudioRateMode = AudioRateMode.Vbr,
                 },
                 new MediaInfo(
                     @"C:\video\source.mp4",
@@ -143,6 +145,8 @@ public sealed class FastCopyExportPlannerTests
                     "loudnorm=I=-14:TP=-1.5:LRA=11",
                     "-c:a",
                     "aac",
+                    "-b:a",
+                    "128k",
                     "-map_metadata",
                     "0",
                     "-avoid_negative_ts",
@@ -255,6 +259,7 @@ public sealed class FastCopyExportPlannerTests
 
             Assert.EndsWith(".webm", plan.TemporaryOutputPath);
             Assert.Contains("copy", plan.Arguments);
+            Assert.DoesNotContain("-c:a", plan.Arguments);
         }
         finally
         {
@@ -285,5 +290,115 @@ public sealed class FastCopyExportPlannerTests
 
         Assert.Contains("WebM", exception.Message);
         Assert.Contains("Fast copy", exception.Message);
+    }
+
+    [Fact]
+    public void CreatePlan_reencodes_audio_to_aac_cbr_when_explicitly_enabled()
+    {
+        string outputDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(outputDirectory);
+
+        try
+        {
+            var planner = new FastCopyExportPlanner();
+            var request = new ExportRequest(
+                @"C:\video\source.mp4",
+                Path.Combine(outputDirectory, "clip.mp4"),
+                new ClipRange(TimeSpan.Zero, TimeSpan.FromSeconds(5)),
+                new AppSettings
+                {
+                    FfmpegPath = @"C:\tools\ffmpeg.exe",
+                    ReencodeAudio = true,
+                    AudioBitrateKbps = 192,
+                    AudioRateMode = AudioRateMode.Cbr,
+                },
+                new MediaInfo(
+                    @"C:\video\source.mp4",
+                    TimeSpan.FromSeconds(10),
+                    "mov,mp4",
+                    null,
+                    [
+                        new MediaStreamInfo(0, "video", "h264", null),
+                        new MediaStreamInfo(1, "audio", "aac", 160_000),
+                    ]));
+
+            ExportPlan plan = planner.CreatePlan(request);
+
+            Assert.Contains("copy", plan.Arguments);
+            Assert.Contains("aac", plan.Arguments);
+            Assert.Contains("192k", plan.Arguments);
+            Assert.DoesNotContain("-q:a", plan.Arguments);
+        }
+        finally
+        {
+            Directory.Delete(outputDirectory, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void CreatePlan_automatically_reencodes_incompatible_audio_for_webm()
+    {
+        string outputDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(outputDirectory);
+
+        try
+        {
+            var planner = new FastCopyExportPlanner();
+            var request = new ExportRequest(
+                @"C:\video\source.mp4",
+                Path.Combine(outputDirectory, "clip.webm"),
+                new ClipRange(TimeSpan.Zero, TimeSpan.FromSeconds(5)),
+                new AppSettings
+                {
+                    FfmpegPath = @"C:\tools\ffmpeg.exe",
+                    AudioBitrateKbps = 128,
+                    AudioRateMode = AudioRateMode.Vbr,
+                },
+                new MediaInfo(
+                    @"C:\video\source.mp4",
+                    TimeSpan.FromSeconds(10),
+                    "mov,mp4",
+                    null,
+                    [
+                        new MediaStreamInfo(0, "video", "vp9", null),
+                        new MediaStreamInfo(1, "audio", "aac", 128_000),
+                    ]));
+
+            ExportPlan plan = planner.CreatePlan(request);
+
+            Assert.Contains("libopus", plan.Arguments);
+            Assert.Contains("128k", plan.Arguments);
+            Assert.Contains("-vbr", plan.Arguments);
+            Assert.Contains("on", plan.Arguments);
+        }
+        finally
+        {
+            Directory.Delete(outputDirectory, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void CreatePlan_rejects_automatic_webm_audio_reencode_when_libopus_is_unavailable()
+    {
+        var planner = new FastCopyExportPlanner(new FfmpegCapabilities(new HashSet<string>()));
+        var request = new ExportRequest(
+            @"C:\video\source.mp4",
+            @"C:\output\clip.webm",
+            new ClipRange(TimeSpan.Zero, TimeSpan.FromSeconds(5)),
+            new AppSettings { FfmpegPath = @"C:\tools\ffmpeg.exe" },
+            new MediaInfo(
+                @"C:\video\source.mp4",
+                TimeSpan.FromSeconds(10),
+                "mov,mp4",
+                null,
+                [
+                    new MediaStreamInfo(0, "video", "vp9", null),
+                    new MediaStreamInfo(1, "audio", "aac", 128_000),
+                ]));
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(
+            () => planner.CreatePlan(request));
+
+        Assert.Contains("libopus", exception.Message);
     }
 }

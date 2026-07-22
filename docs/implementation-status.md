@@ -12,13 +12,24 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 
 ## Completed Slices
 
+- Conditional MP4/WebM UI and audio re-encode controls (`codex/webm-export`).
+  - Added conditional MP4/WebM selection, output-name synchronization, and per-clip WebM filenames to the WinUI export surface.
+  - Fast copy now permits container switching when video can remain copied and converts only incompatible audio; Re-encode writes AV1 WebM and copies compatible audio when no processing is needed.
+  - Added an explicit audio re-encode checkbox. Normalization, audio fades, and destination incompatibility force it on; bitrate and VBR/CBR controls appear only while encoding is active.
+  - Added AAC-for-MP4 and Opus-for-WebM argument generation, persisted settings, source AAC/Opus bitrate suggestions, and the 128 kbps VBR fallback.
+  - Added unit, app-layer, XAML contract, and real ffmpeg integration coverage for VP9 copy plus AAC-to-Opus conversion and MP4-to-AV1/Opus WebM output.
+  - Passed all 193 Core and 28 app-layer Release tests, including the real ffmpeg WebM cases, with 0 failures.
+  - Passed the WinUI-specific analyzer Release x64 build with 0 warnings and 0 errors.
+  - Passed the isolated NormalizeAudio WinUI workflow with all 68 UI assertions and visually confirmed the conditional audio controls in the captured loaded-media state.
+  - Simplified MP4 audio encoding to a bitrate-only AAC control, limited VBR/CBR selection to WebM Opus, and top-aligned the bitrate NumberBox so it keeps its normal control height.
+
 - WebM export Core foundation (`codex/webm-export`).
   - Added persisted MP4/WebM output-container state, container-specific extensions, and collision-safe title handling across both formats.
   - Added conservative ffprobe-based Fast copy compatibility checks for MP4/WebM remuxing, including rejection of unknown codecs and unsupported stream types before process launch.
   - Added WebM Re-encode planning with AV1 video, `libopus` audio, video/audio-only stream mapping, and required-encoder validation.
   - Confirmed the local winget ffmpeg can stream-copy a generated VP9+Opus WebM to MP4 and back to WebM.
   - Passed all 173 Core Release tests with 0 test failures and no build warnings.
-  - WinUI format selection, output-name synchronization, and end-to-end WebM export verification remain in the next slice.
+  - WinUI format selection, output-name synchronization, and end-to-end WebM export verification were completed in the following conditional-audio slice above.
 
 - `0.4.0` release preparation.
   - Advanced the app and release-script defaults from `0.3.0` to `0.4.0` for the merged multi-clip feature release.
@@ -329,7 +340,7 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 - HDR media detection from ffprobe color transfer metadata, with Re-encode-only HDR to SDR tone mapping.
 - INFO media details identify HDR10/PQ or HLG and show color space, transfer characteristic, and color primaries.
 - Re-encode advanced additional ffmpeg arguments with quote-aware argument parsing, app-managed option validation, and obvious syntax-mistake validation.
-- Two-pass audio normalization option with fixed `-14 LUFS` loudnorm and AAC audio re-encode in both Fast copy and Re-encode.
+- Two-pass audio normalization option with fixed `-14 LUFS` loudnorm and destination-aware AAC/Opus audio re-encode in both Fast copy and Re-encode.
 - Target-size mode that derives Re-encode video bitrate from desired output size.
 - Quality mode that maps a single quality value to `-crf` for software encoders and `-cq` for NVEnc encoders.
 - Clip-edge video/audio fade controls that force Re-encode and generate ffmpeg filters.
@@ -584,9 +595,11 @@ When resuming in a new session, rerun the relevant subset before making assumpti
 - Audio normalization is covered by generated-media integration tests, fake-process two-pass argument replacement, isolated UI export with both pass logs, and video-only rejection with no output. Representative real media still needs manual verification.
 - HDR to SDR conversion is covered at ffprobe parsing, settings, planner, Fast copy non-conversion, generated 10-bit BT.2020/PQ media, real `zscale`/`tonemap` execution, UI completion, and BT.709 output metadata layers. Representative real HDR10/PQ and HLG game recordings still need manual visual verification for tone-mapping quality.
 - Quality mode is covered for generated software media and H.264, HEVC, and AV1 NVEnc execution on RTX 5080. One AV1 completion screenshot was partially black, but an immediate full E2E rerun passed and captured the complete rendered state; treat the first image as transient capture noise unless it recurs.
-- Generated media export is automated for Fast copy and Software H.264 Re-encode. Representative real media should still be manually verified for both modes.
+- Generated media export is automated for Fast copy, Software H.264 Re-encode, Fast copy VP9/AAC-to-WebM remux with Opus audio conversion, and AV1/Opus WebM Re-encode. Representative real media should still be manually verified for all selected paths.
+- The local `libsvtav1` encoder rejects bitrate-mode AV1 encoding for the 96x54 synthetic test input because of its adaptive-quantization constraints; the WebM integration test uses 320x180. Very low-resolution real AV1 exports remain a manual edge case.
 - H.264, HEVC, and AV1 NVEnc bitrate and quality-mode exports are verified on the local RTX 5080 and winget ffmpeg build. Representative real media still needs manual verification for these hardware paths.
 - The current winapp UIA bridge does not expose `QualityNumberBox` as a reliably parseable numeric value. Keep the isolated settings contract and screenshot review for the exact value while UIA verifies mode and enabled state.
+- The current winapp UIA bridge likewise does not expose the nested audio bitrate NumberBox and VBR/CBR RadioButtons reliably. App-layer/source contracts verify their state and the NormalizeAudio UI screenshot verifies that the visible controls are laid out correctly; runtime UIA verifies the forced audio re-encode checkbox.
 - Preview-unavailable fallback behavior needs more manual and/or UI coverage.
 - Portable x64 publish, x86 publish, arm64 publish, artifact validation, x64 ZIP distribution packaging, checksum verification, and distributed x64 EXE startup smoke testing now succeed. Signing, MSIX/installer validation, and x86/arm64 runtime startup on matching devices still need verification.
 - The x64 per-user installer was verified through upgrade, launch, uninstall, and clean reinstall for `0.4.0`; production code signing remains unresolved.

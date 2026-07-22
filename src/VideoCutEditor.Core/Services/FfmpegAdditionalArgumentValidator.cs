@@ -6,6 +6,7 @@ public static class FfmpegAdditionalArgumentValidator
     {
         "-avoid_negative_ts",
         "-b:v",
+        "-b:a",
         "-c",
         "-c:a",
         "-c:v",
@@ -14,6 +15,7 @@ public static class FfmpegAdditionalArgumentValidator
         "-codec:v",
         "-cq",
         "-crf",
+        "-q:a",
         "-filter:a",
         "-filter:v",
         "-i",
@@ -25,6 +27,7 @@ public static class FfmpegAdditionalArgumentValidator
         "-t",
         "-to",
         "-vf",
+        "-vbr",
         "-af",
         "-y",
     };

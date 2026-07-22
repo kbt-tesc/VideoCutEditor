@@ -14,7 +14,7 @@ public sealed class ExportPlannerFactory
     public IExportPlanner CreatePlanner(ExportMode exportMode) =>
         exportMode switch
         {
-            ExportMode.FastCopy => new FastCopyExportPlanner(),
+            ExportMode.FastCopy => new FastCopyExportPlanner(capabilities),
             ExportMode.Reencode => new ReencodeExportPlanner(capabilities),
             _ => throw new ArgumentOutOfRangeException(nameof(exportMode)),
         };

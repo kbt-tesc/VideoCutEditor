@@ -5,6 +5,13 @@ namespace VideoCutEditor.Core.Services;
 
 public sealed class FastCopyExportPlanner : IExportPlanner
 {
+    private readonly FfmpegCapabilities? capabilities;
+
+    public FastCopyExportPlanner(FfmpegCapabilities? capabilities = null)
+    {
+        this.capabilities = capabilities;
+    }
+
     public ExportPlan CreatePlan(ExportRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
@@ -14,6 +21,20 @@ public sealed class FastCopyExportPlanner : IExportPlanner
         ArgumentException.ThrowIfNullOrWhiteSpace(request.OutputPath);
         AudioNormalizationArguments.ThrowIfRequestedWithoutAudio(request.Settings, request.MediaInfo);
         ValidateContainerSwitch(request);
+
+        OutputContainer outputContainer = OutputContainerExtensions.TryFromPath(
+            request.OutputPath,
+            out OutputContainer parsedOutputContainer)
+                ? parsedOutputContainer
+                : request.Settings.LastOutputContainer;
+        bool reencodeAudio = AudioEncodingService.RequiresReencode(
+            request.Settings,
+            request.MediaInfo,
+            outputContainer);
+        if (reencodeAudio)
+        {
+            ValidateAudioEncoder(outputContainer);
+        }
 
         string temporaryOutputPath = ExportPlanPathHelper.CreateTemporaryOutputPath(request.OutputPath);
 
@@ -36,17 +57,16 @@ public sealed class FastCopyExportPlanner : IExportPlanner
 
         if (request.Settings.NormalizeAudio)
         {
-            string audioEncoder = OutputContainerExtensions.TryFromPath(request.OutputPath, out OutputContainer outputContainer)
-                && outputContainer == OutputContainer.WebM
-                    ? "libopus"
-                    : "aac";
             arguments.AddRange(
             [
                 "-af",
                 AudioNormalizationArguments.LoudnormFilter,
-                "-c:a",
-                audioEncoder,
             ]);
+        }
+
+        if (reencodeAudio)
+        {
+            arguments.AddRange(AudioEncodingService.CreateArguments(request.Settings, outputContainer));
         }
 
         arguments.AddRange(
@@ -77,10 +97,20 @@ public sealed class FastCopyExportPlanner : IExportPlanner
         }
 
         if (request.MediaInfo is null
-            || !OutputContainerCompatibilityService.CanStreamCopy(request.MediaInfo, outputContainer))
+            || !OutputContainerCompatibilityService.CanExportWithVideoCopy(request.MediaInfo, outputContainer))
         {
             throw new InvalidOperationException(
                 $"{outputContainer.GetDisplayName()}へFast copyできないストリームが含まれています。Re-encodeを選択してください");
+        }
+    }
+
+    private void ValidateAudioEncoder(OutputContainer outputContainer)
+    {
+        string requiredEncoder = outputContainer == OutputContainer.WebM ? "libopus" : "aac";
+        if (capabilities is not null && !capabilities.SupportsEncoder(requiredEncoder))
+        {
+            throw new InvalidOperationException(
+                $"{outputContainer.GetDisplayName()}音声の書き出しに必要な{requiredEncoder}エンコーダーが利用できません");
         }
     }
 

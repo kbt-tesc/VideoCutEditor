@@ -101,6 +101,35 @@ public sealed class UserInterfaceSourceTests
     }
 
     [Fact]
+    public void Output_container_uses_accessible_conditional_radio_buttons()
+    {
+        string xaml = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "src", "VideoCutEditor", "MainPage.xaml"));
+
+        Assert.Contains("AutomationProperties.AutomationId=\"OutputContainerOptions\"", xaml);
+        Assert.Contains("AutomationProperties.AutomationId=\"Mp4OutputRadioButton\"", xaml);
+        Assert.Contains("AutomationProperties.AutomationId=\"WebMOutputRadioButton\"", xaml);
+        Assert.Contains("ViewModel.IsOutputContainerSelectorVisible", xaml);
+        Assert.Contains("ViewModel.IsMp4OutputSelected", xaml);
+        Assert.Contains("ViewModel.IsWebMOutputSelected", xaml);
+        Assert.Contains("ViewModel.IsCodecFamilySelectionEnabled", xaml);
+    }
+
+    [Fact]
+    public void Audio_encoding_uses_conditional_accessible_controls()
+    {
+        string xaml = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "src", "VideoCutEditor", "MainPage.xaml"));
+
+        Assert.Contains("AutomationProperties.AutomationId=\"ReencodeAudioCheckBox\"", xaml);
+        Assert.Contains("ViewModel.IsAudioReencodeSelected", xaml);
+        Assert.Contains("ViewModel.IsAudioReencodeToggleEnabled", xaml);
+        Assert.Contains("AutomationProperties.AutomationId=\"AudioBitrateNumberBox\"", xaml);
+        Assert.Contains("AutomationProperties.AutomationId=\"AudioRateModeRadioButtons\"", xaml);
+        Assert.Contains("ViewModel.IsAudioEncodingSettingsVisible", xaml);
+        Assert.Contains("ViewModel.IsAudioRateModeVisible", xaml);
+        Assert.Contains("VerticalAlignment=\"Top\"", xaml);
+    }
+
+    [Fact]
     public void Play_pause_button_icon_tracks_playback_state()
     {
         string xaml = File.ReadAllText(Path.Combine(FindRepositoryRoot(), "src", "VideoCutEditor", "MainPage.xaml"));

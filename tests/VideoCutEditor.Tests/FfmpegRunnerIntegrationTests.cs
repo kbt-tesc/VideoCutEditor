@@ -240,6 +240,124 @@ public sealed class FfmpegRunnerIntegrationTests
     }
 
     [SkippableFact]
+    public async Task RunAsync_copies_vp9_video_and_reencodes_aac_audio_to_webm()
+    {
+        FfmpegToolPaths paths = new FfmpegToolPathService().Resolve(new AppSettings());
+        IntegrationTestRequirements.RequireFile(paths.FfmpegPath, "ffmpeg is not available.");
+        IntegrationTestRequirements.RequireFile(paths.FfprobePath, "ffprobe is not available.");
+
+        FfmpegCapabilities capabilities = await new FfmpegCapabilityService().DetectAsync(paths.FfmpegPath);
+        IntegrationTestRequirements.Require(capabilities.SupportsEncoder("libvpx-vp9"), "ffmpeg does not provide the libvpx-vp9 encoder.");
+        IntegrationTestRequirements.Require(capabilities.SupportsEncoder("libopus"), "ffmpeg does not provide the libopus encoder.");
+
+        string workingDirectory = Path.Combine(Path.GetTempPath(), "VideoCutEditor.Tests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(workingDirectory);
+
+        try
+        {
+            string sourcePath = Path.Combine(workingDirectory, "vp9-aac.mp4");
+            string outputPath = Path.Combine(workingDirectory, "vp9-opus.webm");
+            await RunProcessAsync(
+                paths.FfmpegPath,
+                [
+                    "-hide_banner", "-loglevel", "error", "-y",
+                    "-f", "lavfi", "-i", "testsrc=size=96x54:rate=12",
+                    "-f", "lavfi", "-i", "sine=frequency=1000:sample_rate=48000",
+                    "-t", "1", "-c:v", "libvpx-vp9", "-b:v", "200k",
+                    "-c:a", "aac", "-b:a", "96k", "-shortest", sourcePath,
+                ]);
+
+            MediaInfo sourceInfo = await new MediaProbeService().ProbeAsync(paths.FfprobePath, sourcePath);
+            ExportPlan plan = new FastCopyExportPlanner().CreatePlan(new ExportRequest(
+                sourcePath,
+                outputPath,
+                new ClipRange(TimeSpan.Zero, TimeSpan.FromSeconds(0.8)),
+                new AppSettings
+                {
+                    FfmpegPath = paths.FfmpegPath,
+                    LastOutputContainer = OutputContainer.WebM,
+                    AudioBitrateKbps = 96,
+                    AudioRateMode = AudioRateMode.Vbr,
+                },
+                sourceInfo));
+
+            ExportResult result = await new FfmpegRunner().RunAsync(plan);
+
+            Assert.True(result.Succeeded, result.ErrorMessage);
+            MediaInfo outputInfo = await new MediaProbeService().ProbeAsync(paths.FfprobePath, outputPath);
+            Assert.Contains(outputInfo.Streams, stream => stream.CodecType == "video" && stream.CodecName == "vp9");
+            Assert.Contains(outputInfo.Streams, stream => stream.CodecType == "audio" && stream.CodecName == "opus");
+        }
+        finally
+        {
+            Directory.Delete(workingDirectory, recursive: true);
+        }
+    }
+
+    [SkippableFact]
+    public async Task RunAsync_reencodes_mp4_to_av1_opus_webm()
+    {
+        FfmpegToolPaths paths = new FfmpegToolPathService().Resolve(new AppSettings());
+        IntegrationTestRequirements.RequireFile(paths.FfmpegPath, "ffmpeg is not available.");
+        IntegrationTestRequirements.RequireFile(paths.FfprobePath, "ffprobe is not available.");
+
+        FfmpegCapabilities capabilities = await new FfmpegCapabilityService().DetectAsync(paths.FfmpegPath);
+        IntegrationTestRequirements.Require(
+            capabilities.ChooseVideoEncoder(CodecFamily.Av1, EncoderKind.Software) is not null,
+            "ffmpeg does not provide a supported AV1 software encoder.");
+        IntegrationTestRequirements.Require(capabilities.SupportsEncoder("libopus"), "ffmpeg does not provide the libopus encoder.");
+
+        string workingDirectory = Path.Combine(Path.GetTempPath(), "VideoCutEditor.Tests", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(workingDirectory);
+
+        try
+        {
+            string sourcePath = Path.Combine(workingDirectory, "source.mp4");
+            string outputPath = Path.Combine(workingDirectory, "encoded.webm");
+            await RunProcessAsync(
+                paths.FfmpegPath,
+                [
+                    "-hide_banner", "-loglevel", "error", "-y",
+                    "-f", "lavfi", "-i", "testsrc=size=320x180:rate=12",
+                    "-f", "lavfi", "-i", "sine=frequency=500:sample_rate=48000",
+                    "-t", "1", "-c:v", "mpeg4", "-q:v", "5",
+                    "-c:a", "aac", "-b:a", "96k", "-shortest", sourcePath,
+                ]);
+
+            MediaInfo sourceInfo = await new MediaProbeService().ProbeAsync(paths.FfprobePath, sourcePath);
+            ExportPlan plan = new ReencodeExportPlanner(capabilities).CreatePlan(new ExportRequest(
+                sourcePath,
+                outputPath,
+                new ClipRange(TimeSpan.Zero, TimeSpan.FromSeconds(0.8)),
+                new AppSettings
+                {
+                    FfmpegPath = paths.FfmpegPath,
+                    LastExportMode = ExportMode.Reencode,
+                    LastOutputContainer = OutputContainer.WebM,
+                    LastEncoderKind = EncoderKind.Software,
+                    LastVideoBitrateKbps = 200,
+                    AudioBitrateKbps = 96,
+                    AudioRateMode = AudioRateMode.Cbr,
+                },
+                sourceInfo));
+
+            var logLines = new List<string>();
+            ExportResult result = await new FfmpegRunner().RunAsync(
+                plan,
+                new InlineProgress<ExportProgress>(progress => logLines.Add(progress.Status)));
+
+            Assert.True(result.Succeeded, $"{result.ErrorMessage}{Environment.NewLine}{string.Join(Environment.NewLine, logLines)}");
+            MediaInfo outputInfo = await new MediaProbeService().ProbeAsync(paths.FfprobePath, outputPath);
+            Assert.Contains(outputInfo.Streams, stream => stream.CodecType == "video" && stream.CodecName == "av1");
+            Assert.Contains(outputInfo.Streams, stream => stream.CodecType == "audio" && stream.CodecName == "opus");
+        }
+        finally
+        {
+            Directory.Delete(workingDirectory, recursive: true);
+        }
+    }
+
+    [SkippableFact]
     public async Task RunAsync_reencodes_video_only_source_when_audio_fade_is_enabled()
     {
         FfmpegToolPaths paths = new FfmpegToolPathService().Resolve(new AppSettings());

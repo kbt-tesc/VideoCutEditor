@@ -306,7 +306,7 @@
                         <Grid Grid.Row="2" ColumnSpacing="12">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
 
                             <TextBox
@@ -411,10 +411,70 @@
                             <x:String>Re-encode</x:String>
                         </RadioButtons>
 
+                        <StackPanel
+                            AutomationProperties.AutomationId="OutputContainerOptions"
+                            Spacing="4"
+                            Visibility="{x:Bind local:MainPage.BoolToVisibility(ViewModel.IsOutputContainerSelectorVisible), Mode=OneWay}">
+                            <TextBlock
+                                Style="{StaticResource BodyStrongTextBlockStyle}"
+                                Text="出力形式" />
+                            <StackPanel Orientation="Horizontal" Spacing="16">
+                                <RadioButton
+                                    AutomationProperties.AutomationId="Mp4OutputRadioButton"
+                                    Content="MP4"
+                                    GroupName="OutputContainer"
+                                    IsChecked="{x:Bind ViewModel.IsMp4OutputSelected, Mode=TwoWay}" />
+                                <RadioButton
+                                    AutomationProperties.AutomationId="WebMOutputRadioButton"
+                                    Content="WebM"
+                                    GroupName="OutputContainer"
+                                    IsChecked="{x:Bind ViewModel.IsWebMOutputSelected, Mode=TwoWay}" />
+                            </StackPanel>
+                        </StackPanel>
+
                         <CheckBox
                             AutomationProperties.AutomationId="NormalizeAudioCheckBox"
                             Content="音量を正規化 (-14 LUFS)"
                             IsChecked="{x:Bind ViewModel.NormalizeAudioEnabled, Mode=TwoWay}" />
+
+                        <CheckBox
+                            AutomationProperties.AutomationId="ReencodeAudioCheckBox"
+                            Content="音声を再エンコード"
+                            IsChecked="{x:Bind ViewModel.IsAudioReencodeSelected, Mode=TwoWay}"
+                            IsEnabled="{x:Bind ViewModel.IsAudioReencodeToggleEnabled, Mode=OneWay}"
+                            Visibility="{x:Bind local:MainPage.BoolToVisibility(ViewModel.HasAudioStream), Mode=OneWay}" />
+
+                        <Grid
+                            AutomationProperties.AutomationId="AudioEncodingSettings"
+                            ColumnSpacing="8"
+                            Visibility="{x:Bind local:MainPage.BoolToVisibility(ViewModel.IsAudioEncodingSettingsVisible), Mode=OneWay}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <NumberBox
+                                AutomationProperties.AutomationId="AudioBitrateNumberBox"
+                                Header="音声ビットレート (kbps)"
+                                HorizontalAlignment="Stretch"
+                                Maximum="512"
+                                Minimum="32"
+                                SmallChange="16"
+                                SpinButtonPlacementMode="Compact"
+                                VerticalAlignment="Top"
+                                Value="{x:Bind ViewModel.AudioBitrateKbps, Mode=TwoWay}" />
+
+                            <RadioButtons
+                                Grid.Column="1"
+                                AutomationProperties.AutomationId="AudioRateModeRadioButtons"
+                                Header="音声レート"
+                                MaxColumns="2"
+                                SelectedIndex="{x:Bind ViewModel.SelectedAudioRateModeIndex, Mode=TwoWay}"
+                                Visibility="{x:Bind local:MainPage.BoolToVisibility(ViewModel.IsAudioRateModeVisible), Mode=OneWay}">
+                                <x:String>VBR</x:String>
+                                <x:String>CBR</x:String>
+                            </RadioButtons>
+                        </Grid>
 
                         <StackPanel
                             Spacing="16"
@@ -429,6 +489,7 @@
                                     AutomationProperties.AutomationId="CodecFamilyComboBox"
                                     Header="コーデック"
                                     HorizontalAlignment="Stretch"
+                                    IsEnabled="{x:Bind ViewModel.IsCodecFamilySelectionEnabled, Mode=OneWay}"
                                     SelectedIndex="{x:Bind ViewModel.SelectedCodecFamilyIndex, Mode=TwoWay}">
                                     <ComboBoxItem Content="H.264" />
                                     <ComboBoxItem Content="H.265" />

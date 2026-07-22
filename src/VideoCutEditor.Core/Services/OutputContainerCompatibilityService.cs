@@ -17,6 +17,22 @@ public static class OutputContainerCompatibilityService
             && mediaInfo.Streams.All(stream => IsCompatible(stream, targetContainer));
     }
 
+    public static bool CanExportWithVideoCopy(MediaInfo mediaInfo, OutputContainer targetContainer)
+    {
+        ArgumentNullException.ThrowIfNull(mediaInfo);
+
+        return mediaInfo.Streams.Count > 0
+            && mediaInfo.Streams.All(stream =>
+                string.Equals(stream.CodecType, "audio", StringComparison.OrdinalIgnoreCase)
+                || IsCompatible(stream, targetContainer));
+    }
+
+    public static bool IsAudioCodecCompatible(string? codecName, OutputContainer targetContainer) =>
+        !string.IsNullOrWhiteSpace(codecName)
+        && (targetContainer == OutputContainer.WebM
+            ? WebMAudioCodecs.Contains(codecName)
+            : Mp4AudioCodecs.Contains(codecName));
+
     private static bool IsCompatible(MediaStreamInfo stream, OutputContainer targetContainer)
     {
         if (string.IsNullOrWhiteSpace(stream.CodecName))

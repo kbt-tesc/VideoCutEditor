@@ -76,7 +76,7 @@ Command policy:
 
 The UI must communicate that stream-copy cuts may align to keyframes and can be slightly imprecise.
 
-For MP4/WebM sources, Fast Copy may expose the other container only after ffprobe metadata proves every mapped stream is compatible. The conservative compatibility table accepts VP8/VP9/AV1 video with Vorbis/Opus audio for WebM, and H.264/HEVC/AV1/VP9/MPEG-4 video with AAC/MP3/AC-3/E-AC-3/ALAC/Opus audio for MP4. Unknown codecs and subtitle, data, or attachment streams make cross-container Fast Copy unavailable. The planner repeats this check so a stale or manually constructed request fails before ffmpeg starts.
+For MP4/WebM sources, Fast Copy may expose the other container only after ffprobe metadata proves video and retained non-audio streams are compatible. The conservative compatibility table accepts VP8/VP9/AV1 video for WebM and H.264/HEVC/AV1/VP9/MPEG-4 video for MP4. WebM audio accepts Vorbis/Opus and MP4 audio accepts AAC/MP3/AC-3/E-AC-3/ALAC/Opus; incompatible audio is re-encoded to Opus or AAC while video remains copied. Unknown video codecs and subtitle, data, or attachment streams make cross-container Fast Copy unavailable. The UI also requires the destination audio encoder when conversion is necessary, and the planner repeats compatibility and capability checks before ffmpeg starts.
 
 The first implemented export path is Fast Copy. It builds the ffmpeg argument list in testable code, writes to a unique temporary output path in the destination folder, and moves the file to the final generated path only after ffmpeg exits successfully.
 
@@ -107,7 +107,7 @@ Tool setup normally selects one directory. `FfmpegToolPathService.ResolveDirecto
 
 The initial re-encode planner builds command arguments for bitrate-based video re-encode. It selects the user-requested codec family and encoder preference from settings, uses the detected capability list to choose the concrete encoder, maps all streams, defaults non-video streams to copy with `-c copy`, overrides video with `-c:v <encoder> -b:v <kbps>k`, preserves metadata, and writes through a temporary output path before promotion. The WinUI shell exposes Fast copy/Re-encode mode, codec family, encoder preference, and video bitrate controls. The view model stores the last-used choices and routes export planning through `ExportPlannerFactory` so Fast copy remains the default while Re-encode uses the detected capability list.
 
-WebM Re-encode fixes the video family to AV1 and selects `av1_nvenc`, `libsvtav1`, or `libaom-av1` through the existing encoder preference. It maps optional video and audio streams only (`-map 0:v? -map 0:a?`), re-encodes audio with `libopus`, and omits incompatible subtitle/data/attachment streams. MP4 keeps the existing codec-family choices and stream-preservation policy. WebM selection is unavailable when no matching AV1 encoder exists or when audio is present and `libopus` is unavailable.
+WebM Re-encode fixes the video family to AV1 and selects `av1_nvenc`, `libsvtav1`, or `libaom-av1` through the existing encoder preference. It maps optional video and audio streams only (`-map 0:v? -map 0:a?`) and omits incompatible subtitle/data/attachment streams. Compatible Opus/Vorbis audio is copied when no processing is requested; otherwise it is encoded with `libopus`. MP4 keeps the existing codec-family choices and stream-preservation policy. WebM selection is unavailable when no matching AV1 encoder exists or when required audio encoding cannot use `libopus`.
 
 The WinUI shell presents Fast copy and Re-encode as direct mode choices. Re-encode-only settings are hidden while Fast copy is selected. Hidden fade controls are not applied in Fast copy mode, so invisible settings cannot silently force a re-encode.
 
@@ -182,12 +182,15 @@ Fade controls apply only to the clip edges:
 
 Any fade requiring filters forces re-encoding of the affected stream.
 
-The implemented planner keeps the selected clip range first, then applies fade filters relative to the trimmed clip timeline. Video fades use `-vf fade=t=in/out`, audio fades use `-af afade=t=in/out`, and audio fades override audio copying with `-c:a aac`. Fade duration is adjusted in 0.25 second UI steps, stored in settings, truncated to two decimal places, and clamped to the selected clip duration during command construction.
+The implemented planner keeps the selected clip range first, then applies fade filters relative to the trimmed clip timeline. Video fades use `-vf fade=t=in/out`, audio fades use `-af afade=t=in/out`, and audio fades override audio copying with AAC for MP4 or Opus for WebM. Fade duration is adjusted in 0.25 second UI steps, stored in settings, truncated to two decimal places, and clamped to the selected clip duration during command construction.
 
 Audio policy:
 
 - If no audio processing is needed, preserve audio with stream copy where practical.
-- If audio fade is enabled and media metadata confirms an audio stream exists, re-encode audio to AAC.
+- Re-encode audio when the user explicitly requests it, normalization or an audio fade requires filtering, or the source audio codec is incompatible with the destination container.
+- Encode audio as AAC for MP4 and Opus for WebM. MP4 AAC always uses the selected `-b:a` bitrate and does not expose a VBR/CBR choice. WebM Opus uses `-b:a` with the visible `-vbr on` or `-vbr off` choice.
+- Suggest the source bitrate for probed AAC/Opus audio, clamped to 32-512 kbps. Other or unknown codecs default to 128 kbps; WebM Opus defaults to VBR.
+- Treat `-b:a`, `-q:a`, and `-vbr` as app-managed options and reject them from advanced arguments.
 - If media metadata confirms there is no audio stream, omit audio fade filters and do not add an audio stream. If metadata is unavailable, keep the previous conservative behavior and assume audio may exist.
 - Preserve channel layout and sample rate where practical.
 
@@ -206,7 +209,7 @@ Fast Copy command policy when normalize audio is enabled:
 - Map all streams where practical with `-map 0`.
 - Default to `-c copy` so video and untouched streams are stream-copied.
 - Apply `-af loudnorm=I=-14:TP=-1.5:LRA=11`.
-- Override audio with `-c:a aac` because audio filters require decoding and encoding.
+- Override audio with the selected MP4 AAC or WebM Opus rate-control arguments because audio filters require decoding and encoding.
 - Preserve metadata with `-map_metadata 0` where supported.
 - Use temporary output promotion and cancellation handling through the common `FfmpegRunner` path.
 
@@ -214,10 +217,10 @@ Re-encode command policy when normalize audio is enabled:
 
 - Analyze the requested time range first, then run the final export with measured loudnorm values.
 - Keep the selected video codec, encoder, and rate-control arguments.
-- Add the measured `loudnorm` audio filter and override audio with `-c:a aac`.
+- Add the measured `loudnorm` audio filter and override audio with the selected MP4 AAC or WebM Opus rate-control arguments.
 - If clip-edge audio fades are also enabled, combine `loudnorm` and `afade` in a single `-af` chain.
 
-If media metadata confirms there is no audio stream, the planner rejects the export before starting ffmpeg with the Japanese error `音声ストリームがないため、音量正規化を使用できません`. If metadata is unavailable, the planner assumes audio may exist and lets the loudnorm analysis pass report any process-level failure. Future work may add configurable true peak/loudness range and codec-preserving audio encode choices.
+If media metadata confirms there is no audio stream, the planner rejects the export before starting ffmpeg with the Japanese error `音声ストリームがないため、音量正規化を使用できません`. If metadata is unavailable, the planner assumes audio may exist and lets the loudnorm analysis pass report any process-level failure. Future work may add configurable true peak/loudness range.
 
 ## Stream And Metadata Preservation
 

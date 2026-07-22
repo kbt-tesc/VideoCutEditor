@@ -58,6 +58,15 @@ public sealed class OutputContainerCompatibilityServiceTests
         Assert.False(OutputContainerCompatibilityService.CanStreamCopy(mediaInfo, OutputContainer.Mp4));
     }
 
+    [Fact]
+    public void CanExportWithVideoCopy_allows_incompatible_audio_that_will_be_reencoded()
+    {
+        MediaInfo mediaInfo = CreateMediaInfo("vp9", "aac");
+
+        Assert.False(OutputContainerCompatibilityService.CanStreamCopy(mediaInfo, OutputContainer.WebM));
+        Assert.True(OutputContainerCompatibilityService.CanExportWithVideoCopy(mediaInfo, OutputContainer.WebM));
+    }
+
     private static MediaInfo CreateMediaInfo(
         string videoCodec,
         string audioCodec,

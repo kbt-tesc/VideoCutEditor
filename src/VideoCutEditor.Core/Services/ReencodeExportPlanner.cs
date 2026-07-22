@@ -31,7 +31,11 @@ public sealed class ReencodeExportPlanner : IExportPlanner
 
         bool isWebM = OutputContainerExtensions.TryFromPath(request.OutputPath, out OutputContainer outputContainer)
             && outputContainer == OutputContainer.WebM;
-        bool mediaHasAudioStream = AudioNormalizationArguments.MayHaveAudioStream(request.MediaInfo);
+        bool mediaHasAudioStream = AudioEncodingService.MayHaveAudioStream(request.MediaInfo);
+        bool reencodeAudio = AudioEncodingService.RequiresReencode(
+            request.Settings,
+            request.MediaInfo,
+            outputContainer);
         CodecFamily videoCodecFamily = isWebM ? CodecFamily.Av1 : request.Settings.LastCodecFamily;
         string? videoEncoder = capabilities.ChooseVideoEncoder(
             videoCodecFamily,
@@ -43,7 +47,7 @@ public sealed class ReencodeExportPlanner : IExportPlanner
                 $"No supported video encoder is available for {videoCodecFamily} with {request.Settings.LastEncoderKind}.");
         }
 
-        if (isWebM && mediaHasAudioStream && !capabilities.SupportsEncoder("libopus"))
+        if (isWebM && reencodeAudio && !capabilities.SupportsEncoder("libopus"))
         {
             throw new InvalidOperationException("WebM音声の書き出しに必要なlibopusエンコーダーが利用できません");
         }
@@ -76,17 +80,16 @@ public sealed class ReencodeExportPlanner : IExportPlanner
 
         AddRateControlArguments(arguments, request.Settings, videoEncoder);
 
-        bool hasAudioFilters = AddFilterArguments(
+        AddFilterArguments(
             arguments,
             request.Settings,
             request.MediaInfo,
             request.Range.Duration,
             mediaHasAudioStream);
 
-        if (mediaHasAudioStream && (hasAudioFilters || isWebM))
+        if (mediaHasAudioStream && reencodeAudio)
         {
-            arguments.Add("-c:a");
-            arguments.Add(isWebM ? "libopus" : "aac");
+            arguments.AddRange(AudioEncodingService.CreateArguments(request.Settings, outputContainer));
         }
 
         arguments.AddRange(

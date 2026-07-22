@@ -32,6 +32,8 @@ public sealed class ReencodeExportPlannerTests
                     LastCodecFamily = CodecFamily.H264,
                     LastEncoderKind = EncoderKind.Auto,
                     LastVideoBitrateKbps = 2500,
+                    AudioBitrateKbps = 160,
+                    AudioRateMode = AudioRateMode.Cbr,
                 },
                 new MediaInfo(
                     @"C:\video\source.mp4",
@@ -49,6 +51,8 @@ public sealed class ReencodeExportPlannerTests
             Assert.EndsWith(".webm", plan.TemporaryOutputPath);
             Assert.Contains("libaom-av1", plan.Arguments);
             Assert.Contains("libopus", plan.Arguments);
+            Assert.Contains("160k", plan.Arguments);
+            Assert.Contains("off", plan.Arguments);
             Assert.Contains("0:v?", plan.Arguments);
             Assert.Contains("0:a?", plan.Arguments);
             Assert.DoesNotContain("aac", plan.Arguments);
@@ -91,6 +95,51 @@ public sealed class ReencodeExportPlannerTests
         InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => planner.CreatePlan(request));
 
         Assert.Contains("libopus", exception.Message);
+    }
+
+    [Fact]
+    public void CreatePlan_copies_compatible_opus_audio_to_webm_without_libopus_encoder()
+    {
+        string outputDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(outputDirectory);
+
+        try
+        {
+            var capabilities = new FfmpegCapabilities(new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "libaom-av1",
+            });
+            var planner = new ReencodeExportPlanner(capabilities);
+            var request = new ExportRequest(
+                @"C:\video\source.webm",
+                Path.Combine(outputDirectory, "clip.webm"),
+                new ClipRange(TimeSpan.Zero, TimeSpan.FromSeconds(5)),
+                new AppSettings
+                {
+                    FfmpegPath = @"C:\tools\ffmpeg.exe",
+                    LastExportMode = ExportMode.Reencode,
+                    LastOutputContainer = OutputContainer.WebM,
+                    LastEncoderKind = EncoderKind.Software,
+                },
+                new MediaInfo(
+                    @"C:\video\source.webm",
+                    TimeSpan.FromSeconds(10),
+                    "matroska,webm",
+                    null,
+                    [
+                        new MediaStreamInfo(0, "video", "vp9", null),
+                        new MediaStreamInfo(1, "audio", "opus", 128_000),
+                    ]));
+
+            ExportPlan plan = planner.CreatePlan(request);
+
+            Assert.DoesNotContain("-c:a", plan.Arguments);
+            Assert.DoesNotContain("libopus", plan.Arguments);
+        }
+        finally
+        {
+            Directory.Delete(outputDirectory, recursive: true);
+        }
     }
 
     [Fact]

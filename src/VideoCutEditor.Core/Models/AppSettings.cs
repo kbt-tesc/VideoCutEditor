@@ -26,6 +26,12 @@ public sealed record AppSettings
 
     public bool NormalizeAudio { get; init; }
 
+    public bool ReencodeAudio { get; init; }
+
+    public int AudioBitrateKbps { get; init; } = 128;
+
+    public AudioRateMode AudioRateMode { get; init; } = AudioRateMode.Vbr;
+
     public bool ConvertHdrToSdr { get; init; }
 
     public string? AdditionalFfmpegArguments { get; init; }
