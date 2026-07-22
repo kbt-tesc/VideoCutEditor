@@ -16,6 +16,7 @@ public sealed class JsonSettingsServiceTests
         Assert.Null(settings.FfmpegPath);
         Assert.Null(settings.FfprobePath);
         Assert.Equal(ExportMode.FastCopy, settings.LastExportMode);
+        Assert.Equal(OutputContainer.Mp4, settings.LastOutputContainer);
     }
 
     [Fact]
@@ -29,6 +30,7 @@ public sealed class JsonSettingsServiceTests
             FfprobePath = @"C:\Tools\ffprobe.exe",
             OutputDirectory = @"D:\Exports",
             LastExportMode = ExportMode.Reencode,
+            LastOutputContainer = OutputContainer.WebM,
             LastCodecFamily = CodecFamily.H265,
             LastEncoderKind = EncoderKind.Nvenc,
             LastBitrateMode = BitrateMode.TargetSize,

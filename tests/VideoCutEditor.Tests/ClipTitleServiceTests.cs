@@ -17,19 +17,20 @@ public sealed class ClipTitleServiceTests
     }
 
     [Fact]
-    public void CreateAvailableTitle_avoids_registered_titles_and_existing_mp4_files()
+    public void CreateAvailableTitle_avoids_registered_titles_and_existing_output_files()
     {
         string directory = CreateTempDirectory();
         File.WriteAllText(Path.Combine(directory, "クリップ_2.mp4"), string.Empty);
+        File.WriteAllText(Path.Combine(directory, "クリップ_3.webm"), string.Empty);
         var service = new ClipTitleService();
 
         string title = service.CreateAvailableTitle(null, directory, ["クリップ_1"]);
 
-        Assert.Equal("クリップ_3", title);
+        Assert.Equal("クリップ_4", title);
     }
 
     [Fact]
-    public void CreateAvailableTitle_trims_mp4_extension_and_suffixes_duplicate_title()
+    public void CreateAvailableTitle_trims_supported_extension_and_suffixes_duplicate_title()
     {
         string directory = CreateTempDirectory();
         var service = new ClipTitleService();
@@ -37,6 +38,10 @@ public sealed class ClipTitleServiceTests
         string title = service.CreateAvailableTitle("  ボス戦.mp4  ", directory, ["ボス戦"]);
 
         Assert.Equal("ボス戦_1", title);
+
+        string webmTitle = service.CreateAvailableTitle("  ボス戦.webm  ", directory, ["ボス戦"]);
+
+        Assert.Equal("ボス戦_1", webmTitle);
     }
 
     [Fact]
@@ -51,13 +56,14 @@ public sealed class ClipTitleServiceTests
     }
 
     [Fact]
-    public void ExportClip_uses_title_as_mp4_filename_and_exposes_fixed_time_text()
+    public void ExportClip_uses_selected_container_extension_and_exposes_fixed_time_text()
     {
         var clip = new ExportClip(
             new ClipRange(TimeSpan.FromSeconds(62.5), TimeSpan.FromSeconds(125.25)),
             "見どころ");
 
         Assert.Equal("見どころ.mp4", clip.OutputFileName);
+        Assert.Equal("見どころ.webm", clip.GetOutputFileName(OutputContainer.WebM));
         Assert.Equal("00:01:02.500", clip.StartText);
         Assert.Equal("00:02:05.250", clip.EndText);
     }

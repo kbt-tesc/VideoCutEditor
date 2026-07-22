@@ -13,6 +13,7 @@ public sealed class FastCopyExportPlanner : IExportPlanner
         ArgumentException.ThrowIfNullOrWhiteSpace(request.SourcePath);
         ArgumentException.ThrowIfNullOrWhiteSpace(request.OutputPath);
         AudioNormalizationArguments.ThrowIfRequestedWithoutAudio(request.Settings, request.MediaInfo);
+        ValidateContainerSwitch(request);
 
         string temporaryOutputPath = ExportPlanPathHelper.CreateTemporaryOutputPath(request.OutputPath);
 
@@ -35,12 +36,16 @@ public sealed class FastCopyExportPlanner : IExportPlanner
 
         if (request.Settings.NormalizeAudio)
         {
+            string audioEncoder = OutputContainerExtensions.TryFromPath(request.OutputPath, out OutputContainer outputContainer)
+                && outputContainer == OutputContainer.WebM
+                    ? "libopus"
+                    : "aac";
             arguments.AddRange(
             [
                 "-af",
                 AudioNormalizationArguments.LoudnormFilter,
                 "-c:a",
-                "aac",
+                audioEncoder,
             ]);
         }
 
@@ -60,6 +65,23 @@ public sealed class FastCopyExportPlanner : IExportPlanner
             request.OutputPath,
             arguments,
             AudioNormalizationArguments.CreateAnalysisPlan(request));
+    }
+
+    private static void ValidateContainerSwitch(ExportRequest request)
+    {
+        if (!OutputContainerExtensions.TryFromPath(request.SourcePath, out OutputContainer sourceContainer)
+            || !OutputContainerExtensions.TryFromPath(request.OutputPath, out OutputContainer outputContainer)
+            || sourceContainer == outputContainer)
+        {
+            return;
+        }
+
+        if (request.MediaInfo is null
+            || !OutputContainerCompatibilityService.CanStreamCopy(request.MediaInfo, outputContainer))
+        {
+            throw new InvalidOperationException(
+                $"{outputContainer.GetDisplayName()}へFast copyできないストリームが含まれています。Re-encodeを選択してください");
+        }
     }
 
     internal static string FormatTimestamp(TimeSpan time)

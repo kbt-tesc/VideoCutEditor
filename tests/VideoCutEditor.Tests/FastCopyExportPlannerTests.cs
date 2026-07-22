@@ -226,4 +226,64 @@ public sealed class FastCopyExportPlannerTests
 
         Assert.Equal("音声ストリームがないため、音量正規化を使用できません", exception.Message);
     }
+
+    [Fact]
+    public void CreatePlan_allows_compatible_mp4_to_webm_stream_copy()
+    {
+        string outputDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(outputDirectory);
+
+        try
+        {
+            var planner = new FastCopyExportPlanner();
+            var request = new ExportRequest(
+                @"C:\video\source.mp4",
+                Path.Combine(outputDirectory, "clip.webm"),
+                new ClipRange(TimeSpan.Zero, TimeSpan.FromSeconds(5)),
+                new AppSettings { FfmpegPath = @"C:\tools\ffmpeg.exe", LastOutputContainer = OutputContainer.WebM },
+                new MediaInfo(
+                    @"C:\video\source.mp4",
+                    TimeSpan.FromSeconds(10),
+                    "mov,mp4",
+                    2_000_000,
+                    [
+                        new MediaStreamInfo(0, "video", "vp9", 1_800_000),
+                        new MediaStreamInfo(1, "audio", "opus", 128_000),
+                    ]));
+
+            ExportPlan plan = planner.CreatePlan(request);
+
+            Assert.EndsWith(".webm", plan.TemporaryOutputPath);
+            Assert.Contains("copy", plan.Arguments);
+        }
+        finally
+        {
+            Directory.Delete(outputDirectory, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void CreatePlan_rejects_incompatible_mp4_to_webm_stream_copy()
+    {
+        var planner = new FastCopyExportPlanner();
+        var request = new ExportRequest(
+            @"C:\video\source.mp4",
+            @"C:\output\clip.webm",
+            new ClipRange(TimeSpan.Zero, TimeSpan.FromSeconds(5)),
+            new AppSettings { FfmpegPath = @"C:\tools\ffmpeg.exe", LastOutputContainer = OutputContainer.WebM },
+            new MediaInfo(
+                @"C:\video\source.mp4",
+                TimeSpan.FromSeconds(10),
+                "mov,mp4",
+                2_000_000,
+                [
+                    new MediaStreamInfo(0, "video", "h264", 1_800_000),
+                    new MediaStreamInfo(1, "audio", "aac", 128_000),
+                ]));
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => planner.CreatePlan(request));
+
+        Assert.Contains("WebM", exception.Message);
+        Assert.Contains("Fast copy", exception.Message);
+    }
 }

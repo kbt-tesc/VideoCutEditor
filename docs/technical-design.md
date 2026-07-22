@@ -76,6 +76,8 @@ Command policy:
 
 The UI must communicate that stream-copy cuts may align to keyframes and can be slightly imprecise.
 
+For MP4/WebM sources, Fast Copy may expose the other container only after ffprobe metadata proves every mapped stream is compatible. The conservative compatibility table accepts VP8/VP9/AV1 video with Vorbis/Opus audio for WebM, and H.264/HEVC/AV1/VP9/MPEG-4 video with AAC/MP3/AC-3/E-AC-3/ALAC/Opus audio for MP4. Unknown codecs and subtitle, data, or attachment streams make cross-container Fast Copy unavailable. The planner repeats this check so a stale or manually constructed request fails before ffmpeg starts.
+
 The first implemented export path is Fast Copy. It builds the ffmpeg argument list in testable code, writes to a unique temporary output path in the destination folder, and moves the file to the final generated path only after ffmpeg exits successfully.
 
 Fast Copy export cancellation is wired through a `CancellationToken` from the UI to `FfmpegRunner`. Canceling terminates the ffmpeg process tree, deletes the temporary output path, and reports the export as canceled rather than promoting a partial file.
@@ -104,6 +106,8 @@ The initial capability detector runs `ffmpeg -hide_banner -encoders`, parses enc
 Tool setup normally selects one directory. `FfmpegToolPathService.ResolveDirectory` checks that directory directly for `ffmpeg.exe` and `ffprobe.exe`; when both are present, the settings UI stores both full paths and keeps individual selectors hidden. If either is absent, it preserves the path that was found and reveals the existing independent executable pickers. Startup still prefers valid saved full paths and then PATH discovery; saved paths in different directories open in the individual-selector state.
 
 The initial re-encode planner builds command arguments for bitrate-based video re-encode. It selects the user-requested codec family and encoder preference from settings, uses the detected capability list to choose the concrete encoder, maps all streams, defaults non-video streams to copy with `-c copy`, overrides video with `-c:v <encoder> -b:v <kbps>k`, preserves metadata, and writes through a temporary output path before promotion. The WinUI shell exposes Fast copy/Re-encode mode, codec family, encoder preference, and video bitrate controls. The view model stores the last-used choices and routes export planning through `ExportPlannerFactory` so Fast copy remains the default while Re-encode uses the detected capability list.
+
+WebM Re-encode fixes the video family to AV1 and selects `av1_nvenc`, `libsvtav1`, or `libaom-av1` through the existing encoder preference. It maps optional video and audio streams only (`-map 0:v? -map 0:a?`), re-encodes audio with `libopus`, and omits incompatible subtitle/data/attachment streams. MP4 keeps the existing codec-family choices and stream-preservation policy. WebM selection is unavailable when no matching AV1 encoder exists or when audio is present and `libopus` is unavailable.
 
 The WinUI shell presents Fast copy and Re-encode as direct mode choices. Re-encode-only settings are hidden while Fast copy is selected. Hidden fade controls are not applied in Fast copy mode, so invisible settings cannot silently force a re-encode.
 
@@ -223,11 +227,11 @@ If media metadata confirms there is no audio stream, the planner rejects the exp
 
 ## Output Path Selection
 
-`OutputPathService` creates automatic default output names from the source stem using `<source>_cut<extension>`. When that default path already exists, it probes one-based suffixes in order: `<source>_cut_1<extension>`, `<source>_cut_2<extension>`, and so on.
+`OutputPathService` creates automatic default output names from the source stem using `<source>_cut<extension>`. The extension follows the selected output container when MP4 or WebM is selected. When that default path already exists, it probes one-based suffixes in order: `<source>_cut_1<extension>`, `<source>_cut_2<extension>`, and so on.
 
-Manual output filename edits are owned by `MainPageViewModel`. The view model keeps the typed filename, rebuilds the planned output path from the configured output directory and source extension, and exposes `IsManualOutputFileNameCollision` when the manual destination already exists. The warning is informational and non-blocking; `FfmpegRunner` remains the final overwrite guard by refusing to promote the temporary export output when the final path exists.
+Manual output filename edits are owned by `MainPageViewModel`. The view model keeps the typed filename, normalizes its extension to the selected output container, rebuilds the planned output path from the configured output directory, and exposes `IsManualOutputFileNameCollision` when the manual destination already exists. The warning is informational and non-blocking; `FfmpegRunner` remains the final overwrite guard by refusing to promote the temporary export output when the final path exists.
 
-Registered clip paths are built from the configured output directory and the collision-safe title as `<title>.mp4`. A second preflight immediately before a batch starts catches files created after registration so no batch begins with a known destination collision.
+Registered clip paths are built from the configured output directory and the collision-safe title as `<title>.mp4` or `<title>.webm`, according to the selected output container. A second preflight immediately before a batch starts catches files created after registration so no batch begins with a known destination collision.
 
 ## Process Execution
 

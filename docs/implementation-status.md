@@ -1,6 +1,6 @@
 # Implementation Status
 
-Last updated: 2026-07-18
+Last updated: 2026-07-22
 
 This document is the handoff ledger for future Codex sessions. Read it after `AGENTS.md`, `docs/product-spec.md`, `docs/technical-design.md`, `docs/codex-workflow.md`, and `docs/implementation-kickoff.md` before choosing the next implementation slice.
 
@@ -11,6 +11,14 @@ VideoCutEditor has a working WinUI 3/.NET 10 editor with single-range extraction
 The project is being developed in small TDD slices. Keep using behavior-focused tests first, then implement the smallest production change, verify, and commit each slice.
 
 ## Completed Slices
+
+- WebM export Core foundation (`codex/webm-export`).
+  - Added persisted MP4/WebM output-container state, container-specific extensions, and collision-safe title handling across both formats.
+  - Added conservative ffprobe-based Fast copy compatibility checks for MP4/WebM remuxing, including rejection of unknown codecs and unsupported stream types before process launch.
+  - Added WebM Re-encode planning with AV1 video, `libopus` audio, video/audio-only stream mapping, and required-encoder validation.
+  - Confirmed the local winget ffmpeg can stream-copy a generated VP9+Opus WebM to MP4 and back to WebM.
+  - Passed all 173 Core Release tests with 0 test failures and no build warnings.
+  - WinUI format selection, output-name synchronization, and end-to-end WebM export verification remain in the next slice.
 
 - `0.4.0` release preparation.
   - Advanced the app and release-script defaults from `0.3.0` to `0.4.0` for the merged multi-clip feature release.

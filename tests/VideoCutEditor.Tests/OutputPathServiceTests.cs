@@ -1,3 +1,4 @@
+using VideoCutEditor.Core.Models;
 using VideoCutEditor.Core.Services;
 
 namespace VideoCutEditor.Tests;
@@ -38,6 +39,20 @@ public sealed class OutputPathServiceTests
         string outputPath = service.CreateAvailableCutPath(@"C:\Input\sample.mp4", directory);
 
         Assert.Equal(Path.Combine(directory, "sample_cut_2.mp4"), outputPath);
+    }
+
+    [Fact]
+    public void CreateAvailableCutPath_uses_requested_output_container_extension()
+    {
+        string directory = CreateTempDirectory();
+        var service = new OutputPathService();
+
+        string outputPath = service.CreateAvailableCutPath(
+            @"C:\Input\sample.mp4",
+            directory,
+            OutputContainer.WebM);
+
+        Assert.Equal(Path.Combine(directory, "sample_cut.webm"), outputPath);
     }
 
     private static string CreateTempDirectory()
