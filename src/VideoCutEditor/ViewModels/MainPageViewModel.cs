@@ -195,6 +195,9 @@ public partial class MainPageViewModel : ObservableObject
     public partial int SelectedExportModeIndex { get; set; }
 
     [ObservableProperty]
+    public partial int SelectedOutputContainerIndex { get; set; }
+
+    [ObservableProperty]
     public partial int SelectedCodecFamilyIndex { get; set; }
 
     [ObservableProperty]
@@ -217,6 +220,15 @@ public partial class MainPageViewModel : ObservableObject
 
     [ObservableProperty]
     public partial bool NormalizeAudioEnabled { get; set; }
+
+    [ObservableProperty]
+    public partial bool ReencodeAudioEnabled { get; set; }
+
+    [ObservableProperty]
+    public partial double AudioBitrateKbps { get; set; } = AudioEncodingService.DefaultBitrateKbps;
+
+    [ObservableProperty]
+    public partial int SelectedAudioRateModeIndex { get; set; }
 
     public bool ConvertHdrToSdrEnabled
     {
@@ -285,6 +297,86 @@ public partial class MainPageViewModel : ObservableObject
     public bool IsQualityMode => CurrentBitrateMode == BitrateMode.Quality;
 
     public bool IsReencodeSettingsVisible => CurrentExportMode == ExportMode.Reencode;
+
+    public bool IsOutputContainerSelectorVisible =>
+        CurrentExportMode == ExportMode.Reencode
+            ? IsWebMReencodeAvailable
+            : IsFastCopyContainerSwitchAvailable;
+
+    public bool IsMp4OutputSelected
+    {
+        get => CurrentOutputContainer == OutputContainer.Mp4;
+        set
+        {
+            if (value && CanSelectOutputContainer(OutputContainer.Mp4))
+            {
+                SelectedOutputContainerIndex = 0;
+            }
+        }
+    }
+
+    public bool IsWebMOutputSelected
+    {
+        get => CurrentOutputContainer == OutputContainer.WebM;
+        set
+        {
+            if (value && CanSelectOutputContainer(OutputContainer.WebM))
+            {
+                SelectedOutputContainerIndex = 1;
+            }
+        }
+    }
+
+    public bool IsCodecFamilySelectionEnabled =>
+        CurrentExportMode != ExportMode.Reencode || CurrentOutputContainer != OutputContainer.WebM;
+
+    public bool HasAudioStream => AudioEncodingService.HasAudioStream(CurrentMediaInfo);
+
+    public bool IsAudioReencodeRequired =>
+        HasAudioStream && IsAudioReencodeRequiredFor(CurrentOutputContainer);
+
+    public bool IsAudioReencodeSelected
+    {
+        get => HasAudioStream && (IsAudioReencodeRequired || ReencodeAudioEnabled);
+        set
+        {
+            if (!IsAudioReencodeRequired)
+            {
+                ReencodeAudioEnabled = value;
+            }
+        }
+    }
+
+    public bool IsAudioReencodeToggleEnabled => HasAudioStream && !IsAudioReencodeRequired;
+
+    public bool IsAudioEncodingSettingsVisible => IsAudioReencodeSelected;
+
+    public bool IsAudioRateModeVisible =>
+        IsAudioEncodingSettingsVisible && CurrentOutputContainer == OutputContainer.WebM;
+
+    public bool IsVbrAudioRateSelected
+    {
+        get => CurrentAudioRateMode == AudioRateMode.Vbr;
+        set
+        {
+            if (value)
+            {
+                SelectedAudioRateModeIndex = 0;
+            }
+        }
+    }
+
+    public bool IsCbrAudioRateSelected
+    {
+        get => CurrentAudioRateMode == AudioRateMode.Cbr;
+        set
+        {
+            if (value)
+            {
+                SelectedAudioRateModeIndex = 1;
+            }
+        }
+    }
 
     public bool IsHdrToSdrOptionVisible =>
         CurrentExportMode == ExportMode.Reencode
@@ -727,7 +819,7 @@ public partial class MainPageViewModel : ObservableObject
             workItems = RegisteredClips
                 .Select(clip => new ExportWorkItem(
                     clip.Range,
-                    Path.Combine(outputDirectory, clip.OutputFileName)))
+                    Path.Combine(outputDirectory, clip.GetOutputFileName(CurrentOutputContainer))))
                 .ToList();
         }
         else
@@ -980,10 +1072,58 @@ public partial class MainPageViewModel : ObservableObject
 
     partial void OnSelectedExportModeIndexChanged(int value)
     {
+        if (CurrentExportMode == ExportMode.FastCopy)
+        {
+            AlignOutputContainerToSource();
+        }
+
         OnPropertyChanged(nameof(IsReencodeSettingsVisible));
         OnPropertyChanged(nameof(IsHdrToSdrOptionVisible));
         OnPropertyChanged(nameof(ExportNoticeText));
+        NotifyOutputContainerPropertiesChanged();
+        NotifyAudioEncodingPropertiesChanged();
         UpdatePredictedOutputSizeText();
+        UpdatePlannedOutputPath();
+    }
+
+    partial void OnSelectedOutputContainerIndexChanged(int value)
+    {
+        if (CurrentExportMode == ExportMode.Reencode && CurrentOutputContainer == OutputContainer.WebM)
+        {
+            SelectedCodecFamilyIndex = 2;
+        }
+
+        NotifyOutputContainerPropertiesChanged();
+        AudioBitrateKbps = AudioEncodingService.GetSuggestedBitrateKbps(CurrentMediaInfo);
+        NotifyAudioEncodingPropertiesChanged();
+        UpdatePlannedOutputPath();
+    }
+
+    partial void OnSelectedEncoderKindIndexChanged(int value)
+    {
+        EnsureSelectedOutputContainerIsAvailable();
+        NotifyOutputContainerPropertiesChanged();
+    }
+
+    partial void OnSelectedSourcePathChanged(string? value)
+    {
+        if (CurrentExportMode == ExportMode.FastCopy)
+        {
+            AlignOutputContainerToSource();
+        }
+
+        NotifyOutputContainerPropertiesChanged();
+        UpdatePlannedOutputPath();
+    }
+
+    partial void OnCurrentMediaInfoChanged(MediaInfo? value)
+    {
+        EnsureSelectedOutputContainerIsAvailable();
+        AudioBitrateKbps = AudioEncodingService.GetSuggestedBitrateKbps(value);
+        SelectedAudioRateModeIndex = 0;
+        NotifyOutputContainerPropertiesChanged();
+        NotifyAudioEncodingPropertiesChanged();
+        UpdatePlannedOutputPath();
     }
 
     partial void OnSelectedBitrateModeIndexChanged(int value)
@@ -998,6 +1138,30 @@ public partial class MainPageViewModel : ObservableObject
     partial void OnNormalizeAudioEnabledChanged(bool value)
     {
         OnPropertyChanged(nameof(ExportNoticeText));
+        NotifyAudioEncodingPropertiesChanged();
+    }
+
+    partial void OnReencodeAudioEnabledChanged(bool value)
+    {
+        NotifyAudioEncodingPropertiesChanged();
+        UpdatePredictedOutputSizeText();
+    }
+
+    partial void OnAudioBitrateKbpsChanged(double value)
+    {
+        if (!double.IsFinite(value))
+        {
+            AudioBitrateKbps = AudioEncodingService.DefaultBitrateKbps;
+            return;
+        }
+
+        UpdatePredictedOutputSizeText();
+    }
+
+    partial void OnSelectedAudioRateModeIndexChanged(int value)
+    {
+        OnPropertyChanged(nameof(IsVbrAudioRateSelected));
+        OnPropertyChanged(nameof(IsCbrAudioRateSelected));
     }
 
     partial void OnTargetSizeMegabytesChanged(double value)
@@ -1027,11 +1191,13 @@ public partial class MainPageViewModel : ObservableObject
     partial void OnAudioFadeInEnabledChanged(bool value)
     {
         OnPropertyChanged(nameof(ExportNoticeText));
+        NotifyAudioEncodingPropertiesChanged();
     }
 
     partial void OnAudioFadeOutEnabledChanged(bool value)
     {
         OnPropertyChanged(nameof(ExportNoticeText));
+        NotifyAudioEncodingPropertiesChanged();
     }
 
     partial void OnFadeDurationSecondsChanged(double value)
@@ -1086,7 +1252,9 @@ public partial class MainPageViewModel : ObservableObject
 
         if (!hasManualOutputFileNameOverride || string.IsNullOrWhiteSpace(PlannedOutputFileName))
         {
-            PlannedOutputPath = outputPathService.CreateAvailableCutPath(SelectedSourcePath, OutputDirectory);
+            PlannedOutputPath = UsesSelectableOutputContainer
+                ? outputPathService.CreateAvailableCutPath(SelectedSourcePath, OutputDirectory, CurrentOutputContainer)
+                : outputPathService.CreateAvailableCutPath(SelectedSourcePath, OutputDirectory);
             SetPlannedOutputFileNameWithoutManual(Path.GetFileName(PlannedOutputPath));
             UpdateManualOutputFileNameCollision();
             return;
@@ -1109,9 +1277,10 @@ public partial class MainPageViewModel : ObservableObject
             return null;
         }
 
-        if (string.IsNullOrEmpty(Path.GetExtension(fileName)) && !string.IsNullOrWhiteSpace(SelectedSourcePath))
+        string outputExtension = GetCurrentOutputExtension();
+        if (!string.Equals(Path.GetExtension(fileName), outputExtension, StringComparison.OrdinalIgnoreCase))
         {
-            fileName += Path.GetExtension(SelectedSourcePath);
+            fileName = Path.ChangeExtension(fileName, outputExtension);
             SetPlannedOutputFileNameWithoutManual(fileName);
         }
 
@@ -1169,6 +1338,149 @@ public partial class MainPageViewModel : ObservableObject
         _ => ExportMode.FastCopy,
     };
 
+    private OutputContainer CurrentOutputContainer => SelectedOutputContainerIndex switch
+    {
+        1 => OutputContainer.WebM,
+        _ => OutputContainer.Mp4,
+    };
+
+    private bool UsesSelectableOutputContainer =>
+        CurrentExportMode == ExportMode.Reencode
+        || OutputContainerExtensions.TryFromPath(SelectedSourcePath, out _);
+
+    private bool IsFastCopyContainerSwitchAvailable
+    {
+        get
+        {
+            if (CurrentMediaInfo is null
+                || !OutputContainerExtensions.TryFromPath(SelectedSourcePath, out OutputContainer sourceContainer))
+            {
+                return false;
+            }
+
+            OutputContainer alternateContainer = sourceContainer == OutputContainer.Mp4
+                ? OutputContainer.WebM
+                : OutputContainer.Mp4;
+            return CanFastCopyToContainer(alternateContainer);
+        }
+    }
+
+    private bool IsWebMReencodeAvailable
+    {
+        get
+        {
+            string? videoEncoder = currentCapabilities.ChooseVideoEncoder(CodecFamily.Av1, CurrentEncoderKind);
+            bool needsAudioEncoder = CurrentMediaInfo is null
+                || IsAudioReencodeRequiredFor(OutputContainer.WebM)
+                || ReencodeAudioEnabled;
+            return videoEncoder is not null
+                && (!needsAudioEncoder || currentCapabilities.SupportsEncoder("libopus"));
+        }
+    }
+
+    private bool CanSelectOutputContainer(OutputContainer container)
+    {
+        if (CurrentExportMode == ExportMode.Reencode)
+        {
+            return container == OutputContainer.Mp4 || IsWebMReencodeAvailable;
+        }
+
+        if (!OutputContainerExtensions.TryFromPath(SelectedSourcePath, out OutputContainer sourceContainer))
+        {
+            return false;
+        }
+
+        return container == sourceContainer
+            || CanFastCopyToContainer(container);
+    }
+
+    private bool CanFastCopyToContainer(OutputContainer container)
+    {
+        if (CurrentMediaInfo is null
+            || !OutputContainerCompatibilityService.CanExportWithVideoCopy(CurrentMediaInfo, container))
+        {
+            return false;
+        }
+
+        if (!IsAudioReencodeRequiredFor(container))
+        {
+            return true;
+        }
+
+        string requiredEncoder = container == OutputContainer.WebM ? "libopus" : "aac";
+        return currentCapabilities.SupportsEncoder(requiredEncoder);
+    }
+
+    private void AlignOutputContainerToSource()
+    {
+        if (OutputContainerExtensions.TryFromPath(SelectedSourcePath, out OutputContainer sourceContainer))
+        {
+            SelectedOutputContainerIndex = sourceContainer == OutputContainer.WebM ? 1 : 0;
+        }
+    }
+
+    private void EnsureSelectedOutputContainerIsAvailable()
+    {
+        if (CanSelectOutputContainer(CurrentOutputContainer))
+        {
+            return;
+        }
+
+        if (CurrentExportMode == ExportMode.FastCopy)
+        {
+            AlignOutputContainerToSource();
+        }
+        else
+        {
+            SelectedOutputContainerIndex = 0;
+        }
+    }
+
+    private void NotifyOutputContainerPropertiesChanged()
+    {
+        OnPropertyChanged(nameof(IsOutputContainerSelectorVisible));
+        OnPropertyChanged(nameof(IsMp4OutputSelected));
+        OnPropertyChanged(nameof(IsWebMOutputSelected));
+        OnPropertyChanged(nameof(IsCodecFamilySelectionEnabled));
+    }
+
+    private void NotifyAudioEncodingPropertiesChanged()
+    {
+        OnPropertyChanged(nameof(HasAudioStream));
+        OnPropertyChanged(nameof(IsAudioReencodeRequired));
+        OnPropertyChanged(nameof(IsAudioReencodeSelected));
+        OnPropertyChanged(nameof(IsAudioReencodeToggleEnabled));
+        OnPropertyChanged(nameof(IsAudioEncodingSettingsVisible));
+        OnPropertyChanged(nameof(IsAudioRateModeVisible));
+    }
+
+    private bool IsAudioReencodeRequiredFor(OutputContainer targetContainer) =>
+        AudioEncodingService.RequiresReencode(
+            new AppSettings
+            {
+                NormalizeAudio = NormalizeAudioEnabled,
+                Fade = CurrentExportMode == ExportMode.Reencode
+                    ? new FadeSettings
+                    {
+                        AudioFadeIn = AudioFadeInEnabled,
+                        AudioFadeOut = AudioFadeOutEnabled,
+                    }
+                    : new FadeSettings(),
+            },
+            CurrentMediaInfo,
+            targetContainer);
+
+    private string GetCurrentOutputExtension()
+    {
+        if (UsesSelectableOutputContainer)
+        {
+            return CurrentOutputContainer.GetFileExtension();
+        }
+
+        string? sourceExtension = Path.GetExtension(SelectedSourcePath);
+        return string.IsNullOrWhiteSpace(sourceExtension) ? ".mp4" : sourceExtension;
+    }
+
     private CodecFamily CurrentCodecFamily => SelectedCodecFamilyIndex switch
     {
         1 => CodecFamily.H265,
@@ -1190,6 +1502,12 @@ public partial class MainPageViewModel : ObservableObject
         _ => BitrateMode.Bitrate,
     };
 
+    private AudioRateMode CurrentAudioRateMode => SelectedAudioRateModeIndex switch
+    {
+        1 => AudioRateMode.Cbr,
+        _ => AudioRateMode.Vbr,
+    };
+
     private bool HasAnyFadeEnabled =>
         VideoFadeInEnabled
         || VideoFadeOutEnabled
@@ -1205,6 +1523,7 @@ public partial class MainPageViewModel : ObservableObject
         FfprobePath = FfprobePath,
         OutputDirectory = OutputDirectory,
         LastExportMode = CurrentExportMode,
+        LastOutputContainer = CurrentOutputContainer,
         LastCodecFamily = CurrentCodecFamily,
         LastEncoderKind = CurrentEncoderKind,
         LastBitrateMode = CurrentBitrateMode,
@@ -1212,6 +1531,9 @@ public partial class MainPageViewModel : ObservableObject
         LastTargetSizeMegabytes = GetTargetSizeMegabytes(),
         LastQualityValue = GetQualityValue(),
         NormalizeAudio = NormalizeAudioEnabled,
+        ReencodeAudio = ReencodeAudioEnabled,
+        AudioBitrateKbps = AudioEncodingService.NormalizeBitrateKbps((int)Math.Round(AudioBitrateKbps)),
+        AudioRateMode = CurrentAudioRateMode,
         ConvertHdrToSdr = CurrentExportMode == ExportMode.Reencode && IsHdrToSdrOptionVisible && ConvertHdrToSdrEnabled,
         AdditionalFfmpegArguments = string.IsNullOrWhiteSpace(AdditionalFfmpegArgumentsText)
             ? null
@@ -1236,6 +1558,11 @@ public partial class MainPageViewModel : ObservableObject
         SelectedExportModeIndex = settings.LastExportMode switch
         {
             ExportMode.Reencode => 1,
+            _ => 0,
+        };
+        SelectedOutputContainerIndex = settings.LastOutputContainer switch
+        {
+            OutputContainer.WebM => 1,
             _ => 0,
         };
         SelectedCodecFamilyIndex = settings.LastCodecFamily switch
@@ -1263,6 +1590,9 @@ public partial class MainPageViewModel : ObservableObject
         TargetSizeMegabytes = settings.LastTargetSizeMegabytes.GetValueOrDefault(100);
         QualityValue = settings.LastQualityValue.GetValueOrDefault(23);
         NormalizeAudioEnabled = settings.NormalizeAudio || settings.LastExportMode == ExportMode.AudioNormalize;
+        ReencodeAudioEnabled = settings.ReencodeAudio;
+        AudioBitrateKbps = AudioEncodingService.NormalizeBitrateKbps(settings.AudioBitrateKbps);
+        SelectedAudioRateModeIndex = settings.AudioRateMode == AudioRateMode.Cbr ? 1 : 0;
         ConvertHdrToSdrEnabled = settings.ConvertHdrToSdr;
         AdditionalFfmpegArgumentsText = settings.AdditionalFfmpegArguments ?? string.Empty;
         VideoFadeInEnabled = settings.Fade.VideoFadeIn;
@@ -1421,6 +1751,11 @@ public partial class MainPageViewModel : ObservableObject
 
     private long? GetPrimaryAudioBitrate()
     {
+        if (IsAudioReencodeSelected)
+        {
+            return AudioEncodingService.NormalizeBitrateKbps((int)Math.Round(AudioBitrateKbps)) * 1000L;
+        }
+
         return CurrentMediaInfo?.Streams
             .FirstOrDefault(stream => stream.CodecType == "audio")
             ?.Bitrate;
@@ -1631,6 +1966,8 @@ public partial class MainPageViewModel : ObservableObject
         {
             currentCapabilities = new FfmpegCapabilities(new HashSet<string>(StringComparer.OrdinalIgnoreCase));
             EncoderSummaryText = "エンコーダー情報を取得できません: ffmpeg が見つかりません";
+            EnsureSelectedOutputContainerIsAvailable();
+            NotifyOutputContainerPropertiesChanged();
             return;
         }
 
@@ -1639,12 +1976,16 @@ public partial class MainPageViewModel : ObservableObject
             FfmpegCapabilities capabilities = await ffmpegCapabilityService.DetectAsync(FfmpegPath);
             currentCapabilities = capabilities;
             EncoderSummaryText = CreateEncoderSummary(capabilities);
+            EnsureSelectedOutputContainerIsAvailable();
+            NotifyOutputContainerPropertiesChanged();
             AppLogger.Info($"Encoder capabilities loaded: {EncoderSummaryText.Replace(Environment.NewLine, " | ")}");
         }
         catch (Exception exception)
         {
             currentCapabilities = new FfmpegCapabilities(new HashSet<string>(StringComparer.OrdinalIgnoreCase));
             EncoderSummaryText = $"エンコーダー情報を取得できません: {exception.Message}";
+            EnsureSelectedOutputContainerIsAvailable();
+            NotifyOutputContainerPropertiesChanged();
             AppLogger.Error("Encoder capability detection failed", exception);
         }
     }

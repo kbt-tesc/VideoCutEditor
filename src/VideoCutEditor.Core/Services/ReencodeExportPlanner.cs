@@ -29,14 +29,27 @@ public sealed class ReencodeExportPlanner : IExportPlanner
         IReadOnlyList<string> additionalArguments = FfmpegArgumentParser.Parse(request.Settings.AdditionalFfmpegArguments);
         FfmpegAdditionalArgumentValidator.Validate(additionalArguments);
 
+        bool isWebM = OutputContainerExtensions.TryFromPath(request.OutputPath, out OutputContainer outputContainer)
+            && outputContainer == OutputContainer.WebM;
+        bool mediaHasAudioStream = AudioEncodingService.MayHaveAudioStream(request.MediaInfo);
+        bool reencodeAudio = AudioEncodingService.RequiresReencode(
+            request.Settings,
+            request.MediaInfo,
+            outputContainer);
+        CodecFamily videoCodecFamily = isWebM ? CodecFamily.Av1 : request.Settings.LastCodecFamily;
         string? videoEncoder = capabilities.ChooseVideoEncoder(
-            request.Settings.LastCodecFamily,
+            videoCodecFamily,
             request.Settings.LastEncoderKind);
 
         if (videoEncoder is null)
         {
             throw new InvalidOperationException(
-                $"No supported video encoder is available for {request.Settings.LastCodecFamily} with {request.Settings.LastEncoderKind}.");
+                $"No supported video encoder is available for {videoCodecFamily} with {request.Settings.LastEncoderKind}.");
+        }
+
+        if (isWebM && reencodeAudio && !capabilities.SupportsEncoder("libopus"))
+        {
+            throw new InvalidOperationException("WebM音声の書き出しに必要なlibopusエンコーダーが利用できません");
         }
 
         string temporaryOutputPath = ExportPlanPathHelper.CreateTemporaryOutputPath(request.OutputPath);
@@ -52,13 +65,18 @@ public sealed class ReencodeExportPlanner : IExportPlanner
             request.SourcePath,
             "-t",
             FastCopyExportPlanner.FormatTimestamp(request.Range.Duration),
-            "-map",
-            "0",
-            "-c",
-            "copy",
-            "-c:v",
-            videoEncoder,
         };
+
+        if (isWebM)
+        {
+            arguments.AddRange(["-map", "0:v?", "-map", "0:a?"]);
+        }
+        else
+        {
+            arguments.AddRange(["-map", "0"]);
+        }
+
+        arguments.AddRange(["-c", "copy", "-c:v", videoEncoder]);
 
         AddRateControlArguments(arguments, request.Settings, videoEncoder);
 
@@ -67,7 +85,12 @@ public sealed class ReencodeExportPlanner : IExportPlanner
             request.Settings,
             request.MediaInfo,
             request.Range.Duration,
-            AudioNormalizationArguments.MayHaveAudioStream(request.MediaInfo));
+            mediaHasAudioStream);
+
+        if (mediaHasAudioStream && reencodeAudio)
+        {
+            arguments.AddRange(AudioEncodingService.CreateArguments(request.Settings, outputContainer));
+        }
 
         arguments.AddRange(
         [
@@ -103,7 +126,7 @@ public sealed class ReencodeExportPlanner : IExportPlanner
         arguments.Add($"{videoBitrateKbps}k");
     }
 
-    private static void AddFilterArguments(
+    private static bool AddFilterArguments(
         List<string> arguments,
         AppSettings settings,
         MediaInfo? mediaInfo,
@@ -117,7 +140,7 @@ public sealed class ReencodeExportPlanner : IExportPlanner
 
         if (!hasAudioProcessing && !hasHdrToSdr)
         {
-            return;
+            return false;
         }
 
         double durationSeconds = hasFade
@@ -144,7 +167,7 @@ public sealed class ReencodeExportPlanner : IExportPlanner
 
         if (!mediaHasAudioStream)
         {
-            return;
+            return false;
         }
 
         var audioFilters = new List<string>(capacity: 2);
@@ -161,13 +184,12 @@ public sealed class ReencodeExportPlanner : IExportPlanner
 
         if (audioFilters.Count == 0)
         {
-            return;
+            return false;
         }
 
         arguments.Add("-af");
         arguments.Add(string.Join(",", audioFilters));
-        arguments.Add("-c:a");
-        arguments.Add("aac");
+        return true;
     }
 
     private static bool IsNvencEncoder(string videoEncoder) =>

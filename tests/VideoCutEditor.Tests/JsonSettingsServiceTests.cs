@@ -16,6 +16,10 @@ public sealed class JsonSettingsServiceTests
         Assert.Null(settings.FfmpegPath);
         Assert.Null(settings.FfprobePath);
         Assert.Equal(ExportMode.FastCopy, settings.LastExportMode);
+        Assert.Equal(OutputContainer.Mp4, settings.LastOutputContainer);
+        Assert.False(settings.ReencodeAudio);
+        Assert.Equal(128, settings.AudioBitrateKbps);
+        Assert.Equal(AudioRateMode.Vbr, settings.AudioRateMode);
     }
 
     [Fact]
@@ -29,6 +33,7 @@ public sealed class JsonSettingsServiceTests
             FfprobePath = @"C:\Tools\ffprobe.exe",
             OutputDirectory = @"D:\Exports",
             LastExportMode = ExportMode.Reencode,
+            LastOutputContainer = OutputContainer.WebM,
             LastCodecFamily = CodecFamily.H265,
             LastEncoderKind = EncoderKind.Nvenc,
             LastBitrateMode = BitrateMode.TargetSize,
@@ -36,6 +41,9 @@ public sealed class JsonSettingsServiceTests
             LastTargetSizeMegabytes = 80.5,
             LastQualityValue = 21,
             NormalizeAudio = true,
+            ReencodeAudio = true,
+            AudioBitrateKbps = 192,
+            AudioRateMode = AudioRateMode.Cbr,
             ConvertHdrToSdr = true,
             AdditionalFfmpegArguments = "-preset slow -movflags +faststart",
             Fade = new FadeSettings

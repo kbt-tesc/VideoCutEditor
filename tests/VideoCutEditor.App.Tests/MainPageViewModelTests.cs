@@ -113,6 +113,151 @@ public sealed class MainPageViewModelTests
     }
 
     [Fact]
+    public void Compatible_webm_source_exposes_fast_copy_mp4_switch_and_updates_output_extension()
+    {
+        string directory = CreateTempDirectory();
+        MainPageViewModel viewModel = CreateViewModel();
+        viewModel.SelectedSourcePath = Path.Combine(directory, "source.webm");
+        viewModel.OutputDirectory = directory;
+        viewModel.CurrentMediaInfo = CreateMediaInfo("source.webm", "vp9", "opus");
+
+        Assert.True(viewModel.IsOutputContainerSelectorVisible);
+        Assert.True(viewModel.IsWebMOutputSelected);
+        Assert.Equal("source_cut.webm", viewModel.PlannedOutputFileName);
+
+        viewModel.IsMp4OutputSelected = true;
+
+        Assert.Equal("source_cut.mp4", viewModel.PlannedOutputFileName);
+        Assert.Equal(Path.Combine(directory, "source_cut.mp4"), viewModel.PlannedOutputPath);
+    }
+
+    [Fact]
+    public void Incompatible_mp4_source_hides_fast_copy_container_switch()
+    {
+        string directory = CreateTempDirectory();
+        MainPageViewModel viewModel = CreateViewModel();
+        viewModel.SelectedSourcePath = Path.Combine(directory, "source.mp4");
+        viewModel.OutputDirectory = directory;
+        viewModel.CurrentMediaInfo = CreateMediaInfo("source.mp4", "h264", "aac");
+
+        Assert.False(viewModel.IsOutputContainerSelectorVisible);
+        Assert.True(viewModel.IsMp4OutputSelected);
+        Assert.False(viewModel.IsWebMOutputSelected);
+    }
+
+    [Fact]
+    public async Task Compatible_webm_video_with_aac_audio_allows_switch_and_requires_audio_reencode()
+    {
+        string directory = CreateTempDirectory();
+        string ffmpegPath = CreateFile(directory, "ffmpeg.exe");
+        var settingsService = new PresetSettingsService(new AppSettings { FfmpegPath = ffmpegPath });
+        MainPageViewModel viewModel = CreateViewModel(
+            settingsService: settingsService,
+            ffmpegCapabilityService: new StaticCapabilityService("libopus"));
+        await viewModel.InitializeAsync();
+        viewModel.SelectedSourcePath = Path.Combine(directory, "source.mp4");
+        viewModel.OutputDirectory = directory;
+        viewModel.CurrentMediaInfo = CreateMediaInfo("source.mp4", "vp9", "aac", 192_000);
+
+        Assert.True(viewModel.IsOutputContainerSelectorVisible);
+
+        viewModel.IsWebMOutputSelected = true;
+
+        Assert.True(viewModel.IsAudioReencodeSelected);
+        Assert.True(viewModel.IsAudioReencodeRequired);
+        Assert.False(viewModel.IsAudioReencodeToggleEnabled);
+        Assert.True(viewModel.IsAudioEncodingSettingsVisible);
+        Assert.Equal(192, viewModel.AudioBitrateKbps);
+        Assert.Equal(0, viewModel.SelectedAudioRateModeIndex);
+        Assert.True(viewModel.IsAudioRateModeVisible);
+        Assert.True(viewModel.IsVbrAudioRateSelected);
+        Assert.False(viewModel.IsCbrAudioRateSelected);
+
+        viewModel.IsCbrAudioRateSelected = true;
+
+        Assert.Equal(1, viewModel.SelectedAudioRateModeIndex);
+        Assert.False(viewModel.IsVbrAudioRateSelected);
+        Assert.True(viewModel.IsCbrAudioRateSelected);
+    }
+
+    [Fact]
+    public void Explicit_audio_reencode_shows_rate_controls_for_compatible_audio()
+    {
+        MainPageViewModel viewModel = CreateViewModel();
+        viewModel.CurrentMediaInfo = CreateMediaInfo("source.mp4", "h264", "aac", 160_000);
+
+        Assert.False(viewModel.IsAudioReencodeSelected);
+        Assert.True(viewModel.IsAudioReencodeToggleEnabled);
+        Assert.False(viewModel.IsAudioEncodingSettingsVisible);
+
+        viewModel.IsAudioReencodeSelected = true;
+
+        Assert.True(viewModel.ReencodeAudioEnabled);
+        Assert.True(viewModel.IsAudioEncodingSettingsVisible);
+        Assert.Equal(160, viewModel.AudioBitrateKbps);
+        Assert.False(viewModel.IsAudioRateModeVisible);
+    }
+
+    [Fact]
+    public void Unsupported_source_audio_uses_128_kbps_vbr_default()
+    {
+        MainPageViewModel viewModel = CreateViewModel();
+
+        viewModel.CurrentMediaInfo = CreateMediaInfo("source.mp4", "h264", "mp3", 256_000);
+
+        Assert.Equal(128, viewModel.AudioBitrateKbps);
+        Assert.Equal(0, viewModel.SelectedAudioRateModeIndex);
+    }
+
+    [Fact]
+    public async Task Reencode_exposes_webm_when_av1_and_opus_encoders_are_available()
+    {
+        string directory = CreateTempDirectory();
+        string ffmpegPath = CreateFile(directory, "ffmpeg.exe");
+        var settingsService = new PresetSettingsService(new AppSettings
+        {
+            FfmpegPath = ffmpegPath,
+            LastExportMode = ExportMode.Reencode,
+        });
+        MainPageViewModel viewModel = CreateViewModel(
+            settingsService: settingsService,
+            ffmpegCapabilityService: new StaticCapabilityService("libaom-av1", "libopus"));
+
+        await viewModel.InitializeAsync();
+
+        Assert.True(viewModel.IsOutputContainerSelectorVisible);
+        viewModel.IsWebMOutputSelected = true;
+        Assert.True(viewModel.IsWebMOutputSelected);
+        Assert.Equal(2, viewModel.SelectedCodecFamilyIndex);
+        Assert.False(viewModel.IsCodecFamilySelectionEnabled);
+    }
+
+    [Fact]
+    public async Task ExportAsync_writes_registered_clips_with_selected_webm_extension()
+    {
+        string directory = CreateTempDirectory();
+        string sourcePath = await CreateFileAsync(directory, "source.webm");
+        string ffmpegPath = await CreateFileAsync(directory, "ffmpeg.exe");
+        var runner = new SuccessfulFfmpegRunner();
+        var settings = new RecordingSettingsService();
+        MainPageViewModel viewModel = CreateViewModel(settingsService: settings, ffmpegRunner: runner);
+        viewModel.SelectedSourcePath = sourcePath;
+        viewModel.FfmpegPath = ffmpegPath;
+        viewModel.OutputDirectory = directory;
+        viewModel.CurrentMediaInfo = CreateMediaInfo(sourcePath, "vp9", "opus");
+        viewModel.IsWebMOutputSelected = true;
+        viewModel.RangeEndSeconds = 2;
+        viewModel.ClipTitleText = "見どころ";
+        viewModel.AddClipCommand.Execute(null);
+
+        await viewModel.ExportCommand.ExecuteAsync(null);
+
+        ExportPlan plan = Assert.Single(runner.Plans);
+        Assert.Equal(Path.Combine(directory, "見どころ.webm"), plan.FinalOutputPath);
+        Assert.Equal(OutputContainer.WebM, settings.SavedSettings?.LastOutputContainer);
+    }
+
+    [Fact]
     public void AddClip_captures_range_assigns_placeholder_and_requests_list_once()
     {
         string directory = CreateTempDirectory();
@@ -441,14 +586,30 @@ public sealed class MainPageViewModelTests
     private static MainPageViewModel CreateViewModel(
         ISettingsService? settingsService = null,
         IFfmpegRunner? ffmpegRunner = null,
-        IFfmpegToolPathService? toolPathService = null) =>
+        IFfmpegToolPathService? toolPathService = null,
+        IFfmpegCapabilityService? ffmpegCapabilityService = null) =>
         new(
             settingsService ?? new StubSettingsService(),
             new OutputPathService(),
             toolPathService ?? new StubToolPathService(),
             ffmpegRunner ?? new RecordingFfmpegRunner(),
             new StubMediaProbeService(),
-            new StubCapabilityService());
+            ffmpegCapabilityService ?? new StubCapabilityService());
+
+    private static MediaInfo CreateMediaInfo(
+        string sourcePath,
+        string videoCodec,
+        string audioCodec,
+        long audioBitrate = 128_000) =>
+        new(
+            sourcePath,
+            TimeSpan.FromSeconds(10),
+            Path.GetExtension(sourcePath).Equals(".webm", StringComparison.OrdinalIgnoreCase) ? "matroska,webm" : "mov,mp4",
+            2_000_000,
+            [
+                new MediaStreamInfo(0, "video", videoCodec, 1_800_000),
+                new MediaStreamInfo(1, "audio", audioCodec, audioBitrate),
+            ]);
 
     private static string CreateTempDirectory()
     {
@@ -498,6 +659,17 @@ public sealed class MainPageViewModelTests
         }
     }
 
+    private sealed class PresetSettingsService(AppSettings settings) : ISettingsService
+    {
+        public string SettingsFilePath => "settings.json";
+
+        public ValueTask<AppSettings> LoadAsync(CancellationToken cancellationToken = default) =>
+            ValueTask.FromResult(settings);
+
+        public ValueTask SaveAsync(AppSettings value, CancellationToken cancellationToken = default) =>
+            ValueTask.CompletedTask;
+    }
+
     private sealed class ThrowingSettingsService : ISettingsService
     {
         public string SettingsFilePath => "settings.json";
@@ -511,7 +683,7 @@ public sealed class MainPageViewModelTests
 
     private sealed class StubToolPathService : IFfmpegToolPathService
     {
-        public FfmpegToolPaths Resolve(AppSettings settings) => new(null, null);
+        public FfmpegToolPaths Resolve(AppSettings settings) => new(settings.FfmpegPath, settings.FfprobePath);
 
         public FfmpegToolPaths ResolveDirectory(string directoryPath) => new(null, null);
     }
@@ -606,5 +778,13 @@ public sealed class MainPageViewModelTests
             string ffmpegPath,
             CancellationToken cancellationToken = default) =>
             Task.FromResult(new FfmpegCapabilities(new HashSet<string>(StringComparer.OrdinalIgnoreCase)));
+    }
+
+    private sealed class StaticCapabilityService(params string[] encoders) : IFfmpegCapabilityService
+    {
+        public Task<FfmpegCapabilities> DetectAsync(
+            string ffmpegPath,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(new FfmpegCapabilities(new HashSet<string>(encoders, StringComparer.OrdinalIgnoreCase)));
     }
 }

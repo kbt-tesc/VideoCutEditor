@@ -414,6 +414,32 @@ if (-not [string]::IsNullOrWhiteSpace($SampleVideoPath)) {
         winapp ui screenshot -a $AppPid -o (Join-Path $screenshots "02-sample-loaded.png") 2>$null
     }
 
+    if ($VerifyExportMode -eq "NormalizeNoAudio") {
+        Test-UI "Audio re-encode controls stay hidden for video-only media" {
+            winapp ui wait-for "ReencodeAudioCheckBox" -w $mainWindowHwnd --gone -t 3000 -q
+            winapp ui wait-for "AudioEncodingSettings" -w $mainWindowHwnd --gone -t 3000 -q
+        }
+    }
+    else {
+        Test-UI "Audio re-encode option appears for media with audio" {
+            winapp ui wait-for "ReencodeAudioCheckBox" -w $mainWindowHwnd -t 3000 -q
+        }
+
+        if ($VerifyExportMode -eq "NormalizeAudio") {
+            Test-UI "Normalization requires audio re-encode" {
+                winapp ui wait-for "ReencodeAudioCheckBox" -w $mainWindowHwnd --value "On" -t 3000 -q
+                winapp ui wait-for "ReencodeAudioCheckBox" -w $mainWindowHwnd -p IsEnabled --value "False" -t 3000 -q
+            }
+        }
+        else {
+            Test-UI "Optional audio re-encode defaults off and hides rate controls" {
+                winapp ui wait-for "ReencodeAudioCheckBox" -w $mainWindowHwnd --value "Off" -t 3000 -q
+                winapp ui wait-for "ReencodeAudioCheckBox" -w $mainWindowHwnd -p IsEnabled --value "True" -t 3000 -q
+                winapp ui wait-for "AudioEncodingSettings" -w $mainWindowHwnd --gone -t 3000 -q
+            }
+        }
+    }
+
     if (-not [string]::IsNullOrWhiteSpace($VerifyExportMode)) {
         Test-UI "$VerifyExportMode mode is selected for isolated export" {
             if ($VerifyExportMode -in @("Reencode", "ReencodeHdrToSdr")) {

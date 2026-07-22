@@ -19,7 +19,8 @@ public sealed class ClipTitleService
         {
             string candidate = suffix == 0 ? baseTitle : $"{baseTitle}_{suffix}";
             bool destinationExists = !string.IsNullOrWhiteSpace(outputDirectory)
-                && File.Exists(Path.Combine(outputDirectory, $"{candidate}.mp4"));
+                && (File.Exists(Path.Combine(outputDirectory, $"{candidate}.mp4"))
+                    || File.Exists(Path.Combine(outputDirectory, $"{candidate}.webm")));
             if (!unavailableTitles.Contains(candidate) && !destinationExists)
             {
                 return candidate;
@@ -35,6 +36,10 @@ public sealed class ClipTitleService
         if (title.EndsWith(".mp4", StringComparison.OrdinalIgnoreCase))
         {
             title = title[..^4].TrimEnd();
+        }
+        else if (title.EndsWith(".webm", StringComparison.OrdinalIgnoreCase))
+        {
+            title = title[..^5].TrimEnd();
         }
 
         char[] invalidCharacters = Path.GetInvalidFileNameChars();

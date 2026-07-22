@@ -10,6 +10,8 @@ public sealed record AppSettings
 
     public ExportMode LastExportMode { get; init; } = ExportMode.FastCopy;
 
+    public OutputContainer LastOutputContainer { get; init; } = OutputContainer.Mp4;
+
     public CodecFamily LastCodecFamily { get; init; } = CodecFamily.H264;
 
     public EncoderKind LastEncoderKind { get; init; } = EncoderKind.Auto;
@@ -23,6 +25,12 @@ public sealed record AppSettings
     public int? LastQualityValue { get; init; }
 
     public bool NormalizeAudio { get; init; }
+
+    public bool ReencodeAudio { get; init; }
+
+    public int AudioBitrateKbps { get; init; } = 128;
+
+    public AudioRateMode AudioRateMode { get; init; } = AudioRateMode.Vbr;
 
     public bool ConvertHdrToSdr { get; init; }
 

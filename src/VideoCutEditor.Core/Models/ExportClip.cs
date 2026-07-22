@@ -4,6 +4,9 @@ public sealed record ExportClip(ClipRange Range, string Title)
 {
     public string OutputFileName => $"{Title}.mp4";
 
+    public string GetOutputFileName(OutputContainer container) =>
+        $"{Title}{container.GetFileExtension()}";
+
     public string StartText => FormatTime(Range.Start);
 
     public string EndText => FormatTime(Range.End);

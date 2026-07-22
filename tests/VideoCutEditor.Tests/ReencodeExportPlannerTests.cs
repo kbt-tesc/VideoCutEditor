@@ -6,6 +6,143 @@ namespace VideoCutEditor.Tests;
 public sealed class ReencodeExportPlannerTests
 {
     [Fact]
+    public void CreatePlan_builds_webm_with_av1_and_opus()
+    {
+        string outputDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(outputDirectory);
+
+        try
+        {
+            var capabilities = new FfmpegCapabilities(new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "libaom-av1",
+                "libopus",
+            });
+            var planner = new ReencodeExportPlanner(capabilities);
+            string outputPath = Path.Combine(outputDirectory, "clip.webm");
+            var request = new ExportRequest(
+                @"C:\video\source.mp4",
+                outputPath,
+                new ClipRange(TimeSpan.Zero, TimeSpan.FromSeconds(10)),
+                new AppSettings
+                {
+                    FfmpegPath = @"C:\tools\ffmpeg.exe",
+                    LastExportMode = ExportMode.Reencode,
+                    LastOutputContainer = OutputContainer.WebM,
+                    LastCodecFamily = CodecFamily.H264,
+                    LastEncoderKind = EncoderKind.Auto,
+                    LastVideoBitrateKbps = 2500,
+                    AudioBitrateKbps = 160,
+                    AudioRateMode = AudioRateMode.Cbr,
+                },
+                new MediaInfo(
+                    @"C:\video\source.mp4",
+                    TimeSpan.FromSeconds(10),
+                    "mov,mp4",
+                    2_500_000,
+                    [
+                        new MediaStreamInfo(0, "video", "h264", 2_300_000),
+                        new MediaStreamInfo(1, "audio", "aac", 128_000),
+                        new MediaStreamInfo(2, "subtitle", "mov_text", null),
+                    ]));
+
+            ExportPlan plan = planner.CreatePlan(request);
+
+            Assert.EndsWith(".webm", plan.TemporaryOutputPath);
+            Assert.Contains("libaom-av1", plan.Arguments);
+            Assert.Contains("libopus", plan.Arguments);
+            Assert.Contains("160k", plan.Arguments);
+            Assert.Contains("off", plan.Arguments);
+            Assert.Contains("0:v?", plan.Arguments);
+            Assert.Contains("0:a?", plan.Arguments);
+            Assert.DoesNotContain("aac", plan.Arguments);
+            Assert.DoesNotContain("0", plan.Arguments.SkipWhile(argument => argument != "-map").Skip(1).Take(1));
+        }
+        finally
+        {
+            Directory.Delete(outputDirectory, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void CreatePlan_rejects_webm_when_opus_encoder_is_missing_for_audio()
+    {
+        var capabilities = new FfmpegCapabilities(new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "libaom-av1",
+        });
+        var planner = new ReencodeExportPlanner(capabilities);
+        var request = new ExportRequest(
+            @"C:\video\source.mp4",
+            @"C:\output\clip.webm",
+            new ClipRange(TimeSpan.Zero, TimeSpan.FromSeconds(10)),
+            new AppSettings
+            {
+                FfmpegPath = @"C:\tools\ffmpeg.exe",
+                LastExportMode = ExportMode.Reencode,
+                LastOutputContainer = OutputContainer.WebM,
+            },
+            new MediaInfo(
+                @"C:\video\source.mp4",
+                TimeSpan.FromSeconds(10),
+                "mov,mp4",
+                null,
+                [
+                    new MediaStreamInfo(0, "video", "h264", null),
+                    new MediaStreamInfo(1, "audio", "aac", null),
+                ]));
+
+        InvalidOperationException exception = Assert.Throws<InvalidOperationException>(() => planner.CreatePlan(request));
+
+        Assert.Contains("libopus", exception.Message);
+    }
+
+    [Fact]
+    public void CreatePlan_copies_compatible_opus_audio_to_webm_without_libopus_encoder()
+    {
+        string outputDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(outputDirectory);
+
+        try
+        {
+            var capabilities = new FfmpegCapabilities(new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            {
+                "libaom-av1",
+            });
+            var planner = new ReencodeExportPlanner(capabilities);
+            var request = new ExportRequest(
+                @"C:\video\source.webm",
+                Path.Combine(outputDirectory, "clip.webm"),
+                new ClipRange(TimeSpan.Zero, TimeSpan.FromSeconds(5)),
+                new AppSettings
+                {
+                    FfmpegPath = @"C:\tools\ffmpeg.exe",
+                    LastExportMode = ExportMode.Reencode,
+                    LastOutputContainer = OutputContainer.WebM,
+                    LastEncoderKind = EncoderKind.Software,
+                },
+                new MediaInfo(
+                    @"C:\video\source.webm",
+                    TimeSpan.FromSeconds(10),
+                    "matroska,webm",
+                    null,
+                    [
+                        new MediaStreamInfo(0, "video", "vp9", null),
+                        new MediaStreamInfo(1, "audio", "opus", 128_000),
+                    ]));
+
+            ExportPlan plan = planner.CreatePlan(request);
+
+            Assert.DoesNotContain("-c:a", plan.Arguments);
+            Assert.DoesNotContain("libopus", plan.Arguments);
+        }
+        finally
+        {
+            Directory.Delete(outputDirectory, recursive: true);
+        }
+    }
+
+    [Fact]
     public void CreatePlan_uses_nvenc_for_auto_when_available()
     {
         string outputDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));
