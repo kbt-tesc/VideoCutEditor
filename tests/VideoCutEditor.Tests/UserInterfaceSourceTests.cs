@@ -127,12 +127,13 @@ public sealed class UserInterfaceSourceTests
         Assert.Contains("AutomationProperties.AutomationId=\"AudioCbrRadioButton\"", xaml);
         Assert.Contains("ViewModel.IsAudioEncodingSettingsVisible", xaml);
         Assert.Contains("ViewModel.IsAudioRateModeVisible", xaml);
-        Assert.Contains("Width=\"180\"", xaml);
+        Assert.Contains("Width=\"150\"", xaml);
         Assert.Contains("Orientation=\"Horizontal\"", xaml);
+        Assert.Contains("MinWidth=\"0\"", xaml);
         Assert.Contains("VerticalAlignment=\"Top\"", xaml);
         Assert.Matches(
             new Regex(
-                "<StackPanel\\s+AutomationProperties.AutomationId=\"AudioEncodingSettings\"",
+                "<Grid\\s+AutomationProperties.AutomationId=\"AudioEncodingSettings\"",
                 RegexOptions.None,
                 TimeSpan.FromSeconds(1)),
             xaml);

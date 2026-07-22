@@ -444,10 +444,15 @@
                             IsEnabled="{x:Bind ViewModel.IsAudioReencodeToggleEnabled, Mode=OneWay}"
                             Visibility="{x:Bind local:MainPage.BoolToVisibility(ViewModel.HasAudioStream), Mode=OneWay}" />
 
-                        <StackPanel
+                        <Grid
                             AutomationProperties.AutomationId="AudioEncodingSettings"
-                            Spacing="12"
+                            ColumnSpacing="12"
                             Visibility="{x:Bind local:MainPage.BoolToVisibility(ViewModel.IsAudioEncodingSettingsVisible), Mode=OneWay}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
                             <NumberBox
                                 AutomationProperties.AutomationId="AudioBitrateNumberBox"
                                 Header="音声ビットレート (kbps)"
@@ -458,9 +463,11 @@
                                 SpinButtonPlacementMode="Compact"
                                 VerticalAlignment="Top"
                                 Value="{x:Bind ViewModel.AudioBitrateKbps, Mode=TwoWay}"
-                                Width="180" />
+                                Width="150" />
 
                             <StackPanel
+                                Grid.Column="1"
+                                HorizontalAlignment="Left"
                                 Spacing="4"
                                 Visibility="{x:Bind local:MainPage.BoolToVisibility(ViewModel.IsAudioRateModeVisible), Mode=OneWay}">
                                 <TextBlock
@@ -471,15 +478,17 @@
                                         AutomationProperties.AutomationId="AudioVbrRadioButton"
                                         Content="VBR"
                                         GroupName="AudioRateMode"
-                                        IsChecked="{x:Bind ViewModel.IsVbrAudioRateSelected, Mode=TwoWay}" />
+                                        IsChecked="{x:Bind ViewModel.IsVbrAudioRateSelected, Mode=TwoWay}"
+                                        MinWidth="0" />
                                     <RadioButton
                                         AutomationProperties.AutomationId="AudioCbrRadioButton"
                                         Content="CBR"
                                         GroupName="AudioRateMode"
-                                        IsChecked="{x:Bind ViewModel.IsCbrAudioRateSelected, Mode=TwoWay}" />
+                                        IsChecked="{x:Bind ViewModel.IsCbrAudioRateSelected, Mode=TwoWay}"
+                                        MinWidth="0" />
                                 </StackPanel>
                             </StackPanel>
-                        </StackPanel>
+                        </Grid>
 
                         <StackPanel
                             Spacing="16"
