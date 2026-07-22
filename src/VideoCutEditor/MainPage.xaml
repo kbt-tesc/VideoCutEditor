@@ -444,15 +444,10 @@
                             IsEnabled="{x:Bind ViewModel.IsAudioReencodeToggleEnabled, Mode=OneWay}"
                             Visibility="{x:Bind local:MainPage.BoolToVisibility(ViewModel.HasAudioStream), Mode=OneWay}" />
 
-                        <Grid
+                        <StackPanel
                             AutomationProperties.AutomationId="AudioEncodingSettings"
-                            ColumnSpacing="8"
+                            Spacing="12"
                             Visibility="{x:Bind local:MainPage.BoolToVisibility(ViewModel.IsAudioEncodingSettingsVisible), Mode=OneWay}">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="*" />
-                            </Grid.ColumnDefinitions>
-
                             <NumberBox
                                 AutomationProperties.AutomationId="AudioBitrateNumberBox"
                                 Header="音声ビットレート (kbps)"
@@ -466,7 +461,6 @@
                                 Width="180" />
 
                             <StackPanel
-                                Grid.Column="1"
                                 Spacing="4"
                                 Visibility="{x:Bind local:MainPage.BoolToVisibility(ViewModel.IsAudioRateModeVisible), Mode=OneWay}">
                                 <TextBlock
@@ -485,7 +479,7 @@
                                         IsChecked="{x:Bind ViewModel.IsCbrAudioRateSelected, Mode=TwoWay}" />
                                 </StackPanel>
                             </StackPanel>
-                        </Grid>
+                        </StackPanel>
 
                         <StackPanel
                             Spacing="16"

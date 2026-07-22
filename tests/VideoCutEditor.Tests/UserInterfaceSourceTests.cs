@@ -130,6 +130,12 @@ public sealed class UserInterfaceSourceTests
         Assert.Contains("Width=\"180\"", xaml);
         Assert.Contains("Orientation=\"Horizontal\"", xaml);
         Assert.Contains("VerticalAlignment=\"Top\"", xaml);
+        Assert.Matches(
+            new Regex(
+                "<StackPanel\\s+AutomationProperties.AutomationId=\"AudioEncodingSettings\"",
+                RegexOptions.None,
+                TimeSpan.FromSeconds(1)),
+            xaml);
     }
 
     [Fact]
