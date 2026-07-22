@@ -12,6 +12,12 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 
 ## Completed Slices
 
+- `0.5.0` release preparation.
+  - Advanced the app and release-script defaults from `0.4.0` to `0.5.0` for the MP4/WebM and conditional audio re-encode feature release.
+  - Updated the development and packaged Japanese guides for MP4/WebM selection, audio-only AAC/Opus conversion, explicit audio re-encode, bitrate controls, and WebM VBR/CBR.
+  - Passed all 193 Core and 28 app-layer Release tests and the WinUI-analyzer x64 Release build with 0 warnings and 0 errors.
+  - Release artifact hashes and installer/portable verification will be recorded after generation.
+
 - Conditional MP4/WebM UI and audio re-encode controls (`codex/webm-export`).
   - Added conditional MP4/WebM selection, output-name synchronization, and per-clip WebM filenames to the WinUI export surface.
   - Fast copy now permits container switching when video can remain copied and converts only incompatible audio; Re-encode writes AV1 WebM and copies compatible audio when no processing is needed.
