@@ -16,7 +16,13 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
   - Advanced the app and release-script defaults from `0.4.0` to `0.5.0` for the MP4/WebM and conditional audio re-encode feature release.
   - Updated the development and packaged Japanese guides for MP4/WebM selection, audio-only AAC/Opus conversion, explicit audio re-encode, bitrate controls, and WebM VBR/CBR.
   - Passed all 193 Core and 28 app-layer Release tests and the WinUI-analyzer x64 Release build with 0 warnings and 0 errors.
-  - Release artifact hashes and installer/portable verification will be recorded after generation.
+  - Generated and validated the unsigned x64 Portable ZIP and per-user NSIS installer from merged `main` commit `d29159c`.
+  - Portable ZIP SHA-256: `929cba663a57467737f34ea04f404a7e2e67ae48121d558e5c953068d51045a4`.
+  - Installer SHA-256: `4dd3bf083cd06d18bc8fbd50c6d383fa5739e56747a1dcece03da8409a3c79bb`.
+  - Confirmed ZIP contents, official license notices, packaged Japanese guidance, external ffmpeg/ffprobe policy, and embedded EXE file version `0.5.0.0`.
+  - Silently installed the per-user package, verified registered version `0.5.0`, confirmed the EXE under `%LocalAppData%/Programs/VideoCutEditor`, and kept the installed app running for 8 seconds.
+  - Installer verification must read the install directory from `HKCU\Software\VideoCutEditor\InstallDir`; the uninstall entry currently does not define the optional `InstallLocation` value.
+  - GitHub release: `https://github.com/kbt-tesc/VideoCutEditor/releases/tag/v0.5.0`.
 
 - Conditional MP4/WebM UI and audio re-encode controls (`codex/webm-export`).
   - Added conditional MP4/WebM selection, output-name synchronization, and per-clip WebM filenames to the WinUI export surface.
@@ -612,7 +618,7 @@ When resuming in a new session, rerun the relevant subset before making assumpti
 - The current winapp UIA bridge likewise does not expose the nested audio bitrate NumberBox and VBR/CBR RadioButtons reliably. App-layer/source contracts verify their state and the NormalizeAudio UI screenshot verifies that the visible controls are laid out correctly; runtime UIA verifies the forced audio re-encode checkbox.
 - Preview-unavailable fallback behavior needs more manual and/or UI coverage.
 - Portable x64 publish, x86 publish, arm64 publish, artifact validation, x64 ZIP distribution packaging, checksum verification, and distributed x64 EXE startup smoke testing now succeed. Signing, MSIX/installer validation, and x86/arm64 runtime startup on matching devices still need verification.
-- The x64 per-user installer was verified through upgrade, launch, uninstall, and clean reinstall for `0.4.0`; production code signing remains unresolved.
+- The x64 per-user installer was verified through upgrade, launch, uninstall, and clean reinstall for `0.4.0`, then through silent install and launch for `0.5.0`; production code signing remains unresolved.
 - UI tests cover opening generated media through the real Windows file picker, loaded range state, and isolated Fast copy export completion.
 - The picker workflow supports the current legacy filename field ID `1148` and the newer `FileNameControlHost` ID. Future Windows picker UIA changes may require updating these selectors.
 - VS Code F5 now has an explicit x64 unpackaged launch path, but the user should manually confirm breakpoint attachment from VS Code because automated tests can only validate the configuration files and build output.
