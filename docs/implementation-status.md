@@ -25,6 +25,7 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
   - Reduced the audio bitrate input to a stable 180px width and replaced the WebM rate selector with horizontally arranged VBR/CBR radio buttons.
   - Fixed right-panel clipping at the actual desktop display scale by moving the horizontal WebM VBR/CBR row below the bitrate input; captured the failing layout before the fix for comparison.
   - Refined the final compact layout to keep bitrate and WebM VBR/CBR on one row: bitrate width is 150px and the radio buttons opt out of WinUI's oversized default minimum width.
+  - Aligned the bitrate box and WebM radio buttons vertically by replacing the mixed NumberBox/manual headers with shared grid header and control rows, both centered in the control row.
 
 - WebM export Core foundation (`codex/webm-export`).
   - Added persisted MP4/WebM output-container state, container-specific extensions, and collision-safe title handling across both formats.

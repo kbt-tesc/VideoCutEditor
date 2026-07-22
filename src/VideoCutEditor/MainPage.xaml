@@ -452,41 +452,53 @@
                                 <ColumnDefinition Width="Auto" />
                                 <ColumnDefinition Width="*" />
                             </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <TextBlock
+                                Style="{StaticResource BodyStrongTextBlockStyle}"
+                                Text="音声ビットレート (kbps)" />
+
+                            <TextBlock
+                                Grid.Column="1"
+                                Style="{StaticResource BodyStrongTextBlockStyle}"
+                                Text="音声レート"
+                                Visibility="{x:Bind local:MainPage.BoolToVisibility(ViewModel.IsAudioRateModeVisible), Mode=OneWay}" />
 
                             <NumberBox
+                                Grid.Row="1"
                                 AutomationProperties.AutomationId="AudioBitrateNumberBox"
-                                Header="音声ビットレート (kbps)"
                                 HorizontalAlignment="Left"
                                 Maximum="512"
                                 Minimum="32"
                                 SmallChange="16"
                                 SpinButtonPlacementMode="Compact"
-                                VerticalAlignment="Top"
+                                VerticalAlignment="Center"
                                 Value="{x:Bind ViewModel.AudioBitrateKbps, Mode=TwoWay}"
                                 Width="150" />
 
                             <StackPanel
+                                Grid.Row="1"
                                 Grid.Column="1"
                                 HorizontalAlignment="Left"
-                                Spacing="4"
+                                Orientation="Horizontal"
+                                Spacing="16"
+                                VerticalAlignment="Center"
                                 Visibility="{x:Bind local:MainPage.BoolToVisibility(ViewModel.IsAudioRateModeVisible), Mode=OneWay}">
-                                <TextBlock
-                                    Style="{StaticResource BodyStrongTextBlockStyle}"
-                                    Text="音声レート" />
-                                <StackPanel Orientation="Horizontal" Spacing="16">
-                                    <RadioButton
-                                        AutomationProperties.AutomationId="AudioVbrRadioButton"
-                                        Content="VBR"
-                                        GroupName="AudioRateMode"
-                                        IsChecked="{x:Bind ViewModel.IsVbrAudioRateSelected, Mode=TwoWay}"
-                                        MinWidth="0" />
-                                    <RadioButton
-                                        AutomationProperties.AutomationId="AudioCbrRadioButton"
-                                        Content="CBR"
-                                        GroupName="AudioRateMode"
-                                        IsChecked="{x:Bind ViewModel.IsCbrAudioRateSelected, Mode=TwoWay}"
-                                        MinWidth="0" />
-                                </StackPanel>
+                                <RadioButton
+                                    AutomationProperties.AutomationId="AudioVbrRadioButton"
+                                    Content="VBR"
+                                    GroupName="AudioRateMode"
+                                    IsChecked="{x:Bind ViewModel.IsVbrAudioRateSelected, Mode=TwoWay}"
+                                    MinWidth="0" />
+                                <RadioButton
+                                    AutomationProperties.AutomationId="AudioCbrRadioButton"
+                                    Content="CBR"
+                                    GroupName="AudioRateMode"
+                                    IsChecked="{x:Bind ViewModel.IsCbrAudioRateSelected, Mode=TwoWay}"
+                                    MinWidth="0" />
                             </StackPanel>
                         </Grid>
 

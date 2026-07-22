@@ -130,7 +130,9 @@ public sealed class UserInterfaceSourceTests
         Assert.Contains("Width=\"150\"", xaml);
         Assert.Contains("Orientation=\"Horizontal\"", xaml);
         Assert.Contains("MinWidth=\"0\"", xaml);
-        Assert.Contains("VerticalAlignment=\"Top\"", xaml);
+        Assert.Contains("VerticalAlignment=\"Center\"", xaml);
+        Assert.Contains("Grid.Row=\"1\"", xaml);
+        Assert.DoesNotContain("Header=\"音声ビットレート (kbps)\"", xaml);
         Assert.Matches(
             new Regex(
                 "<Grid\\s+AutomationProperties.AutomationId=\"AudioEncodingSettings\"",
