@@ -61,6 +61,8 @@ public sealed class VerificationMediaScriptTests
         Assert.Contains("Applying audio normalization...", uiScript);
         Assert.Contains("VideoExportProgressBar", uiScript);
         Assert.Contains("AudioExportProgressBar", uiScript);
+        Assert.Contains("AutoScrollExportLogCheckBox", uiScript);
+        Assert.Contains("EncoderAndMediaSummaryTextBox", uiScript);
         Assert.Contains("NormalizeNoAudio", uiScript);
         Assert.Contains("ReencodeNvenc", uiScript);
         Assert.Contains("$VerifyExportMode -like \"*Quality\"", uiScript);

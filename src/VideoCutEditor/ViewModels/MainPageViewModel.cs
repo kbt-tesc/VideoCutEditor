@@ -121,6 +121,9 @@ public partial class MainPageViewModel : ObservableObject
     [ObservableProperty]
     public partial string EncoderSummaryText { get; set; } = "エンコーダー情報はまだ検出されていません";
 
+    public string EncoderAndMediaSummaryText =>
+        $"エンコーダー情報\n{EncoderSummaryText}\n\nメディア情報\n{MediaSummaryText}";
+
     [ObservableProperty]
     public partial MediaInfo? CurrentMediaInfo { get; set; }
 
@@ -1076,6 +1079,12 @@ public partial class MainPageViewModel : ObservableObject
         UpdatePlannedOutputPath();
         OpenOutputDirectoryCommand.NotifyCanExecuteChanged();
     }
+
+    partial void OnMediaSummaryTextChanged(string value) =>
+        OnPropertyChanged(nameof(EncoderAndMediaSummaryText));
+
+    partial void OnEncoderSummaryTextChanged(string value) =>
+        OnPropertyChanged(nameof(EncoderAndMediaSummaryText));
 
     partial void OnPreviewSourceChanged(MediaSource? value)
     {

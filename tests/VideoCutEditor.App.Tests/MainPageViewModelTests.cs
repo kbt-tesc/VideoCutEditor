@@ -511,6 +511,19 @@ public sealed class MainPageViewModelTests
     }
 
     [Fact]
+    public void Info_summary_combines_encoder_and_media_information()
+    {
+        MainPageViewModel viewModel = CreateViewModel();
+
+        viewModel.EncoderSummaryText = "H.264: h264_nvenc";
+        viewModel.MediaSummaryText = "長さ: 00:04.000";
+
+        Assert.Equal(
+            "エンコーダー情報\nH.264: h264_nvenc\n\nメディア情報\n長さ: 00:04.000",
+            viewModel.EncoderAndMediaSummaryText);
+    }
+
+    [Fact]
     public async Task ExportAsync_writes_registered_clips_in_order_as_title_mp4_files()
     {
         string directory = CreateTempDirectory();

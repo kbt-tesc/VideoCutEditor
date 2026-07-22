@@ -12,6 +12,14 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 
 ## Completed Slices
 
+- Responsive fixed-order INFO layout and export-log auto-scroll (`codex/info-export-progress`).
+  - Replaced the window-level scrolling stack with an `Auto/*/Auto` grid ordered as combined encoder/media information, export log, and bottom export progress.
+  - Combined encoder and media summaries into one fixed-height TextBox; only the full-width log row changes height with the window.
+  - Added a non-persisted `自動スクロール` checkbox beside the log heading, checked by default, with coalesced `TextChanged` handling and a cached nested ScrollViewer.
+  - The first visual run showed that selecting the TextBox end alone did not move its viewport. Added explicit `ChangeView` handling; the rerun displayed the final `frame=120` and completion statistics at the bottom with auto-scroll enabled.
+  - Updated both common and HDR-specific UI automation to use the combined information field; the stale HDR-only `MediaInfoTextBox` selector was found during final diff review before commit.
+  - Passed all 193 Core and 30 app-layer Release tests, the WinUI-analyzer x64 Release build with 0 warnings and 0 errors, and the isolated NormalizeAudio workflow with all 70 UI assertions.
+
 - INFO-window export progress with audio/video phase switching (`codex/info-export-progress`).
   - Moved the export progress surface out of the main settings pane and into the modeless INFO window, which now opens or reactivates automatically when export starts.
   - Added explicit audio/video progress phases to `ExportProgress`. Loudness analysis reports audio progress; the final ffmpeg process reports video progress and parses `frame=` alongside `time=`.
