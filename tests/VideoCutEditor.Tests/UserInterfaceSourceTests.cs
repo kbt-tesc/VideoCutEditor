@@ -180,18 +180,43 @@ public sealed class UserInterfaceSourceTests
         Assert.Matches(new Regex("x:Name=\"SettingsDialog\"[\\s\\S]*?AutomationProperties.AutomationId=\"FfprobePathTextBox\"", RegexOptions.None, TimeSpan.FromSeconds(1)), xaml);
         Assert.Matches(new Regex("x:Name=\"SettingsDialog\"[\\s\\S]*?AutomationProperties.AutomationId=\"OutputDirectoryTextBox\"", RegexOptions.None, TimeSpan.FromSeconds(1)), xaml);
         Assert.Contains("x:Class=\"VideoCutEditor.InfoWindow\"", infoWindowXaml);
-        Assert.Contains("<ScrollViewer", infoWindowXaml);
-        Assert.Contains("AutomationProperties.AutomationId=\"EncoderSummaryTextBox\"", infoWindowXaml);
+        Assert.DoesNotContain("<ScrollViewer", infoWindowXaml);
+        Assert.Contains("AutomationProperties.AutomationId=\"EncoderAndMediaSummaryTextBox\"", infoWindowXaml);
         Assert.Contains("AutomationProperties.AutomationId=\"ExportLogTextBox\"", infoWindowXaml);
-        Assert.Contains("AutomationProperties.AutomationId=\"MediaInfoTextBox\"", infoWindowXaml);
+        Assert.DoesNotContain("AutomationProperties.AutomationId=\"EncoderSummaryTextBox\"", infoWindowXaml);
+        Assert.DoesNotContain("AutomationProperties.AutomationId=\"MediaInfoTextBox\"", infoWindowXaml);
+        Assert.Contains("x:Name=\"ExportLogTextBox\"", infoWindowXaml);
+        Assert.Contains("AutomationProperties.AutomationId=\"AutoScrollExportLogCheckBox\"", infoWindowXaml);
+        Assert.Contains("IsChecked=\"True\"", infoWindowXaml);
+        Assert.Matches(
+            new Regex(
+                "<RowDefinition Height=\"Auto\"[\\s\\S]*?<RowDefinition Height=\"\\*\"[\\s\\S]*?<RowDefinition Height=\"Auto\"",
+                RegexOptions.None,
+                TimeSpan.FromSeconds(1)),
+            infoWindowXaml);
+        Assert.True(
+            infoWindowXaml.IndexOf("EncoderAndMediaSummaryTextBox", StringComparison.Ordinal)
+                < infoWindowXaml.IndexOf("ExportLogTextBox", StringComparison.Ordinal));
+        Assert.True(
+            infoWindowXaml.IndexOf("ExportLogTextBox", StringComparison.Ordinal)
+                < infoWindowXaml.IndexOf("VideoExportProgressBar", StringComparison.Ordinal));
+        Assert.Contains("AutomationProperties.AutomationId=\"VideoExportProgressBar\"", infoWindowXaml);
+        Assert.Contains("AutomationProperties.AutomationId=\"AudioExportProgressBar\"", infoWindowXaml);
+        Assert.Contains("ViewModel.ExportProgressDetailText", infoWindowXaml);
+        Assert.DoesNotContain("AutomationProperties.AutomationId=\"ExportProgressBar\"", xaml);
         Assert.Contains("OpenSettingsButton_Click", codeBehind);
         Assert.Contains("ShowInfoButton_Click", codeBehind);
         Assert.Contains("private InfoWindow? infoWindow;", codeBehind);
         Assert.Contains("infoWindow ??= new InfoWindow(ViewModel, App.WindowHandle);", codeBehind);
         Assert.Contains("infoWindow.Activate();", codeBehind);
+        Assert.Contains("ViewModel.InfoWindowRequested += ViewModelInfoWindowRequested;", codeBehind);
+        Assert.Contains("ViewModel.InfoWindowRequested -= ViewModelInfoWindowRequested;", codeBehind);
         Assert.DoesNotContain("await InfoDialog.ShowAsync();", codeBehind);
         Assert.Contains("public InfoWindow(MainPageViewModel viewModel, nint ownerWindowHandle)", infoWindowCodeBehind);
         Assert.Contains("SetOwner(ownerWindowHandle);", infoWindowCodeBehind);
+        Assert.Contains("TextChanged=\"ExportLogTextBox_TextChanged\"", infoWindowXaml);
+        Assert.Contains("ExportLogTextBox.Select(ExportLogTextBox.Text.Length, 0);", infoWindowCodeBehind);
+        Assert.Contains("exportLogScrollViewer.ChangeView(null, exportLogScrollViewer.ScrollableHeight, null, true);", infoWindowCodeBehind);
     }
 
     [Fact]

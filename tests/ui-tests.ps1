@@ -617,10 +617,23 @@ Test-UI "INFO window opens once and is owned by main window" {
     if ($infoWindows.Count -ne 1) { throw "Repeated INFO command created a duplicate window." }
 }
 
-Test-UI "INFO window shows all three information fields" {
-    winapp ui wait-for "EncoderSummaryTextBox" -w $infoWindowHwnd -t 3000 -q
+Test-UI "INFO window shows combined information and export log fields" {
+    winapp ui wait-for "EncoderAndMediaSummaryTextBox" -w $infoWindowHwnd -t 3000 -q
     winapp ui wait-for "ExportLogTextBox" -w $infoWindowHwnd -t 3000 -q
-    winapp ui wait-for "MediaInfoTextBox" -w $infoWindowHwnd -t 3000 -q
+    winapp ui wait-for "AutoScrollExportLogCheckBox" -w $infoWindowHwnd --value "On" -t 3000 -q
+}
+
+Test-UI "INFO progress controls are hidden while idle" {
+    foreach ($automationId in @("VideoExportProgressBar", "AudioExportProgressBar")) {
+        winapp ui wait-for $automationId -w $infoWindowHwnd --gone -t 3000 -q
+    }
+}
+
+Test-UI "INFO export log auto-scroll can be disabled and re-enabled" {
+    winapp ui invoke "AutoScrollExportLogCheckBox" -w $infoWindowHwnd -q
+    winapp ui wait-for "AutoScrollExportLogCheckBox" -w $infoWindowHwnd --value "Off" -t 3000 -q
+    winapp ui invoke "AutoScrollExportLogCheckBox" -w $infoWindowHwnd -q
+    winapp ui wait-for "AutoScrollExportLogCheckBox" -w $infoWindowHwnd --value "On" -t 3000 -q
 }
 
 if ($VerifyExportMode -eq "NormalizeAudio") {
@@ -634,7 +647,7 @@ if ($VerifyExportMode -eq "NormalizeAudio") {
 
 if ($VerifyExportMode -eq "ReencodeHdrToSdr") {
     Test-UI "HDR media information shows transfer and color specifications" {
-        $mediaInfo = winapp ui get-value "MediaInfoTextBox" -w $infoWindowHwnd --json 2>$null | ConvertFrom-Json
+        $mediaInfo = winapp ui get-value "EncoderAndMediaSummaryTextBox" -w $infoWindowHwnd --json 2>$null | ConvertFrom-Json
         if ($mediaInfo.text -notlike "*HDR10 (PQ)*" -or $mediaInfo.text -notlike "*smpte2084*" -or $mediaInfo.text -notlike "*bt2020*") {
             throw "HDR media information did not include the expected PQ and BT.2020 specifications."
         }
@@ -662,7 +675,7 @@ Test-UI "INFO window can close and reopen" {
     $reopened = @(Get-InfoWindows)
     if ($reopened.Count -ne 1) { throw "INFO window did not reopen exactly once." }
     $script:infoWindowHwnd = $reopened[0].hwnd
-    winapp ui wait-for "EncoderSummaryTextBox" -w $infoWindowHwnd -t 3000 -q
+    winapp ui wait-for "EncoderAndMediaSummaryTextBox" -w $infoWindowHwnd -t 3000 -q
 }
 
 Test-UI "INFO window is closed during test cleanup" {

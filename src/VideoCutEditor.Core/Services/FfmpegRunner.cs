@@ -25,11 +25,16 @@ public sealed partial class FfmpegRunner : IFfmpegRunner
             IReadOnlyList<string> exportArguments = plan.Arguments;
             if (plan.AudioNormalizationAnalysis is not null)
             {
-                progress?.Report(new ExportProgress(null, null, "Analyzing audio loudness..."));
+                progress?.Report(new ExportProgress(
+                    null,
+                    null,
+                    "Analyzing audio loudness...",
+                    ExportProgressPhase.Audio));
                 FfmpegProcessResult analysisResult = await RunProcessAsync(
                     plan.FfmpegPath,
                     plan.AudioNormalizationAnalysis.Arguments,
                     progress,
+                    ExportProgressPhase.Audio,
                     cancellationToken);
 
                 if (analysisResult.ExitCode != 0)
@@ -40,13 +45,18 @@ public sealed partial class FfmpegRunner : IFfmpegRunner
 
                 string measuredLoudnormFilter = AudioNormalizationArguments.CreateMeasuredLoudnormFilter(analysisResult.Stderr);
                 exportArguments = ReplaceLoudnormFilter(plan.Arguments, measuredLoudnormFilter);
-                progress?.Report(new ExportProgress(null, null, "Applying audio normalization..."));
+                progress?.Report(new ExportProgress(
+                    null,
+                    null,
+                    "Applying audio normalization...",
+                    ExportProgressPhase.Audio));
             }
 
             FfmpegProcessResult exportResult = await RunProcessAsync(
                 plan.FfmpegPath,
                 exportArguments,
                 progress,
+                ExportProgressPhase.Video,
                 cancellationToken);
 
             if (!exportResult.Started)
@@ -91,6 +101,7 @@ public sealed partial class FfmpegRunner : IFfmpegRunner
         string ffmpegPath,
         IReadOnlyList<string> arguments,
         IProgress<ExportProgress>? progress,
+        ExportProgressPhase phase,
         CancellationToken cancellationToken)
     {
         using var process = new Process
@@ -130,7 +141,7 @@ public sealed partial class FfmpegRunner : IFfmpegRunner
             }
         });
 
-        Task<string> stderrTask = ReadStreamAsync(process.StandardError, progress, cancellationToken);
+        Task<string> stderrTask = ReadStreamAsync(process.StandardError, progress, phase, cancellationToken);
         Task<string> stdoutTask = process.StandardOutput.ReadToEndAsync(cancellationToken);
 
         await process.WaitForExitAsync(cancellationToken);
@@ -173,6 +184,7 @@ public sealed partial class FfmpegRunner : IFfmpegRunner
     private static async Task<string> ReadStreamAsync(
         StreamReader reader,
         IProgress<ExportProgress>? progress,
+        ExportProgressPhase phase,
         CancellationToken cancellationToken)
     {
         var log = new List<string>();
@@ -188,7 +200,8 @@ public sealed partial class FfmpegRunner : IFfmpegRunner
 
             log.Add(line);
             TimeSpan? position = ParseProgressPosition(line);
-            progress?.Report(new ExportProgress(position, null, line));
+            long? processedFrames = ParseProcessedFrames(line);
+            progress?.Report(new ExportProgress(position, null, line, phase, processedFrames));
         }
 
         return string.Join(Environment.NewLine, log);
@@ -198,6 +211,14 @@ public sealed partial class FfmpegRunner : IFfmpegRunner
     {
         Match match = FfmpegTimeRegex().Match(line);
         return match.Success && TimeSpan.TryParse(match.Groups["time"].Value, out TimeSpan value)
+            ? value
+            : null;
+    }
+
+    private static long? ParseProcessedFrames(string line)
+    {
+        Match match = FfmpegFrameRegex().Match(line);
+        return match.Success && long.TryParse(match.Groups["frame"].Value, out long value)
             ? value
             : null;
     }
@@ -225,6 +246,9 @@ public sealed partial class FfmpegRunner : IFfmpegRunner
 
     [GeneratedRegex(@"time=(?<time>\d{2}:\d{2}:\d{2}\.\d{2,3})")]
     private static partial Regex FfmpegTimeRegex();
+
+    [GeneratedRegex(@"(?:^|\s)frame=\s*(?<frame>\d+)")]
+    private static partial Regex FfmpegFrameRegex();
 
     private sealed record FfmpegProcessResult(bool Started, int ExitCode, string Stderr);
 }

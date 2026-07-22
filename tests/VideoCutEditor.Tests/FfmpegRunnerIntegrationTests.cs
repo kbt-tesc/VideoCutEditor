@@ -30,6 +30,7 @@ public sealed class FfmpegRunnerIntegrationTests
                 )
 
                 if ($Remaining[0] -eq "analysis") {
+                    [Console]::Error.WriteLine('size=N/A time=00:00:00.50 bitrate=N/A speed=1x')
                     [Console]::Error.WriteLine('{')
                     [Console]::Error.WriteLine('  "input_i" : "-20.00",')
                     [Console]::Error.WriteLine('  "input_tp" : "-1.00",')
@@ -42,6 +43,7 @@ public sealed class FfmpegRunnerIntegrationTests
 
                 $logPath = $Remaining[1]
                 $outputPath = $Remaining[$Remaining.Length - 1]
+                [Console]::Error.WriteLine('frame=   42 fps=0.0 size=1kB time=00:00:01.50 bitrate=5.5kbits/s speed=3x')
                 Set-Content -LiteralPath $logPath -Value ($Remaining -join "`n")
                 Set-Content -LiteralPath $outputPath -Value "output"
                 exit 0
@@ -72,7 +74,10 @@ public sealed class FfmpegRunnerIntegrationTests
                     "analysis",
                 ]));
 
-            ExportResult result = await new FfmpegRunner().RunAsync(plan);
+            var progressEvents = new List<ExportProgress>();
+            ExportResult result = await new FfmpegRunner().RunAsync(
+                plan,
+                new InlineProgress<ExportProgress>(progressEvents.Add));
 
             Assert.True(result.Succeeded, result.ErrorMessage);
             Assert.True(File.Exists(finalOutputPath));
@@ -86,6 +91,15 @@ public sealed class FfmpegRunnerIntegrationTests
             Assert.Contains("offset=1.25", finalArguments);
             Assert.Contains("linear=true", finalArguments);
             Assert.DoesNotContain("print_format=json", finalArguments);
+            Assert.Contains(
+                progressEvents,
+                progress => progress.Phase == ExportProgressPhase.Audio
+                    && progress.Position == TimeSpan.FromSeconds(0.5));
+            Assert.Contains(
+                progressEvents,
+                progress => progress.Phase == ExportProgressPhase.Video
+                    && progress.ProcessedFrames == 42
+                    && progress.Position == TimeSpan.FromSeconds(1.5));
         }
         finally
         {

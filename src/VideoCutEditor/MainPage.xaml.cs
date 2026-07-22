@@ -74,6 +74,7 @@ public sealed partial class MainPage : Page
         ViewModel.PropertyChanged += ViewModelPropertyChanged;
         ViewModel.ExportListRequested += ViewModelExportListRequested;
         ViewModel.ClipOverwriteConfirmationRequested += ViewModelClipOverwriteConfirmationRequested;
+        ViewModel.InfoWindowRequested += ViewModelInfoWindowRequested;
         ConfigureTimelineControls();
         AppLogger.Info("Timeline controls configured");
         PreviewPlayer.MediaPlayer.MediaOpened += PreviewPlayerMediaOpened;
@@ -120,6 +121,7 @@ public sealed partial class MainPage : Page
         ViewModel.PropertyChanged -= ViewModelPropertyChanged;
         ViewModel.ExportListRequested -= ViewModelExportListRequested;
         ViewModel.ClipOverwriteConfirmationRequested -= ViewModelClipOverwriteConfirmationRequested;
+        ViewModel.InfoWindowRequested -= ViewModelInfoWindowRequested;
         PreviewPlayer.MediaPlayer.CurrentStateChanged -= PreviewPlayerCurrentStateChanged;
         PreviewPlayer.MediaPlayer.Pause();
     }
@@ -267,6 +269,11 @@ public sealed partial class MainPage : Page
 
     private void ShowInfoButton_Click(object sender, Microsoft.UI.Xaml.RoutedEventArgs e)
     {
+        ShowInfoWindow();
+    }
+
+    private void ShowInfoWindow()
+    {
         infoWindow ??= new InfoWindow(ViewModel, App.WindowHandle);
         infoWindow.Closed -= InfoWindowClosed;
         infoWindow.Closed += InfoWindowClosed;
@@ -284,6 +291,8 @@ public sealed partial class MainPage : Page
     }
 
     private void ViewModelExportListRequested(object? sender, EventArgs e) => ShowExportListWindow();
+
+    private void ViewModelInfoWindowRequested(object? sender, EventArgs e) => ShowInfoWindow();
 
     private async void ViewModelClipOverwriteConfirmationRequested(object? sender, EventArgs e)
     {

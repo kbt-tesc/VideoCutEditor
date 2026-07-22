@@ -1,3 +1,14 @@
 namespace VideoCutEditor.Core.Models;
 
-public sealed record ExportProgress(TimeSpan? Position, double? Percent, string Status);
+public enum ExportProgressPhase
+{
+    Video,
+    Audio,
+}
+
+public sealed record ExportProgress(
+    TimeSpan? Position,
+    double? Percent,
+    string Status,
+    ExportProgressPhase Phase = ExportProgressPhase.Video,
+    long? ProcessedFrames = null);

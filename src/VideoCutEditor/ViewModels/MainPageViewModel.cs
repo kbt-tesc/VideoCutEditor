@@ -44,6 +44,8 @@ public partial class MainPageViewModel : ObservableObject
 
     public event EventHandler? ClipOverwriteConfirmationRequested;
 
+    public event EventHandler? InfoWindowRequested;
+
     public ObservableCollection<ExportClip> RegisteredClips { get; } = [];
 
     public string ClipTitleText
@@ -119,6 +121,9 @@ public partial class MainPageViewModel : ObservableObject
     [ObservableProperty]
     public partial string EncoderSummaryText { get; set; } = "エンコーダー情報はまだ検出されていません";
 
+    public string EncoderAndMediaSummaryText =>
+        $"エンコーダー情報\n{EncoderSummaryText}\n\nメディア情報\n{MediaSummaryText}";
+
     [ObservableProperty]
     public partial MediaInfo? CurrentMediaInfo { get; set; }
 
@@ -184,6 +189,21 @@ public partial class MainPageViewModel : ObservableObject
 
     [ObservableProperty]
     public partial bool IsExportProgressIndeterminate { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsVideoExportProgressVisible { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsAudioExportProgressVisible { get; set; }
+
+    [ObservableProperty]
+    public partial long ExportProcessedFrames { get; set; }
+
+    [ObservableProperty]
+    public partial long ExportTotalFrames { get; set; }
+
+    [ObservableProperty]
+    public partial string ExportProgressDetailText { get; set; } = "書き出しを準備しています...";
 
     [ObservableProperty]
     public partial string ExportLogText { get; set; } = "書き出しログはまだありません。";
@@ -866,9 +886,15 @@ public partial class MainPageViewModel : ObservableObject
         exportCancellation = new CancellationTokenSource();
         ExportProgressValue = 0;
         IsExportProgressIndeterminate = true;
+        IsVideoExportProgressVisible = false;
+        IsAudioExportProgressVisible = false;
+        ExportProcessedFrames = 0;
+        ExportTotalFrames = 0;
+        ExportProgressDetailText = "書き出しを準備しています...";
         ExportLogText = "書き出しを開始しています...";
         HasExportLog = true;
         StatusMessage = "書き出し中...";
+        InfoWindowRequested?.Invoke(this, EventArgs.Empty);
 
         try
         {
@@ -883,7 +909,6 @@ public partial class MainPageViewModel : ObservableObject
             for (int index = 0; index < workItems.Count; index++)
             {
                 ExportWorkItem item = workItems[index];
-                int itemIndex = index;
                 int itemNumber = index + 1;
                 AppSettings itemSettings = settings with
                 {
@@ -898,6 +923,10 @@ public partial class MainPageViewModel : ObservableObject
                 ExportPlan plan = planner.CreatePlan(request);
                 AppendExportLog($"[{itemNumber}/{workItems.Count}] {Path.GetFileName(item.OutputPath)}");
                 StatusMessage = $"書き出し中 ({itemNumber}/{workItems.Count}): {Path.GetFileName(item.OutputPath)}";
+                IsVideoExportProgressVisible = false;
+                IsAudioExportProgressVisible = false;
+                ExportProgressValue = 0;
+                IsExportProgressIndeterminate = true;
                 bool acceptsItemProgress = true;
                 var progress = new Progress<ExportProgress>(exportProgress =>
                 {
@@ -907,14 +936,7 @@ public partial class MainPageViewModel : ObservableObject
                     }
 
                     AppendExportLog(exportProgress.Status);
-                    double? itemProgress = exportProgress.Position is { } position && item.Range.Duration.TotalSeconds > 0
-                        ? position.TotalSeconds / item.Range.Duration.TotalSeconds
-                        : exportProgress.Percent;
-                    if (itemProgress is { } value)
-                    {
-                        IsExportProgressIndeterminate = false;
-                        ExportProgressValue = Math.Clamp((itemIndex + Math.Clamp(value, 0, 1)) / workItems.Count, 0, 1);
-                    }
+                    UpdateExportProgressPresentation(exportProgress, item.Range, mediaInfo);
                 });
 
                 ExportResult result = await ffmpegRunner.RunAsync(plan, progress, exportCancellation.Token);
@@ -971,6 +993,71 @@ public partial class MainPageViewModel : ObservableObject
         exportCancellation.Cancel();
     }
 
+    private void UpdateExportProgressPresentation(
+        ExportProgress progress,
+        ClipRange range,
+        MediaInfo? mediaInfo)
+    {
+        TimeSpan duration = range.Duration;
+        bool hasVideo = mediaInfo?.Streams.Any(stream =>
+            string.Equals(stream.CodecType, "video", StringComparison.OrdinalIgnoreCase)) ?? true;
+        bool showAudio = progress.Phase == ExportProgressPhase.Audio || !hasVideo;
+        bool phaseChanged = showAudio != IsAudioExportProgressVisible
+            || (!showAudio && !IsVideoExportProgressVisible);
+
+        IsAudioExportProgressVisible = showAudio;
+        IsVideoExportProgressVisible = !showAudio;
+        if (phaseChanged)
+        {
+            ExportProgressValue = 0;
+            IsExportProgressIndeterminate = true;
+        }
+
+        double? phaseProgress = progress.Position is { } position && duration.TotalSeconds > 0
+            ? position.TotalSeconds / duration.TotalSeconds
+            : progress.Percent;
+        if (phaseProgress is { } value)
+        {
+            ExportProgressValue = Math.Clamp(value, 0, 1);
+            IsExportProgressIndeterminate = false;
+        }
+
+        if (showAudio)
+        {
+            TimeSpan processed = progress.Position ?? (progress.Percent is >= 1 ? duration : TimeSpan.Zero);
+            processed = TimeSpan.FromSeconds(Math.Clamp(processed.TotalSeconds, 0, duration.TotalSeconds));
+            ExportProgressDetailText = progress.Position is not null || progress.Percent is not null
+                ? $"音声: {FormatProgressTime(processed)} / {FormatProgressTime(duration)}"
+                : "音声を処理しています...";
+            return;
+        }
+
+        double? frameRate = mediaInfo?.Streams
+            .FirstOrDefault(stream => string.Equals(stream.CodecType, "video", StringComparison.OrdinalIgnoreCase))
+            ?.FrameRate;
+        ExportTotalFrames = frameRate is > 0
+            ? Math.Max(1, (long)Math.Ceiling(duration.TotalSeconds * frameRate.Value))
+            : 0;
+
+        long processedFrames = progress.ProcessedFrames
+            ?? (frameRate is > 0 && progress.Position is { } videoPosition
+                ? (long)Math.Floor(videoPosition.TotalSeconds * frameRate.Value)
+                : progress.Percent is >= 1
+                    ? ExportTotalFrames
+                    : 0);
+        ExportProcessedFrames = ExportTotalFrames > 0
+            ? Math.Clamp(processedFrames, 0, ExportTotalFrames)
+            : Math.Max(0, processedFrames);
+        ExportProgressDetailText = ExportTotalFrames > 0
+            ? $"映像: {ExportProcessedFrames} / {ExportTotalFrames} フレーム"
+            : "映像を処理しています...";
+    }
+
+    private static string FormatProgressTime(TimeSpan value) =>
+        value.TotalHours >= 1
+            ? $"{(int)value.TotalHours:00}:{value.Minutes:00}:{value.Seconds:00}"
+            : $"{value.Minutes:00}:{value.Seconds:00}";
+
     [RelayCommand]
     private void MarkStart()
     {
@@ -992,6 +1079,12 @@ public partial class MainPageViewModel : ObservableObject
         UpdatePlannedOutputPath();
         OpenOutputDirectoryCommand.NotifyCanExecuteChanged();
     }
+
+    partial void OnMediaSummaryTextChanged(string value) =>
+        OnPropertyChanged(nameof(EncoderAndMediaSummaryText));
+
+    partial void OnEncoderSummaryTextChanged(string value) =>
+        OnPropertyChanged(nameof(EncoderAndMediaSummaryText));
 
     partial void OnPreviewSourceChanged(MediaSource? value)
     {

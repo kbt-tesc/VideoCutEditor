@@ -12,6 +12,28 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 
 ## Completed Slices
 
+- `0.5.1` release preparation.
+  - Advanced the app and release-script defaults from `0.5.0` to `0.5.1` for the INFO export progress and responsive log-layout update.
+  - Updated development and packaged release commands plus the current installer filename.
+  - Passed all 193 Core and 30 app-layer Release tests and the WinUI-analyzer x64 Release build with 0 warnings and 0 errors.
+  - The first test attempt hit the documented `VBCSCompiler` file lock; `dotnet build-server shutdown` cleared it and the complete rerun passed.
+  - Artifact hashes, installer smoke verification, and GitHub release URL will be recorded after generation.
+
+- Responsive fixed-order INFO layout and export-log auto-scroll (`codex/info-export-progress`).
+  - Replaced the window-level scrolling stack with an `Auto/*/Auto` grid ordered as combined encoder/media information, export log, and bottom export progress.
+  - Combined encoder and media summaries into one fixed-height TextBox; only the full-width log row changes height with the window.
+  - Added a non-persisted `自動スクロール` checkbox beside the log heading, checked by default, with coalesced `TextChanged` handling and a cached nested ScrollViewer.
+  - The first visual run showed that selecting the TextBox end alone did not move its viewport. Added explicit `ChangeView` handling; the rerun displayed the final `frame=120` and completion statistics at the bottom with auto-scroll enabled.
+  - Updated both common and HDR-specific UI automation to use the combined information field; the stale HDR-only `MediaInfoTextBox` selector was found during final diff review before commit.
+  - Passed all 193 Core and 30 app-layer Release tests, the WinUI-analyzer x64 Release build with 0 warnings and 0 errors, and the isolated NormalizeAudio workflow with all 70 UI assertions.
+
+- INFO-window export progress with audio/video phase switching (`codex/info-export-progress`).
+  - Moved the export progress surface out of the main settings pane and into the modeless INFO window, which now opens or reactivates automatically when export starts.
+  - Added explicit audio/video progress phases to `ExportProgress`. Loudness analysis reports audio progress; the final ffmpeg process reports video progress and parses `frame=` alongside `time=`.
+  - Video progress shows processed and estimated total frames using the selected duration and probed frame rate, with timestamp-derived processed frames as a fallback. Audio progress switches to processed time over selected duration.
+  - Added Core runner, app-layer phase-switching, XAML source-contract, and idle UIA coverage.
+  - Passed all 193 Core and 29 app-layer Release tests, the WinUI-analyzer x64 Release build with 0 warnings and 0 errors, and the isolated NormalizeAudio workflow with all 69 UI assertions.
+
 - `0.5.0` release preparation.
   - Advanced the app and release-script defaults from `0.4.0` to `0.5.0` for the MP4/WebM and conditional audio re-encode feature release.
   - Updated the development and packaged Japanese guides for MP4/WebM selection, audio-only AAC/Opus conversion, explicit audio re-encode, bitrate controls, and WebM VBR/CBR.
@@ -598,6 +620,9 @@ Most recent successful checks:
 When resuming in a new session, rerun the relevant subset before making assumptions if files have changed.
 
 ## Known Gaps
+
+- A focused Release test run on 2026-07-22 initially failed because the persistent `VBCSCompiler` process locked `VideoCutEditor.Core\obj\Release\net10.0\VideoCutEditor.Core.dll`. `dotnet build-server shutdown` clears the transient lock before retrying; treat recurrence as toolchain state unless it persists after shutdown.
+- The first isolated NormalizeAudio UI rerun for the INFO progress slice passed 67 assertions but transiently lost the existing export-mode element from the UIA tree and exposed a new idle-progress assertion that treated an expected missing element as failure. The idle assertion now uses `wait-for --gone`; the immediate full rerun passed all 69 assertions, so the lost element is treated as transient UIA state unless it recurs.
 
 - Multi-clip Fast copy is covered end to end with generated media. Batch Re-encode, audio normalization, fade, and HDR-to-SDR reuse the same per-item planner path and have unit/integration coverage individually, but multi-item combinations have not yet been exercised end to end.
 

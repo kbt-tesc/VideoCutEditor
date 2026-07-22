@@ -1,5 +1,7 @@
 using Microsoft.UI;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
 using System.Runtime.InteropServices;
 using VideoCutEditor.ViewModels;
 using Windows.Graphics;
@@ -9,6 +11,8 @@ namespace VideoCutEditor;
 public sealed partial class InfoWindow : Window
 {
     private const int WindowOwnerIndex = -8;
+    private ScrollViewer? exportLogScrollViewer;
+    private bool exportLogScrollPending;
 
     [DllImport("user32.dll")]
     private static extern uint GetDpiForWindow(nint hWnd);
@@ -21,6 +25,9 @@ public sealed partial class InfoWindow : Window
 
     public MainPageViewModel ViewModel { get; }
 
+    public static Visibility BoolToVisibility(bool value) =>
+        value ? Visibility.Visible : Visibility.Collapsed;
+
     public InfoWindow(MainPageViewModel viewModel, nint ownerWindowHandle)
     {
         ViewModel = viewModel;
@@ -28,6 +35,62 @@ public sealed partial class InfoWindow : Window
         SetOwner(ownerWindowHandle);
         AppWindow.SetIcon("Assets/AppIcon.ico");
         ResizeToDefault();
+    }
+
+    private void ExportLogTextBox_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (exportLogScrollPending)
+        {
+            return;
+        }
+
+        exportLogScrollPending = true;
+        if (!DispatcherQueue.TryEnqueue(() =>
+        {
+            exportLogScrollPending = false;
+            ScrollExportLogToEnd();
+        }))
+        {
+            exportLogScrollPending = false;
+        }
+    }
+
+    private void AutoScrollExportLogCheckBox_Click(object sender, RoutedEventArgs e) =>
+        ScrollExportLogToEnd();
+
+    private void ScrollExportLogToEnd()
+    {
+        if (AutoScrollExportLogCheckBox.IsChecked == true)
+        {
+            ExportLogTextBox.Select(ExportLogTextBox.Text.Length, 0);
+            ExportLogTextBox.UpdateLayout();
+            exportLogScrollViewer ??= FindDescendantScrollViewer(ExportLogTextBox);
+            if (exportLogScrollViewer is not null)
+            {
+                exportLogScrollViewer.ChangeView(null, exportLogScrollViewer.ScrollableHeight, null, true);
+            }
+        }
+    }
+
+    private static ScrollViewer? FindDescendantScrollViewer(DependencyObject root)
+    {
+        int childCount = VisualTreeHelper.GetChildrenCount(root);
+        for (int index = 0; index < childCount; index++)
+        {
+            DependencyObject child = VisualTreeHelper.GetChild(root, index);
+            if (child is ScrollViewer scrollViewer)
+            {
+                return scrollViewer;
+            }
+
+            ScrollViewer? descendant = FindDescendantScrollViewer(child);
+            if (descendant is not null)
+            {
+                return descendant;
+            }
+        }
+
+        return null;
     }
 
     private void SetOwner(nint ownerWindowHandle)
