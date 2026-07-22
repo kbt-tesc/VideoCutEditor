@@ -17,7 +17,12 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
   - Updated development and packaged release commands plus the current installer filename.
   - Passed all 193 Core and 30 app-layer Release tests and the WinUI-analyzer x64 Release build with 0 warnings and 0 errors.
   - The first test attempt hit the documented `VBCSCompiler` file lock; `dotnet build-server shutdown` cleared it and the complete rerun passed.
-  - Artifact hashes, installer smoke verification, and GitHub release URL will be recorded after generation.
+  - Generated and validated the unsigned x64 Portable ZIP and per-user NSIS installer from merged `main` commit `ed6df9d`.
+  - Portable ZIP SHA-256: `384abe74807bb67bf4492fa9f7fc0406b427d327f0549d7f63288c169bbf688f`.
+  - Installer SHA-256: `62c6ee2a2bbedb580812fd23ba3a0ac42d9d6f0c7fc3f919fc68d5a417e0cfe5`.
+  - Confirmed ZIP contents, official license notices, packaged Japanese guidance, external ffmpeg/ffprobe policy, and embedded EXE file version `0.5.1.0`.
+  - Silently upgraded the per-user installation to registered version `0.5.1`, confirmed the installed EXE, and kept it running for 8 seconds.
+  - GitHub release: `https://github.com/kbt-tesc/VideoCutEditor/releases/tag/v0.5.1`.
 
 - Responsive fixed-order INFO layout and export-log auto-scroll (`codex/info-export-progress`).
   - Replaced the window-level scrolling stack with an `Auto/*/Auto` grid ordered as combined encoder/media information, export log, and bottom export progress.
@@ -643,7 +648,7 @@ When resuming in a new session, rerun the relevant subset before making assumpti
 - The current winapp UIA bridge likewise does not expose the nested audio bitrate NumberBox and VBR/CBR RadioButtons reliably. App-layer/source contracts verify their state and the NormalizeAudio UI screenshot verifies that the visible controls are laid out correctly; runtime UIA verifies the forced audio re-encode checkbox.
 - Preview-unavailable fallback behavior needs more manual and/or UI coverage.
 - Portable x64 publish, x86 publish, arm64 publish, artifact validation, x64 ZIP distribution packaging, checksum verification, and distributed x64 EXE startup smoke testing now succeed. Signing, MSIX/installer validation, and x86/arm64 runtime startup on matching devices still need verification.
-- The x64 per-user installer was verified through upgrade, launch, uninstall, and clean reinstall for `0.4.0`, then through silent install and launch for `0.5.0`; production code signing remains unresolved.
+- The x64 per-user installer was verified through upgrade, launch, uninstall, and clean reinstall for `0.4.0`, through silent install and launch for `0.5.0`, and through silent upgrade and launch for `0.5.1`; production code signing remains unresolved.
 - UI tests cover opening generated media through the real Windows file picker, loaded range state, and isolated Fast copy export completion.
 - The picker workflow supports the current legacy filename field ID `1148` and the newer `FileNameControlHost` ID. Future Windows picker UIA changes may require updating these selectors.
 - VS Code F5 now has an explicit x64 unpackaged launch path, but the user should manually confirm breakpoint attachment from VS Code because automated tests can only validate the configuration files and build output.
