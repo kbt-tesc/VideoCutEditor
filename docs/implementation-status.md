@@ -12,6 +12,13 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 
 ## Completed Slices
 
+- INFO-window export progress with audio/video phase switching (`codex/info-export-progress`).
+  - Moved the export progress surface out of the main settings pane and into the modeless INFO window, which now opens or reactivates automatically when export starts.
+  - Added explicit audio/video progress phases to `ExportProgress`. Loudness analysis reports audio progress; the final ffmpeg process reports video progress and parses `frame=` alongside `time=`.
+  - Video progress shows processed and estimated total frames using the selected duration and probed frame rate, with timestamp-derived processed frames as a fallback. Audio progress switches to processed time over selected duration.
+  - Added Core runner, app-layer phase-switching, XAML source-contract, and idle UIA coverage.
+  - Passed all 193 Core and 29 app-layer Release tests, the WinUI-analyzer x64 Release build with 0 warnings and 0 errors, and the isolated NormalizeAudio workflow with all 69 UI assertions.
+
 - `0.5.0` release preparation.
   - Advanced the app and release-script defaults from `0.4.0` to `0.5.0` for the MP4/WebM and conditional audio re-encode feature release.
   - Updated the development and packaged Japanese guides for MP4/WebM selection, audio-only AAC/Opus conversion, explicit audio re-encode, bitrate controls, and WebM VBR/CBR.
@@ -598,6 +605,9 @@ Most recent successful checks:
 When resuming in a new session, rerun the relevant subset before making assumptions if files have changed.
 
 ## Known Gaps
+
+- A focused Release test run on 2026-07-22 initially failed because the persistent `VBCSCompiler` process locked `VideoCutEditor.Core\obj\Release\net10.0\VideoCutEditor.Core.dll`. `dotnet build-server shutdown` clears the transient lock before retrying; treat recurrence as toolchain state unless it persists after shutdown.
+- The first isolated NormalizeAudio UI rerun for the INFO progress slice passed 67 assertions but transiently lost the existing export-mode element from the UIA tree and exposed a new idle-progress assertion that treated an expected missing element as failure. The idle assertion now uses `wait-for --gone`; the immediate full rerun passed all 69 assertions, so the lost element is treated as transient UIA state unless it recurs.
 
 - Multi-clip Fast copy is covered end to end with generated media. Batch Re-encode, audio normalization, fade, and HDR-to-SDR reuse the same per-item planner path and have unit/integration coverage individually, but multi-item combinations have not yet been exercised end to end.
 

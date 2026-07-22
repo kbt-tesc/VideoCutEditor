@@ -623,6 +623,12 @@ Test-UI "INFO window shows all three information fields" {
     winapp ui wait-for "MediaInfoTextBox" -w $infoWindowHwnd -t 3000 -q
 }
 
+Test-UI "INFO progress controls are hidden while idle" {
+    foreach ($automationId in @("VideoExportProgressBar", "AudioExportProgressBar")) {
+        winapp ui wait-for $automationId -w $infoWindowHwnd --gone -t 3000 -q
+    }
+}
+
 if ($VerifyExportMode -eq "NormalizeAudio") {
     Test-UI "Normalize audio export log records both loudness passes" {
         $log = winapp ui get-value "ExportLogTextBox" -w $infoWindowHwnd --json 2>$null | ConvertFrom-Json

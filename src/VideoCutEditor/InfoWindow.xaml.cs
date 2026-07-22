@@ -21,6 +21,9 @@ public sealed partial class InfoWindow : Window
 
     public MainPageViewModel ViewModel { get; }
 
+    public static Visibility BoolToVisibility(bool value) =>
+        value ? Visibility.Visible : Visibility.Collapsed;
+
     public InfoWindow(MainPageViewModel viewModel, nint ownerWindowHandle)
     {
         ViewModel = viewModel;

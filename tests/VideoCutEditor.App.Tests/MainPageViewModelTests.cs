@@ -455,6 +455,62 @@ public sealed class MainPageViewModelTests
     }
 
     [Fact]
+    public async Task ExportAsync_switches_info_progress_from_audio_to_video_frames()
+    {
+        string directory = CreateTempDirectory();
+        string sourcePath = await CreateFileAsync(directory, "source.mp4");
+        string ffmpegPath = await CreateFileAsync(directory, "ffmpeg.exe");
+        var runner = new ManualProgressFfmpegRunner();
+        MainPageViewModel viewModel = CreateViewModel(ffmpegRunner: runner);
+        viewModel.SelectedSourcePath = sourcePath;
+        viewModel.FfmpegPath = ffmpegPath;
+        viewModel.OutputDirectory = directory;
+        viewModel.RangeEndSeconds = 2;
+        viewModel.CurrentMediaInfo = new MediaInfo(
+            sourcePath,
+            TimeSpan.FromSeconds(10),
+            "mov,mp4",
+            2_000_000,
+            [new MediaStreamInfo(0, "video", "h264", 1_800_000, FrameRate: 30)]);
+        int infoWindowRequestCount = 0;
+        viewModel.InfoWindowRequested += (_, _) => infoWindowRequestCount++;
+
+        Task exportTask = viewModel.ExportCommand.ExecuteAsync(null);
+        await runner.Started.Task;
+
+        runner.Report(new ExportProgress(
+            TimeSpan.FromSeconds(1),
+            null,
+            "音声解析中",
+            ExportProgressPhase.Audio));
+        await WaitForAsync(() => viewModel.IsAudioExportProgressVisible);
+
+        Assert.False(viewModel.IsVideoExportProgressVisible);
+        Assert.Equal("音声: 00:01 / 00:02", viewModel.ExportProgressDetailText);
+        Assert.Equal(0.5, viewModel.ExportProgressValue);
+
+        runner.Report(new ExportProgress(
+            TimeSpan.FromSeconds(1.5),
+            null,
+            "映像処理中",
+            ExportProgressPhase.Video,
+            42));
+        await WaitForAsync(() =>
+            viewModel.IsVideoExportProgressVisible
+            && viewModel.ExportProcessedFrames == 42);
+
+        Assert.False(viewModel.IsAudioExportProgressVisible);
+        Assert.Equal(42, viewModel.ExportProcessedFrames);
+        Assert.Equal(60, viewModel.ExportTotalFrames);
+        Assert.Equal("映像: 42 / 60 フレーム", viewModel.ExportProgressDetailText);
+        Assert.Equal(0.75, viewModel.ExportProgressValue);
+        Assert.Equal(1, infoWindowRequestCount);
+
+        runner.Complete();
+        await exportTask;
+    }
+
+    [Fact]
     public async Task ExportAsync_writes_registered_clips_in_order_as_title_mp4_files()
     {
         string directory = CreateTempDirectory();
@@ -625,6 +681,16 @@ public sealed class MainPageViewModelTests
         return path;
     }
 
+    private static async Task WaitForAsync(Func<bool> condition)
+    {
+        for (int attempt = 0; attempt < 100 && !condition(); attempt++)
+        {
+            await Task.Delay(10);
+        }
+
+        Assert.True(condition());
+    }
+
     private static string CreateFile(string directory, string fileName)
     {
         string path = Path.Combine(directory, fileName);
@@ -745,6 +811,28 @@ public sealed class MainPageViewModelTests
 
             throw new InvalidOperationException("The blocking export runner should be canceled.");
         }
+    }
+
+    private sealed class ManualProgressFfmpegRunner : IFfmpegRunner
+    {
+        private readonly TaskCompletionSource<ExportResult> completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private IProgress<ExportProgress>? progress;
+
+        public TaskCompletionSource Started { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public Task<ExportResult> RunAsync(
+            ExportPlan plan,
+            IProgress<ExportProgress>? progress = null,
+            CancellationToken cancellationToken = default)
+        {
+            this.progress = progress;
+            Started.TrySetResult();
+            return completion.Task;
+        }
+
+        public void Report(ExportProgress value) => progress?.Report(value);
+
+        public void Complete() => completion.TrySetResult(new ExportResult(true, null));
     }
 
     private sealed class FailOnSecondFfmpegRunner : IFfmpegRunner

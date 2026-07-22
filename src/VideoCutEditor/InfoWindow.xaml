@@ -4,6 +4,7 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:local="using:VideoCutEditor"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     Title="VideoCutEditor - 情報"
     mc:Ignorable="d">
@@ -17,6 +18,51 @@
         VerticalScrollBarVisibility="Auto"
         VerticalScrollMode="Enabled">
         <StackPanel Spacing="16">
+            <Grid
+                RowSpacing="8"
+                Visibility="{x:Bind local:InfoWindow.BoolToVisibility(ViewModel.IsExporting), Mode=OneWay}">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <TextBlock
+                    Style="{StaticResource BodyStrongTextBlockStyle}"
+                    Text="書き出し進捗" />
+
+                <StackPanel
+                    Grid.Row="1"
+                    Spacing="8"
+                    Visibility="{x:Bind local:InfoWindow.BoolToVisibility(ViewModel.IsVideoExportProgressVisible), Mode=OneWay}">
+                    <TextBlock
+                        AutomationProperties.AutomationId="VideoExportProgressText"
+                        Text="{x:Bind ViewModel.ExportProgressDetailText, Mode=OneWay}" />
+                    <ProgressBar
+                        AutomationProperties.AutomationId="VideoExportProgressBar"
+                        AutomationProperties.Name="映像の書き出し進捗"
+                        IsIndeterminate="{x:Bind ViewModel.IsExportProgressIndeterminate, Mode=OneWay}"
+                        Maximum="1"
+                        Minimum="0"
+                        Value="{x:Bind ViewModel.ExportProgressValue, Mode=OneWay}" />
+                </StackPanel>
+
+                <StackPanel
+                    Grid.Row="1"
+                    Spacing="8"
+                    Visibility="{x:Bind local:InfoWindow.BoolToVisibility(ViewModel.IsAudioExportProgressVisible), Mode=OneWay}">
+                    <TextBlock
+                        AutomationProperties.AutomationId="AudioExportProgressText"
+                        Text="{x:Bind ViewModel.ExportProgressDetailText, Mode=OneWay}" />
+                    <ProgressBar
+                        AutomationProperties.AutomationId="AudioExportProgressBar"
+                        AutomationProperties.Name="音声の書き出し進捗"
+                        IsIndeterminate="{x:Bind ViewModel.IsExportProgressIndeterminate, Mode=OneWay}"
+                        Maximum="1"
+                        Minimum="0"
+                        Value="{x:Bind ViewModel.ExportProgressValue, Mode=OneWay}" />
+                </StackPanel>
+            </Grid>
+
             <TextBox
                 AutomationProperties.AutomationId="EncoderSummaryTextBox"
                 Header="エンコーダー情報"

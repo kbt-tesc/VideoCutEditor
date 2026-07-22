@@ -682,16 +682,6 @@
                             </Button>
                         </Grid>
 
-                        <StackPanel
-                            Spacing="8"
-                            Visibility="{x:Bind local:MainPage.BoolToVisibility(ViewModel.IsExporting), Mode=OneWay}">
-                            <ProgressBar
-                                AutomationProperties.AutomationId="ExportProgressBar"
-                                IsIndeterminate="{x:Bind ViewModel.IsExportProgressIndeterminate, Mode=OneWay}"
-                                Maximum="1"
-                                Minimum="0"
-                                Value="{x:Bind ViewModel.ExportProgressValue, Mode=OneWay}" />
-                        </StackPanel>
                     </StackPanel>
                 </ScrollViewer>
 

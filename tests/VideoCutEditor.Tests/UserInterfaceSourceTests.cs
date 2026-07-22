@@ -184,11 +184,17 @@ public sealed class UserInterfaceSourceTests
         Assert.Contains("AutomationProperties.AutomationId=\"EncoderSummaryTextBox\"", infoWindowXaml);
         Assert.Contains("AutomationProperties.AutomationId=\"ExportLogTextBox\"", infoWindowXaml);
         Assert.Contains("AutomationProperties.AutomationId=\"MediaInfoTextBox\"", infoWindowXaml);
+        Assert.Contains("AutomationProperties.AutomationId=\"VideoExportProgressBar\"", infoWindowXaml);
+        Assert.Contains("AutomationProperties.AutomationId=\"AudioExportProgressBar\"", infoWindowXaml);
+        Assert.Contains("ViewModel.ExportProgressDetailText", infoWindowXaml);
+        Assert.DoesNotContain("AutomationProperties.AutomationId=\"ExportProgressBar\"", xaml);
         Assert.Contains("OpenSettingsButton_Click", codeBehind);
         Assert.Contains("ShowInfoButton_Click", codeBehind);
         Assert.Contains("private InfoWindow? infoWindow;", codeBehind);
         Assert.Contains("infoWindow ??= new InfoWindow(ViewModel, App.WindowHandle);", codeBehind);
         Assert.Contains("infoWindow.Activate();", codeBehind);
+        Assert.Contains("ViewModel.InfoWindowRequested += ViewModelInfoWindowRequested;", codeBehind);
+        Assert.Contains("ViewModel.InfoWindowRequested -= ViewModelInfoWindowRequested;", codeBehind);
         Assert.DoesNotContain("await InfoDialog.ShowAsync();", codeBehind);
         Assert.Contains("public InfoWindow(MainPageViewModel viewModel, nint ownerWindowHandle)", infoWindowCodeBehind);
         Assert.Contains("SetOwner(ownerWindowHandle);", infoWindowCodeBehind);
