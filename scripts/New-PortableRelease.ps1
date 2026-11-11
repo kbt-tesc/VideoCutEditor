@@ -1,6 +1,6 @@
 param(
     [ValidatePattern("^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$")]
-    [string]$Version = "0.5.1",
+    [string]$Version = "0.6.0",
 
     [ValidateSet("x64", "x86", "arm64")]
     [string]$Platform = "x64",
@@ -37,19 +37,15 @@ if ($LASTEXITCODE -ne 0) {
     throw "Portable publish failed with exit code $LASTEXITCODE"
 }
 
-$targetFramework = "net10.0-windows10.0.26100.0"
+$targetFramework = "net11.0-windows10.0.26100.0"
 $publishDirectory = Join-Path $repoRoot "src\VideoCutEditor\bin\$Configuration\$targetFramework\win-$Platform\publish"
-$exePath = Join-Path $publishDirectory "VideoCutEditor.exe"
-if (-not (Test-Path -LiteralPath $exePath -PathType Leaf)) {
-    throw "Published executable was not found at '$exePath'."
-}
 
 New-Item -ItemType Directory -Force -Path $releaseDirectory | Out-Null
 $stagingDirectory = Join-Path $releaseDirectory ("." + $baseName + "-" + [Guid]::NewGuid().ToString("N"))
 
 try {
     New-Item -ItemType Directory -Path $stagingDirectory | Out-Null
-    Copy-Item -LiteralPath $exePath -Destination (Join-Path $stagingDirectory "VideoCutEditor.exe")
+    Get-ChildItem -LiteralPath $publishDirectory | Copy-Item -Destination $stagingDirectory -Recurse
 
     $readmePath = Join-Path $repoRoot "distribution\README.md"
     if (-not (Test-Path -LiteralPath $readmePath -PathType Leaf)) {
@@ -64,8 +60,6 @@ try {
         "Microsoft.WindowsAppSDK.txt"
         "CommunityToolkit.Mvvm.txt"
         "CommunityToolkit.Mvvm-ThirdPartyNotices.txt"
-        "dotnet-Windows.txt"
-        "dotnet-ThirdPartyNotices.txt"
     ) | ForEach-Object {
         Copy-Item -LiteralPath (Join-Path $repoRoot "third-party\$_") -Destination (Join-Path $licenseDirectory $_)
     }

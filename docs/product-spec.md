@@ -24,6 +24,8 @@ Each registered range is exported as an independent MP4 file. Merging ranges int
 ## UI Behavior
 
 - Show a video preview using Windows standard media playback.
+- A `トリミング` toggle opens a crop frame over the displayed video and an adjustment panel beside the preview. Drag any edge or corner to resize the frame, or drag its interior to move it. Each side has `−10`, `−1`, `+1`, and `+10` buttons that change how many source pixels are removed from that side. The panel shows the current cutout size and provides a reset to the full frame.
+- Closing the crop panel hides the frame and retains the crop. Opening a video clears the crop. Cropping requires ffprobe dimensions for a single video stream. If Windows cannot preview that stream, the adjustment buttons still work.
 - Show a custom editor-style timeline below the preview with the current playhead position, start/end markers, timeline zoom controls, and an audio waveform when ffmpeg can generate one.
 - The play/pause button shows a play icon while not playing and switches to a pause icon while playback is active.
 - The timeline ruler shows frequent minor tick lines plus longer labeled major tick lines. Time labels appear above their major tick lines with enough ruler height to avoid overlapping the tick marks, and whole-second labels must not display the preceding second because of floating-point accumulation.
@@ -89,6 +91,7 @@ The first screen should be the usable editor, not a landing page or marketing sc
 - MP4 and WebM inputs default to their source container. Re-encode allows selecting MP4 or WebM. Fast copy allows switching when ffprobe metadata proves mapped video and retained non-audio streams are compatible and any incompatible audio can be re-encoded with an available destination codec.
 - Stream-copy cuts may not be frame-accurate because they depend on keyframes. The UI should make that tradeoff clear.
 - Enabling any fade forces the export through Re-encode even when the visible export mode is Fast copy, because ffmpeg filters require decoding and encoding.
+- Changing the crop switches the visible export mode to Re-encode. Fast copy becomes available again after resetting the crop. The current crop applies to every clip in the export batch. If either cropped dimension is odd, the output adds one black pixel column on the right or row at the bottom to produce even dimensions. The panel shows both sizes in that case.
 - The normalize audio option analyzes audio loudness before the final export, then applies an audio filter and therefore re-encodes audio. In Fast copy mode it should not re-encode video when video stream copy is possible; in Re-encode mode it combines with the selected video encode settings.
 - HDR to SDR conversion requires video filtering and is available only in Re-encode mode. Fast copy exports preserve HDR video unchanged and only show an informational notice.
 
@@ -98,6 +101,8 @@ The first screen should be the usable editor, not a landing page or marketing sc
 - The default install location is `%LocalAppData%/Programs/VideoCutEditor` rather than `Program Files`.
 - Register a Start menu shortcut and a standard per-user uninstall entry.
 - Continue providing the portable ZIP for users who do not want installation.
+- Require the matching x64, x86, or ARM64 .NET 11 Runtime on the user's machine. Ship the Windows App SDK runtime alongside the app files in both distributions.
+- Keep the portable ZIP contents together after extraction and launch `VideoCutEditor.exe` from that folder.
 - Include the VideoCutEditor license and applicable official third-party license/notice files in both installer and portable distributions.
 - ffmpeg and ffprobe remain external and are not bundled.
 - Until production code signing is available, clearly disclose that Windows may show an unknown-publisher or SmartScreen warning.

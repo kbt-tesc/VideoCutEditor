@@ -7,10 +7,21 @@
     xmlns:formatting="using:Windows.Globalization.NumberFormatting"
     xmlns:local="using:VideoCutEditor"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:vm="using:VideoCutEditor.ViewModels"
     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
     mc:Ignorable="d">
 
     <Page.Resources>
+        <Style x:Key="CropHandleStyle" TargetType="Rectangle">
+            <Setter Property="Width" Value="8" />
+            <Setter Property="Height" Value="8" />
+            <Setter Property="Fill" Value="{ThemeResource AccentFillColorDefaultBrush}" />
+            <Setter Property="Stroke" Value="{ThemeResource TextFillColorPrimaryBrush}" />
+        </Style>
+        <Style x:Key="CropStepButtonStyle" TargetType="Button">
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="Padding" Value="4,0" />
+        </Style>
         <formatting:DecimalFormatter
             x:Key="FadeDurationNumberFormatter"
             FractionDigits="2"
@@ -48,15 +59,23 @@
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
 
-            <Button
-                AutomationProperties.AutomationId="OpenVideoButton"
-                Command="{x:Bind ViewModel.OpenVideoCommand}"
-                ToolTipService.ToolTip="動画を開く">
-                <StackPanel Orientation="Horizontal" Spacing="8">
-                    <FontIcon FontSize="16" Glyph="&#xE8E5;" />
-                    <TextBlock Text="開く" />
-                </StackPanel>
-            </Button>
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button
+                    AutomationProperties.AutomationId="OpenVideoButton"
+                    Command="{x:Bind ViewModel.OpenVideoCommand}"
+                    ToolTipService.ToolTip="動画を開く">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon FontSize="16" Glyph="&#xE8E5;" />
+                        <TextBlock Text="開く" />
+                    </StackPanel>
+                </Button>
+                <ToggleButton
+                    AutomationProperties.AutomationId="CropEditorButton"
+                    Content="トリミング"
+                    IsChecked="{x:Bind ViewModel.IsCropEditorOpen, Mode=TwoWay}"
+                    IsEnabled="{x:Bind ViewModel.CanEditCrop, Mode=OneWay}"
+                    ToolTipService.ToolTip="映像の切り抜き範囲を調整" />
+            </StackPanel>
 
             <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
                 <TextBlock
@@ -93,17 +112,50 @@
                     BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}"
                     BorderThickness="1"
                     CornerRadius="6">
-                    <Grid>
+                    <Grid x:Name="PreviewSurface" SizeChanged="PreviewSurface_SizeChanged">
                         <MediaPlayerElement
                             x:Name="PreviewPlayer"
                             AreTransportControlsEnabled="False"
-                            Source="{x:Bind ViewModel.PreviewSource, Mode=OneWay}" />
+                            Source="{x:Bind ViewModel.PreviewSource, Mode=OneWay}"
+                            Stretch="Uniform" />
                         <TextBlock
                             HorizontalAlignment="Center"
                             VerticalAlignment="Center"
                             Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                             Text="プレビュー"
                             Visibility="{x:Bind local:MainPage.BoolToVisibility(ViewModel.IsPreviewPlaceholderVisible), Mode=OneWay}" />
+                        <local:CropOverlayCanvas
+                            x:Name="CropOverlay"
+                            AutomationProperties.AutomationId="CropOverlay"
+                            AutomationProperties.Name="トリミング枠"
+                            AutomationProperties.HelpText="キーボードで調整するにはトリミング操作パネルを使用してください。"
+                            Background="Transparent"
+                            PointerCanceled="CropOverlay_PointerCanceled"
+                            PointerCaptureLost="CropOverlay_PointerCanceled"
+                            PointerMoved="CropOverlay_PointerMoved"
+                            PointerPressed="CropOverlay_PointerPressed"
+                            PointerReleased="CropOverlay_PointerReleased"
+                            Visibility="Collapsed">
+                            <Path Fill="{ThemeResource SmokeFillColorDefaultBrush}" IsHitTestVisible="False">
+                                <Path.Data>
+                                    <GeometryGroup FillRule="EvenOdd">
+                                        <RectangleGeometry x:Name="CropMaskFrame" />
+                                        <RectangleGeometry x:Name="CropMaskSelection" />
+                                    </GeometryGroup>
+                                </Path.Data>
+                            </Path>
+                            <Grid x:Name="CropGuide" IsHitTestVisible="False">
+                                <Border BorderBrush="{ThemeResource AccentFillColorDefaultBrush}" BorderThickness="2" />
+                                <Rectangle HorizontalAlignment="Left" VerticalAlignment="Top" Style="{StaticResource CropHandleStyle}" />
+                                <Rectangle HorizontalAlignment="Center" VerticalAlignment="Top" Style="{StaticResource CropHandleStyle}" />
+                                <Rectangle HorizontalAlignment="Right" VerticalAlignment="Top" Style="{StaticResource CropHandleStyle}" />
+                                <Rectangle HorizontalAlignment="Left" VerticalAlignment="Center" Style="{StaticResource CropHandleStyle}" />
+                                <Rectangle HorizontalAlignment="Right" VerticalAlignment="Center" Style="{StaticResource CropHandleStyle}" />
+                                <Rectangle HorizontalAlignment="Left" VerticalAlignment="Bottom" Style="{StaticResource CropHandleStyle}" />
+                                <Rectangle HorizontalAlignment="Center" VerticalAlignment="Bottom" Style="{StaticResource CropHandleStyle}" />
+                                <Rectangle HorizontalAlignment="Right" VerticalAlignment="Bottom" Style="{StaticResource CropHandleStyle}" />
+                            </Grid>
+                        </local:CropOverlayCanvas>
                     </Grid>
                 </Border>
 
@@ -398,8 +450,83 @@
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
 
-                <ScrollViewer>
+                <ScrollViewer x:Name="ExportSettingsScrollViewer">
                     <StackPanel Margin="0,0,24,0" Spacing="16">
+                        <StackPanel
+                            AutomationProperties.AutomationId="CropPanel"
+                            Spacing="8"
+                            Visibility="{x:Bind local:MainPage.BoolToVisibility(ViewModel.IsCropEditorOpen), Mode=OneWay}">
+                            <TextBlock Text="トリミング" Style="{StaticResource SubtitleTextBlockStyle}" />
+                            <TextBlock
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                Text="枠の辺や角をドラッグして調整できます。枠の内側をドラッグすると移動します。"
+                                TextWrapping="Wrap" />
+                            <ItemsControl
+                                IsEnabled="{x:Bind ViewModel.CanEditCrop, Mode=OneWay}"
+                                ItemsSource="{x:Bind ViewModel.CropAdjustments}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:CropAdjustment">
+                                        <Grid ColumnSpacing="4" Padding="0,0,0,4">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="28" />
+                                                <ColumnDefinition Width="48" />
+                                                <ColumnDefinition Width="52" />
+                                                <ColumnDefinition Width="52" />
+                                                <ColumnDefinition Width="52" />
+                                                <ColumnDefinition Width="52" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="{x:Bind Name}" VerticalAlignment="Center" />
+                                            <TextBlock
+                                                Grid.Column="1"
+                                                AutomationProperties.AutomationId="{x:Bind PixelsId}"
+                                                Text="{x:Bind Pixels, Mode=OneWay}"
+                                                VerticalAlignment="Center" />
+                                            <Button
+                                                Grid.Column="2"
+                                                AutomationProperties.AutomationId="{x:Bind GetStepId('Decrease10')}"
+                                                AutomationProperties.Name="{x:Bind DescribeStep('-10')}"
+                                                Command="{x:Bind AdjustCommand}"
+                                                CommandParameter="-10"
+                                                Content="−10"
+                                                Style="{StaticResource CropStepButtonStyle}" />
+                                            <Button
+                                                Grid.Column="3"
+                                                AutomationProperties.AutomationId="{x:Bind GetStepId('Decrease1')}"
+                                                AutomationProperties.Name="{x:Bind DescribeStep('-1')}"
+                                                Command="{x:Bind AdjustCommand}"
+                                                CommandParameter="-1"
+                                                Content="−1"
+                                                Style="{StaticResource CropStepButtonStyle}" />
+                                            <Button
+                                                Grid.Column="4"
+                                                AutomationProperties.AutomationId="{x:Bind GetStepId('Increase1')}"
+                                                AutomationProperties.Name="{x:Bind DescribeStep('+1')}"
+                                                Command="{x:Bind AdjustCommand}"
+                                                CommandParameter="1"
+                                                Content="+1"
+                                                Style="{StaticResource CropStepButtonStyle}" />
+                                            <Button
+                                                Grid.Column="5"
+                                                AutomationProperties.AutomationId="{x:Bind GetStepId('Increase10')}"
+                                                AutomationProperties.Name="{x:Bind DescribeStep('+10')}"
+                                                Command="{x:Bind AdjustCommand}"
+                                                CommandParameter="10"
+                                                Content="+10"
+                                                Style="{StaticResource CropStepButtonStyle}" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <TextBlock
+                                AutomationProperties.AutomationId="CropSizeText"
+                                Text="{x:Bind ViewModel.CropSizeText, Mode=OneWay}"
+                                TextWrapping="Wrap" />
+                            <Button
+                                AutomationProperties.AutomationId="ResetCropButton"
+                                Command="{x:Bind ViewModel.ResetCropCommand}"
+                                Content="範囲をリセット"
+                                IsEnabled="{x:Bind ViewModel.CanEditCrop, Mode=OneWay}" />
+                        </StackPanel>
                         <TextBlock Text="書き出し" Style="{StaticResource SubtitleTextBlockStyle}" />
 
                         <RadioButtons
@@ -407,8 +534,10 @@
                             Header="モード"
                             MaxColumns="2"
                             SelectedIndex="{x:Bind ViewModel.SelectedExportModeIndex, Mode=TwoWay}">
-                            <x:String>Fast copy</x:String>
-                            <x:String>Re-encode</x:String>
+                            <RadioButton
+                                Content="Fast copy"
+                                IsEnabled="{x:Bind ViewModel.CanFastCopy, Mode=OneWay}" />
+                            <RadioButton Content="Re-encode" />
                         </RadioButtons>
 
                         <StackPanel

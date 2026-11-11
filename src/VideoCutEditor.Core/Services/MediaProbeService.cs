@@ -129,6 +129,11 @@ public sealed class MediaProbeService : IMediaProbeService
         string? colorSpace = GetString(stream, "color_space");
         string? colorTransfer = GetString(stream, "color_transfer");
         string? colorPrimaries = GetString(stream, "color_primaries");
+        double sampleAspectRatio = ParseRatio(GetString(stream, "sample_aspect_ratio"), ':') is > 0 and double aspect
+            ? aspect
+            : 1;
+        bool isAttachedPicture = stream.TryGetProperty("disposition", out JsonElement disposition)
+            && GetInt(disposition, "attached_pic") == 1;
 
         return new MediaStreamInfo(
             index,
@@ -143,7 +148,26 @@ public sealed class MediaProbeService : IMediaProbeService
             channelLayout,
             colorSpace,
             colorTransfer,
-            colorPrimaries);
+            colorPrimaries,
+            sampleAspectRatio,
+            GetRotationDegrees(stream),
+            isAttachedPicture);
+    }
+
+    private static double GetRotationDegrees(JsonElement stream)
+    {
+        if (stream.TryGetProperty("side_data_list", out JsonElement sideData) && sideData.ValueKind == JsonValueKind.Array)
+        {
+            foreach (JsonElement item in sideData.EnumerateArray())
+            {
+                if (GetDouble(item, "rotation") is { } rotation)
+                {
+                    return rotation;
+                }
+            }
+        }
+
+        return stream.TryGetProperty("tags", out JsonElement tags) ? GetDouble(tags, "rotate") ?? 0 : 0;
     }
 
     private static TimeSpan GetStreamDuration(JsonElement root, int streamIndex)
@@ -173,17 +197,19 @@ public sealed class MediaProbeService : IMediaProbeService
             return null;
         }
 
-        string[] parts = value.Split('/');
-        if (parts.Length == 2
-            && double.TryParse(parts[0], NumberStyles.Float, CultureInfo.InvariantCulture, out double numerator)
-            && double.TryParse(parts[1], NumberStyles.Float, CultureInfo.InvariantCulture, out double denominator)
-            && denominator > 0)
-        {
-            return numerator / denominator;
-        }
-
-        return double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out double result)
+        return ParseRatio(value, '/')
+            ?? (double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out double result)
             ? result
+            : null);
+    }
+
+    private static double? ParseRatio(string? value, char separator)
+    {
+        string[]? parts = value?.Split(separator);
+        return parts is [string numerator, string denominator]
+            && double.TryParse(numerator, NumberStyles.Float, CultureInfo.InvariantCulture, out double dividend)
+            && double.TryParse(denominator, NumberStyles.Float, CultureInfo.InvariantCulture, out double divisor) && divisor > 0
+            ? dividend / divisor
             : null;
     }
 

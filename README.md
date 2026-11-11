@@ -13,8 +13,10 @@ VideoCutEditorは、1つの動画から必要な範囲を1つまたは複数切�
 
 ## 初回起動
 
+バージョン 0.6.0 から、起動には配布物と同じアーキテクチャ（x64、x86、ARM64）の [.NET 11 Runtime](https://dotnet.microsoft.com/en-us/download/dotnet/11.0) が必要です。
+
 1. 配布ZIPを任意のフォルダーへ展開します。
-2. `VideoCutEditor.exe`を起動します。
+2. 展開したファイル一式を同じフォルダーに保ち、`VideoCutEditor.exe`を起動します。
 3. Windowsの警告が表示された場合は、内容を確認して「詳細情報」から「実行」を選びます。現在のportable版はコード署名されていません。
 4. ffmpegとffprobeがPATH上にあれば自動検出されます。
 5. 検出されない場合は歯車ボタンから設定を開き、両方のEXEが入ったフォルダーを選択します。片方がない場合は個別のファイル指定欄が表示されます。
@@ -28,7 +30,13 @@ ffmpegとffprobeは本アプリに同梱されていません。未導入の場�
 2. 動画またはタイムラインで再生位置を移動します。左右キーでは1フレームずつ移動できます。
 3. `[`ボタンまたは`[`キーで開始位置、`]`ボタンまたは`]`キーで終了位置を設定します。開始・終了欄へ時刻を直接入力することもできます。
 4. 1つだけ切り出す場合は、必要に応じて出力ファイル名を変更します。
-5. 書き出し方法を選び、「書き出し」を押します。複数範囲を切り出す場合は、次の手順で先にクリップを登録します。
+5. 書き出し方法を選び、「書き出し」を押します。複数範囲を切り出す場合は、先にクリップを登録します。
+
+### 映像のトリミング
+
+動画を開いて「トリミング」を押します。プレビュー上の枠の辺や角をドラッグすると範囲を調整でき、枠の内側をドラッグすると枠全体が移動します。右側の操作パネルでは、各辺の切り取り量を `−10`、`−1`、`+1`、`+10` px で調整できます。「範囲をリセット」で元の範囲に戻ります。
+
+指定した範囲はパネルを閉じても保持され、同じ動画から書き出す全クリップに適用されます。トリミングを指定すると Re-encode に切り替わります。切り抜き後の幅や高さが奇数の場合は、出力の右端または下端に1pxの黒い余白が付きます。
 
 ## 複数クリップをまとめて書き出す
 
@@ -95,7 +103,7 @@ dotnet build src/VideoCutEditor/VideoCutEditor.csproj -p:Platform=x64
 
 ### Debug In VS Code
 
-Open the repository root, then choose `VideoCutEditor: Debug x64` from Run and Debug before pressing F5. VS Code is pinned to `VideoCutEditor.slnx` through `.vscode/settings.json` so the C# language service opens the repo-standard solution. The WinUI app project also exposes a design-time-only `VideoCutEditor.Core` reference to keep Roslyn LSP diagnostics aligned with the normal project reference. This configuration runs the `build VideoCutEditor x64` task first, builds with `WindowsPackageType=None`, and launches the x64 Debug output directly so VS Code can attach breakpoints. The C# Dev Kit generated profile is kept as a fallback, but it can choose a mismatched platform folder on some machines.
+Open the repository root, then choose `VideoCutEditor: Debug x64` from Run and Debug before pressing F5. VS Code is pinned to `VideoCutEditor.slnx` through `.vscode/settings.json` so the C# language service opens the repo-standard solution. The WinUI app project also exposes a design-time-only `VideoCutEditor.Core` reference to keep Roslyn LSP diagnostics aligned with the normal project reference. The pre-launch task builds the unpackaged x64 app and launches the output directly so VS Code can attach breakpoints. Visual Studio uses the `VideoCutEditor (Unpackaged)` launch profile.
 
 If the build reports that `VideoCutEditor.exe` is locked, close the previous debugged app instance and press F5 again.
 
@@ -106,15 +114,16 @@ If VS Code still shows stale `VideoCutEditor.Core` or generated MVVM warnings af
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\Publish-Portable.ps1 -Platform x64 -Configuration Release
 powershell -ExecutionPolicy Bypass -File scripts\Publish-AllPortable.ps1 -Configuration Release
-powershell -ExecutionPolicy Bypass -File scripts\New-PortableRelease.ps1 -Version 0.5.1 -Platform x64
-powershell -ExecutionPolicy Bypass -File scripts\New-InstallerRelease.ps1 -Version 0.5.1 -Platform x64
+powershell -ExecutionPolicy Bypass -File scripts\New-PortableRelease.ps1 -Version 0.6.0 -Platform x64
+powershell -ExecutionPolicy Bypass -File scripts\New-InstallerRelease.ps1 -Version 0.6.0 -Platform x64
 ```
 
-The portable publish output is written under `src\VideoCutEditor\bin\Release\...\publish`.
-The WinUI app is built self-contained so packaged debug launches and portable output do not depend on a machine-wide .NET runtime probe.
-`Publish-Portable.ps1` also runs `scripts\Test-PortablePublish.ps1` to verify that the output contains `VideoCutEditor.exe`, does not include sidecar runtime files, and does not bundle ffmpeg or ffprobe.
+Build and publish with the .NET 11 SDK. To launch the unpackaged project with WinApp CLI 0.8.0, run `winapp run src/VideoCutEditor/VideoCutEditor.csproj --arch x64`.
+
+The portable publish folder is written under `src\VideoCutEditor\bin\Release\...\publish`. It includes the app-local Windows App SDK and requires the installed .NET 11 Runtime.
+`Publish-Portable.ps1` runs `scripts\Test-PortablePublish.ps1` to verify the expected app files, the shared .NET runtime reference, and the absence of bundled .NET runtime files, MSIX packages, and ffmpeg tools.
 `Publish-AllPortable.ps1` runs the same publish and validation flow for x64, x86, and arm64.
-`New-PortableRelease.ps1` creates a versioned ZIP plus a SHA-256 checksum under `artifacts\releases`. The ZIP contains the single-file EXE, Japanese usage guidance, and official license notices; ffmpeg and ffprobe remain external.
+`New-PortableRelease.ps1` creates a versioned ZIP plus a SHA-256 checksum under `artifacts\releases`. The ZIP contains the full publish folder contents, Japanese usage guidance, and official license notices.
 `New-InstallerRelease.ps1` creates an NSIS installer and checksum. The installer requires no administrator privileges and installs for the current user under `%LocalAppData%\Programs\VideoCutEditor`.
 
 ### License

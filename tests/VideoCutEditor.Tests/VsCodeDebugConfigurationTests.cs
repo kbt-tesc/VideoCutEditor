@@ -20,7 +20,7 @@ public sealed class VsCodeDebugConfigurationTests
         Assert.Equal("coreclr", launchConfiguration.GetProperty("type").GetString());
         Assert.Equal("launch", launchConfiguration.GetProperty("request").GetString());
         Assert.Equal("build VideoCutEditor x64", launchConfiguration.GetProperty("preLaunchTask").GetString());
-        Assert.Contains(@"bin\x64\Debug\net10.0-windows10.0.26100.0\win-x64\VideoCutEditor.exe", launchConfiguration.GetProperty("program").GetString());
+        Assert.Contains(@"bin\x64\Debug\net11.0-windows10.0.26100.0\win-x64\VideoCutEditor.exe", launchConfiguration.GetProperty("program").GetString());
 
         JsonElement buildTask = tasksJson
             .RootElement
@@ -33,7 +33,6 @@ public sealed class VsCodeDebugConfigurationTests
         string[] arguments = buildTask.GetProperty("args").EnumerateArray().Select(argument => argument.GetString() ?? string.Empty).ToArray();
         Assert.Contains(@"${workspaceFolder}\src\VideoCutEditor\VideoCutEditor.csproj", arguments);
         Assert.Contains("-p:Platform=x64", arguments);
-        Assert.Contains("-p:WindowsPackageType=None", arguments);
     }
 
     [Fact]
@@ -72,7 +71,7 @@ public sealed class VsCodeDebugConfigurationTests
 
         Assert.Contains("$(DesignTimeBuild)' == 'true'", project);
         Assert.Contains("<Reference Include=\"VideoCutEditor.Core\"", project);
-        Assert.Contains(@"..\VideoCutEditor.Core\obj\$(Configuration)\net10.0\ref\VideoCutEditor.Core.dll", project);
+        Assert.Contains(@"..\VideoCutEditor.Core\obj\$(Configuration)\net11.0\ref\VideoCutEditor.Core.dll", project);
         Assert.Contains("<Private>false</Private>", project);
     }
 

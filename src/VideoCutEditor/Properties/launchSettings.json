@@ -1,8 +1,5 @@
 {
   "profiles": {
-    "VideoCutEditor (Package)": {
-      "commandName": "MsixPackage"
-    },
     "VideoCutEditor (Unpackaged)": {
       "commandName": "Project"
     }

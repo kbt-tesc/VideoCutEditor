@@ -14,7 +14,7 @@ public sealed class PublishProfileTests
 
     [Theory]
     [MemberData(nameof(PortableProfiles))]
-    public void Portable_publish_profiles_are_unpacked_self_contained_single_file(string profileName, string runtimeIdentifier)
+    public void Portable_publish_profiles_use_the_project_deployment_settings(string profileName, string runtimeIdentifier)
     {
         string profilePath = Path.Combine(
             FindRepositoryRoot(),
@@ -29,15 +29,14 @@ public sealed class PublishProfileTests
         string? property(string name) => profile.Descendants(msbuild + name).SingleOrDefault()?.Value;
 
         Assert.Equal(runtimeIdentifier, property("RuntimeIdentifier"));
-        Assert.Equal("None", property("WindowsPackageType"));
-        Assert.Equal("true", property("WindowsAppSDKSelfContained"), ignoreCase: true);
-        Assert.Equal("true", property("SelfContained"), ignoreCase: true);
-        Assert.Equal("true", property("PublishSingleFile"), ignoreCase: true);
-        Assert.Equal("true", property("IncludeNativeLibrariesForSelfExtract"), ignoreCase: true);
+        Assert.Null(property("WindowsPackageType"));
+        Assert.Null(property("WindowsAppSDKSelfContained"));
+        Assert.Null(property("SelfContained"));
+        Assert.Null(property("PublishSingleFile"));
     }
 
     [Fact]
-    public void App_project_uses_self_contained_runtime_by_default()
+    public void App_project_uses_unpacked_framework_dependent_dotnet_by_default()
     {
         string projectPath = Path.Combine(
             FindRepositoryRoot(),
@@ -46,12 +45,13 @@ public sealed class PublishProfileTests
             "VideoCutEditor.csproj");
         XDocument project = XDocument.Load(projectPath);
 
-        string? selfContained = project
-            .Descendants("SelfContained")
-            .FirstOrDefault()
-            ?.Value;
+        string property(string name) => project.Descendants(name).Single().Value;
 
-        Assert.Equal("true", selfContained, ignoreCase: true);
+        Assert.Equal("net11.0-windows10.0.26100.0", property("TargetFramework"));
+        Assert.Equal("None", property("WindowsPackageType"));
+        Assert.Equal("true", property("WindowsAppSDKSelfContained"), ignoreCase: true);
+        Assert.Equal("false", property("SelfContained"), ignoreCase: true);
+        Assert.Equal("false", property("PublishSingleFile"), ignoreCase: true);
     }
 
     [Fact]
@@ -69,14 +69,14 @@ public sealed class PublishProfileTests
         string projectPath = Path.Combine(FindRepositoryRoot(), "src", "VideoCutEditor", "VideoCutEditor.csproj");
         XDocument project = XDocument.Load(projectPath);
 
-        Assert.Equal("0.5.1", project.Descendants("Version").Single().Value);
+        Assert.Equal("0.6.0", project.Descendants("Version").Single().Value);
     }
 
     [Fact]
-    public void Portable_publish_validation_accepts_single_file_artifact_with_symbols()
+    public void Portable_publish_validation_accepts_framework_dependent_folder_with_symbols()
     {
         using var publishDirectory = new TemporaryDirectory();
-        File.WriteAllText(Path.Combine(publishDirectory.Path, "VideoCutEditor.exe"), "stub");
+        CreatePortableFixture(publishDirectory.Path);
         File.WriteAllText(Path.Combine(publishDirectory.Path, "VideoCutEditor.pdb"), "symbols");
 
         (int exitCode, string output) = RunPortableValidation(publishDirectory.Path);
@@ -86,20 +86,38 @@ public sealed class PublishProfileTests
     }
 
     [Theory]
-    [InlineData("VideoCutEditor.dll")]
-    [InlineData("VideoCutEditor.runtimeconfig.json")]
+    [InlineData("coreclr.dll")]
+    [InlineData("nested/hostfxr.dll")]
+    [InlineData("VideoCutEditor.msix")]
     [InlineData("ffmpeg.exe")]
     [InlineData("ffprobe.exe")]
-    public void Portable_publish_validation_rejects_sidecars_and_bundled_tools(string fileName)
+    public void Portable_publish_validation_rejects_bundled_dotnet_msix_and_tools(string fileName)
     {
         using var publishDirectory = new TemporaryDirectory();
-        File.WriteAllText(Path.Combine(publishDirectory.Path, "VideoCutEditor.exe"), "stub");
-        File.WriteAllText(Path.Combine(publishDirectory.Path, fileName), "unexpected");
+        CreatePortableFixture(publishDirectory.Path);
+        string filePath = Path.Combine(publishDirectory.Path, fileName);
+        Directory.CreateDirectory(Path.GetDirectoryName(filePath)!);
+        File.WriteAllText(filePath, "unexpected");
 
         (int exitCode, string output) = RunPortableValidation(publishDirectory.Path);
 
         Assert.NotEqual(0, exitCode);
-        Assert.Contains(fileName, output);
+        Assert.Contains(Path.GetFileName(fileName), output);
+    }
+
+    [Fact]
+    public void Portable_publish_validation_rejects_self_contained_runtime_config()
+    {
+        using var publishDirectory = new TemporaryDirectory();
+        CreatePortableFixture(publishDirectory.Path);
+        File.WriteAllText(
+            Path.Combine(publishDirectory.Path, "VideoCutEditor.runtimeconfig.json"),
+            """{"runtimeOptions":{"includedFrameworks":[{"name":"Microsoft.NETCore.App","version":"11.0.0"}]}}""");
+
+        (int exitCode, string output) = RunPortableValidation(publishDirectory.Path);
+
+        Assert.NotEqual(0, exitCode);
+        Assert.Contains("VideoCutEditor.runtimeconfig.json", output);
     }
 
     [Fact]
@@ -141,7 +159,7 @@ public sealed class PublishProfileTests
 
         Assert.Contains("Publish-Portable.ps1", script);
         Assert.Contains("-Version $Version", script);
-        Assert.Contains("[string]$Version = \"0.5.1\"", script);
+        Assert.Contains("[string]$Version = \"0.6.0\"", script);
         Assert.Contains("Compress-Archive", script);
         Assert.Contains("Get-FileHash", script);
         Assert.Contains("README.md", script);
@@ -213,7 +231,7 @@ public sealed class PublishProfileTests
         Assert.Contains("Publish-Portable.ps1", releaseScript);
         Assert.Contains("makensis", releaseScript, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Get-FileHash", releaseScript);
-        Assert.Contains("[string]$Version = \"0.5.1\"", releaseScript);
+        Assert.Contains("[string]$Version = \"0.6.0\"", releaseScript);
     }
 
     public static TheoryData<string, int, int> AppIconPngAssets => new()
@@ -267,6 +285,23 @@ public sealed class PublishProfileTests
         (bytes[offset + 1] << 16) |
         (bytes[offset + 2] << 8) |
         bytes[offset + 3];
+
+    private static void CreatePortableFixture(string directory)
+    {
+        foreach (string name in new[]
+        {
+            "VideoCutEditor.exe", "VideoCutEditor.dll", "VideoCutEditor.pri",
+            "Microsoft.UI.Xaml.dll", "Microsoft.WindowsAppRuntime.dll",
+        })
+        {
+            File.WriteAllText(Path.Combine(directory, name), "stub");
+        }
+
+        File.WriteAllText(Path.Combine(directory, "VideoCutEditor.deps.json"), """{"libraries":{}}""");
+        File.WriteAllText(
+            Path.Combine(directory, "VideoCutEditor.runtimeconfig.json"),
+            """{"runtimeOptions":{"framework":{"name":"Microsoft.NETCore.App","version":"11.0.0"}}}""");
+    }
 
     private static (int ExitCode, string Output) RunPortableValidation(string publishDirectory)
     {

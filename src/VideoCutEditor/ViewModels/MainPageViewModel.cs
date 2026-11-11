@@ -296,7 +296,9 @@ public partial class MainPageViewModel : ObservableObject
 
     public double TimelineContentWidth => Math.Max(TimelineViewportWidth, 1) * TimelineZoom;
 
-    public string ExportNoticeText => CurrentMediaInfo is not null && HasHdrVideoStream(CurrentMediaInfo)
+    public string ExportNoticeText => !Crop.IsEmpty
+        ? "トリミング範囲を適用するため、Re-encode で書き出します。"
+        : CurrentMediaInfo is not null && HasHdrVideoStream(CurrentMediaInfo)
         ? CurrentExportMode == ExportMode.FastCopy
             ? "HDR動画です。Fast copyではHDRのまま書き出します。SDRに変換する場合は Re-encode を選んでください。"
             : ConvertHdrToSdrEnabled
@@ -444,6 +446,13 @@ public partial class MainPageViewModel : ObservableObject
         this.bitrateSuggestionService = bitrateSuggestionService ?? new BitrateSuggestionService();
         this.outputDirectoryLauncher = outputDirectoryLauncher ?? OpenDirectoryInShell;
         this.clipTitleService = clipTitleService ?? new ClipTitleService();
+        CropAdjustments = (CropAdjustment[])
+        [
+            CreateCropAdjustment("左", "Left", delta => new VideoCrop(delta, 0, 0, 0)),
+            CreateCropAdjustment("上", "Top", delta => new VideoCrop(0, delta, 0, 0)),
+            CreateCropAdjustment("右", "Right", delta => new VideoCrop(0, 0, delta, 0)),
+            CreateCropAdjustment("下", "Bottom", delta => new VideoCrop(0, 0, 0, delta)),
+        ];
     }
 
     public async Task InitializeAsync()
@@ -869,10 +878,12 @@ public partial class MainPageViewModel : ObservableObject
 
         AppSettings currentSettings = CreateCurrentSettings();
         MediaInfo? mediaInfo = CurrentMediaInfo;
+        VideoCrop exportCrop = Crop;
+        ExportMode exportMode = GetEffectiveExportMode(currentSettings, exportCrop);
         int?[] exportVideoBitrates = workItems
             .Select(item => GetEffectiveVideoBitrateKbps(item.Range))
             .ToArray();
-        if (GetEffectiveExportMode(currentSettings) == ExportMode.Reencode
+        if (exportMode == ExportMode.Reencode
             && CurrentBitrateMode != BitrateMode.Quality
             && exportVideoBitrates.Any(bitrate => bitrate is null))
         {
@@ -903,7 +914,7 @@ public partial class MainPageViewModel : ObservableObject
                 LastVideoBitrateKbps = exportVideoBitrates[0],
             };
             await settingsService.SaveAsync(settings);
-            IExportPlanner planner = new ExportPlannerFactory(currentCapabilities).CreatePlanner(GetEffectiveExportMode(settings));
+            IExportPlanner planner = new ExportPlannerFactory(currentCapabilities).CreatePlanner(exportMode);
             int completedCount = 0;
 
             for (int index = 0; index < workItems.Count; index++)
@@ -919,7 +930,8 @@ public partial class MainPageViewModel : ObservableObject
                     item.OutputPath,
                     item.Range,
                     itemSettings,
-                    mediaInfo);
+                    mediaInfo,
+                    exportCrop);
                 ExportPlan plan = planner.CreatePlan(request);
                 AppendExportLog($"[{itemNumber}/{workItems.Count}] {Path.GetFileName(item.OutputPath)}");
                 StatusMessage = $"書き出し中 ({itemNumber}/{workItems.Count}): {Path.GetFileName(item.OutputPath)}";
@@ -1211,6 +1223,7 @@ public partial class MainPageViewModel : ObservableObject
 
     partial void OnCurrentMediaInfoChanged(MediaInfo? value)
     {
+        RefreshCropFrame(value);
         EnsureSelectedOutputContainerIsAvailable();
         AudioBitrateKbps = AudioEncodingService.GetSuggestedBitrateKbps(value);
         SelectedAudioRateModeIndex = 0;
@@ -1331,6 +1344,7 @@ public partial class MainPageViewModel : ObservableObject
     {
         CancelExportCommand.NotifyCanExecuteChanged();
         OnPropertyChanged(nameof(CanEditRegisteredClips));
+        OnPropertyChanged(nameof(CanEditCrop));
     }
 
     private void UpdatePlannedOutputPath()
@@ -1643,8 +1657,8 @@ public partial class MainPageViewModel : ObservableObject
             : new FadeSettings(),
     };
 
-    private static ExportMode GetEffectiveExportMode(AppSettings settings) =>
-        settings.Fade.HasAnyFade ? ExportMode.Reencode : settings.LastExportMode;
+    private static ExportMode GetEffectiveExportMode(AppSettings settings, VideoCrop crop) =>
+        settings.Fade.HasAnyFade || !crop.IsEmpty ? ExportMode.Reencode : settings.LastExportMode;
 
     private void ApplyExportSettings(AppSettings settings)
     {

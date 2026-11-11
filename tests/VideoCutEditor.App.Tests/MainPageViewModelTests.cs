@@ -14,7 +14,7 @@ public sealed class MainPageViewModelTests
             TimeSpan.FromSeconds(10),
             "mov,mp4",
             12_000_000,
-            [new MediaStreamInfo(0, "video", "hevc", 10_000_000, 3840, 2160, 60, ColorSpace: "bt2020nc", ColorTransfer: "smpte2084", ColorPrimaries: "bt2020")]);
+            (MediaStreamInfo[])[new MediaStreamInfo(0, "video", "hevc", 10_000_000, 3840, 2160, 60, ColorSpace: "bt2020nc", ColorTransfer: "smpte2084", ColorPrimaries: "bt2020")]);
 
         string summary = MediaSummaryFormatter.Create(info);
 
@@ -32,7 +32,7 @@ public sealed class MainPageViewModelTests
             TimeSpan.FromSeconds(10),
             "mov,mp4",
             null,
-            [new MediaStreamInfo(0, "video", "hevc", null, 1920, 1080, 30, ColorTransfer: "arib-std-b67")]);
+            (MediaStreamInfo[])[new MediaStreamInfo(0, "video", "hevc", null, 1920, 1080, 30, ColorTransfer: "arib-std-b67")]);
 
         string summary = MediaSummaryFormatter.Create(info);
 
@@ -207,6 +207,27 @@ public sealed class MainPageViewModelTests
 
         Assert.Equal(128, viewModel.AudioBitrateKbps);
         Assert.Equal(0, viewModel.SelectedAudioRateModeIndex);
+    }
+
+    [Fact]
+    public void Crop_switches_fast_copy_to_reencode_with_an_available_output_container()
+    {
+        MainPageViewModel viewModel = CreateViewModel();
+        viewModel.SelectedSourcePath = "source.webm";
+        viewModel.CurrentMediaInfo = new MediaInfo("source.webm", TimeSpan.FromSeconds(4), "webm", null,
+            (MediaStreamInfo[])[new MediaStreamInfo(0, "video", "vp9", null, Width: 320, Height: 180)]);
+        Assert.True(viewModel.IsWebMOutputSelected);
+
+        viewModel.UpdateCrop(new VideoCrop(Left: 1, Top: 0, Right: 0, Bottom: 0));
+
+        Assert.True(viewModel.IsReencodeSettingsVisible);
+        Assert.True(viewModel.IsMp4OutputSelected);
+        Assert.False(viewModel.CanFastCopy);
+
+        viewModel.ResetCropCommand.Execute(null);
+
+        Assert.True(viewModel.Crop.IsEmpty);
+        Assert.True(viewModel.CanFastCopy);
     }
 
     [Fact]
@@ -471,7 +492,7 @@ public sealed class MainPageViewModelTests
             TimeSpan.FromSeconds(10),
             "mov,mp4",
             2_000_000,
-            [new MediaStreamInfo(0, "video", "h264", 1_800_000, FrameRate: 30)]);
+            (MediaStreamInfo[])[new MediaStreamInfo(0, "video", "h264", 1_800_000, FrameRate: 30)]);
         int infoWindowRequestCount = 0;
         viewModel.InfoWindowRequested += (_, _) => infoWindowRequestCount++;
 
@@ -675,7 +696,7 @@ public sealed class MainPageViewModelTests
             TimeSpan.FromSeconds(10),
             Path.GetExtension(sourcePath).Equals(".webm", StringComparison.OrdinalIgnoreCase) ? "matroska,webm" : "mov,mp4",
             2_000_000,
-            [
+            (MediaStreamInfo[])[
                 new MediaStreamInfo(0, "video", videoCodec, 1_800_000),
                 new MediaStreamInfo(1, "audio", audioCodec, audioBitrate),
             ]);

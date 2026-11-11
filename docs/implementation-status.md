@@ -1,16 +1,36 @@
 # Implementation Status
 
-Last updated: 2026-07-22
+Last updated: 2026-11-12
 
 This document is the handoff ledger for future Codex sessions. Read it after `AGENTS.md`, `docs/product-spec.md`, `docs/technical-design.md`, `docs/codex-workflow.md`, and `docs/implementation-kickoff.md` before choosing the next implementation slice.
 
 ## Current State
 
-VideoCutEditor has a working WinUI 3/.NET 10 editor with single-range extraction and multi-clip batch export from one source video. The app can detect externally installed `ffmpeg` and `ffprobe`, probe media metadata, preview videos through Windows media playback when possible, set and register start/end ranges, edit or overwrite registered clips, suggest re-encode bitrates from metadata, configure clip-edge fades, and export Fast copy or Re-encode through bitrate/target-size/quality rate control. Two-pass audio normalization is available as an option within both export modes, and Re-encode exposes an advanced additional ffmpeg arguments field with focused guardrails.
+VideoCutEditor has a working WinUI 3/.NET 11 editor with single-range extraction and multi-clip batch export from one source video. The app can detect externally installed `ffmpeg` and `ffprobe`, probe media metadata, preview videos through Windows media playback when possible, set and register start/end ranges, edit or overwrite registered clips, suggest re-encode bitrates from metadata, configure clip-edge fades, and export Fast copy or Re-encode through bitrate/target-size/quality rate control. Two-pass audio normalization is available as an option within both export modes, and Re-encode exposes an advanced additional ffmpeg arguments field with focused guardrails.
 
 The project is being developed in small TDD slices. Keep using behavior-focused tests first, then implement the smallest production change, verify, and commit each slice.
 
 ## Completed Slices
+
+- `0.6.0` release preparation.
+  - Updated the app and release-script defaults, added the Japanese release notes, and documented the x64 .NET 11 Runtime prerequisite.
+  - Passed all 196 Core and 31 app-layer Release tests. The crop workflow had already passed 73 UI assertions, including export and output dimensions.
+  - Built the unsigned x64 Portable ZIP and NSIS installer. Verified their SHA-256 files, extracted application version, packaged guidance and licenses, and framework-dependent .NET 11 configuration. Clean Windows install and uninstall remain unverified.
+
+- Spatial video trimming.
+  - Added a preview crop frame with pointer capture for edge and corner resizing and interior dragging. The adjustment panel exposes all four insets with 1px and 10px increment/decrement buttons, the cutout and output dimensions, and a reset to the full frame.
+  - Kept the crop per source and applied it to every registered export range. A nonempty crop switches to Re-encode and selects MP4 when WebM encoding is unavailable. The planner uses exact cropping and pads odd dimensions on the right or bottom.
+  - Passed 196 Core and 31 app-layer Release tests, including rotation/aspect metadata parsing, crop filter ordering and validation, and the WebM fallback. Validated the x64 Release publish.
+  - Passed all 73 crop UI assertions and verified a real H.264 export at `1270x710` with ffprobe. Confirmed edge, corner, and interior drags on the Windows desktop. The physical drag test needs an unobstructed window with no competing mouse input.
+  - Preview alignment on real rotated or anamorphic inputs and crop exports with HDR or hardware encoders still need manual verification.
+
+- .NET 11 and unpackaged folder deployment.
+  - Retargeted the app, Core, and tests to .NET 11. Debug builds and portable publishes use WinUI's generated entry point, app-local Windows App SDK files, and an installed .NET 11 Runtime.
+  - Updated VS Code launch paths, WinApp CLI and runtime setup instructions, the x64/x86/ARM64 publish profiles, the ZIP and NSIS payloads, and their license files.
+  - Passed 195 Core and 30 app-layer Release tests. Replaced four ambiguous collection expressions in the app tests to clear `CsWinRT1032`. The focused retest passed with `-m:1 -p:UseSharedCompilation=false` after a transient Core DLL lock.
+  - Published and validated x64, x86, and ARM64 using .NET SDK 11.0.100. Built the x64 ZIP and installer, checked their SHA-256 files, validated both extracted payloads, and confirmed both started with the shared x64 `Microsoft.NETCore.App\11.0.0` runtime.
+  - Confirmed the unpackaged editor opens via WinApp CLI 0.8.0 and passed all 69 Fast copy UI assertions, including the file picker and a real ffmpeg export.
+  - x86 and ARM64 app startup, startup on a clean Windows machine, and the NSIS installation, upgrade, and uninstall lifecycle still need runtime verification.
 
 - `0.5.1` release preparation.
   - Advanced the app and release-script defaults from `0.5.0` to `0.5.1` for the INFO export progress and responsive log-layout update.
@@ -399,14 +419,14 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 - Re-encode video bitrate suggestions from source bitrate or resolution with codec-specific multipliers.
 - Predicted output size display for bitrate-based Re-encode when enough information is available.
 - Scripted WinUI UI smoke tests with screenshots.
-- Portable x64/x86/arm64 publish profiles for unpackaged self-contained single-file output.
-- Self-contained WinUI app builds for both packaged debug launch and portable publish.
-- Automated portable publish artifact validation for single-file shape and external ffmpeg/ffprobe policy.
+- Portable x64/x86/ARM64 publish profiles for unpackaged folder deployment with app-local Windows App SDK files.
+- Shared .NET 11 Runtime dependency for both debug builds and portable publish.
+- Automated portable artifact validation for the expected app files, shared .NET 11 runtime configuration, and external ffmpeg/ffprobe policy.
 - All-platform portable publish script for x64, x86, and arm64.
 - Verification sample media generator for repeatable local manual checks.
 - Verification media includes a generated 10-bit BT.2020/PQ sample for HDR detection and SDR tone-mapping checks.
 - VS Code F5 configuration for x64 Debug breakpoint debugging.
-- VS Code F5 direct debugging uses the unpackaged entry point while packaged debug launch remains covered by `BuildAndRun.ps1` / `winapp run`.
+- VS Code F5 and `winapp run` launch the unpackaged app.
 - VS Code/C# Dev Kit language-service opens `VideoCutEditor.slnx`, the repo-standard solution.
 - VS Code/Roslyn LSP design-time fallback reference for `VideoCutEditor.Core` diagnostics.
 - Project-file guidance memo for `.slnx`, `.vscode/settings.json`, and design-time diagnostic fallback handling.

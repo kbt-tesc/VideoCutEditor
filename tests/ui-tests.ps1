@@ -29,6 +29,7 @@ public static class NativeWindowTest
 
     [DllImport("user32.dll")]
     public static extern bool PostMessage(IntPtr hWnd, uint message, IntPtr wParam, IntPtr lParam);
+
 }
 "@
 
@@ -144,13 +145,17 @@ function Set-FilePickerPath {
         throw "Failed to set the sample video path in the file picker."
     }
 
-    $openButtonSearch = & winapp @("ui", "search", "1", "-w", $pickerHwndText, "--json") 2>$null | ConvertFrom-Json
+    $openButtonSearch = & winapp @("ui", "search", "1", "--max", "100", "-w", $pickerHwndText, "--json") 2>$null | ConvertFrom-Json
     $openButton = @($openButtonSearch.matches) | Where-Object {
         $_.automationId -eq "1" -and
         $_.className -eq "Button" -and
         $_.type -in @("Button", "SplitButton")
     } | Select-Object -First 1
     if ($null -eq $openButton) {
+        # Some picker versions accept the filename as soon as UI Automation sets the value.
+        $pickerStillOpen = @(winapp ui list-windows --json 2>$null | ConvertFrom-Json) |
+            Where-Object { $_.hwnd -eq $PickerHwnd }
+        if (!$pickerStillOpen) { return }
         throw "The file picker open button was not found."
     }
 
@@ -217,6 +222,7 @@ Test-UI "App has a main window" {
 
 $expectedElements = @(
     "OpenVideoButton",
+    "CropEditorButton",
     "StatusMessageText",
     "PlayPauseButton",
     "MarkStartButton",
@@ -308,7 +314,7 @@ Test-UI "Codec matches expected Re-encode setting" {
     winapp ui wait-for "CodecFamilyComboBox" -a $AppPid --value $expectedCodec -t 3000 -q
 }
 
-$expectedInitialEncoder = if ($VerifyExportMode -in @("Reencode", "ReencodeHdrToSdr")) { "Software" } elseif ($VerifyExportMode -like "ReencodeNvenc*") { "NVEnc" } else { "Auto" }
+$expectedInitialEncoder = if ($VerifyExportMode -in @("Crop", "Reencode", "ReencodeHdrToSdr")) { "Software" } elseif ($VerifyExportMode -like "ReencodeNvenc*") { "NVEnc" } else { "Auto" }
 Test-UI "Encoder matches expected Re-encode setting" {
     winapp ui wait-for "EncoderKindComboBox" -a $AppPid --value $expectedInitialEncoder -t 3000 -q
 }
@@ -455,7 +461,7 @@ if (-not [string]::IsNullOrWhiteSpace($SampleVideoPath)) {
                 winapp ui wait-for "EncoderKindComboBox" -w $mainWindowHwnd --value "NVEnc" -t 3000 -q
                 winapp ui wait-for "BitrateModeComboBox" -w $mainWindowHwnd --value $expectedRateControl -t 3000 -q
             }
-            elseif ($VerifyExportMode -in @("FastCopy", "FastCopyMultiClip")) {
+            elseif ($VerifyExportMode -in @("FastCopy", "FastCopyMultiClip", "Crop")) {
                 winapp ui invoke "Fast copy" -w $mainWindowHwnd -q
             }
             elseif ($VerifyExportMode -eq "NormalizeAudio") {
@@ -468,6 +474,73 @@ if (-not [string]::IsNullOrWhiteSpace($SampleVideoPath)) {
             }
             else {
                 throw "Unsupported export verification mode '$VerifyExportMode'."
+            }
+        }
+
+        if ($VerifyExportMode -eq "Crop") {
+            Test-UI "Crop frame resizes and moves with the mouse" {
+                winapp ui click "CropEditorButton" -w $mainWindowHwnd -q
+                if ($LASTEXITCODE -ne 0) { throw "CropEditorButton could not be clicked." }
+                winapp ui wait-for "CropSizeText" -w $mainWindowHwnd -t 3000 -q
+                if ($LASTEXITCODE -ne 0) { throw "Crop panel did not open." }
+                $overlaySearch = winapp ui search "CropOverlay" -w $mainWindowHwnd --json 2>$null | ConvertFrom-Json
+                $preview = $overlaySearch.matches | Where-Object { $_.automationId -eq "CropOverlay" } | Select-Object -First 1
+                if ($null -eq $preview -or $preview.width -le 0 -or $preview.height -le 0) { throw "Preview bounds were unavailable." }
+                $videoWidth = [Math]::Min($preview.width, $preview.height * 16 / 9)
+                $centerX = [int]($preview.x + $preview.width / 2)
+                $centerY = [int]($preview.y + $preview.height / 2)
+                $rightEdge = [int]($centerX + $videoWidth / 2 - 3)
+
+                winapp ui drag "$rightEdge,$centerY" "$($rightEdge - 40),$centerY" -w $mainWindowHwnd --hold-ms 100 --dwell-ms 100 -q
+                if ($LASTEXITCODE -ne 0) { throw "Crop edge drag failed." }
+                $right = (winapp ui get-value "CropRightPixelsText" -w $mainWindowHwnd --json 2>$null | ConvertFrom-Json).text
+                if ($right -notmatch '^\d+$' -or [int]$right -lt 20) {
+                    throw "Crop edge did not move: '$right'. Drag at $rightEdge,$centerY in overlay $($preview.x),$($preview.y) $($preview.width)x$($preview.height)."
+                }
+
+                winapp ui drag "$centerX,$centerY" "$($centerX + 20),$centerY" -w $mainWindowHwnd --hold-ms 100 --dwell-ms 100 -q
+                if ($LASTEXITCODE -ne 0) { throw "Crop frame move failed." }
+                $left = (winapp ui get-value "CropLeftPixelsText" -w $mainWindowHwnd --json 2>$null | ConvertFrom-Json).text
+                $movedRight = (winapp ui get-value "CropRightPixelsText" -w $mainWindowHwnd --json 2>$null | ConvertFrom-Json).text
+                if ($left -notmatch '^\d+$' -or $movedRight -notmatch '^\d+$' -or [int]$left -le 0 -or [int]$left + [int]$movedRight -ne [int]$right) {
+                    throw "Moving the crop frame changed its size or failed to move it."
+                }
+                winapp ui screenshot -a $AppPid -o (Join-Path $screenshots "03-crop-dragged.png") 2>$null
+            }
+
+            Test-UI "Crop panel adjusts all four edges by exactly 1 and 10 pixels" {
+                winapp ui invoke "ResetCropButton" -w $mainWindowHwnd -q
+                if ($LASTEXITCODE -ne 0) { throw "Crop reset failed." }
+                foreach ($edge in @("Left", "Top", "Right", "Bottom")) {
+                    foreach ($adjustment in @(
+                        @{ Button = "Increase10"; Pixels = "10" },
+                        @{ Button = "Increase1"; Pixels = "11" },
+                        @{ Button = "Decrease10"; Pixels = "1" },
+                        @{ Button = "Decrease1"; Pixels = "0" }
+                    )) {
+                        winapp ui invoke "Crop$edge$($adjustment.Button)Button" -w $mainWindowHwnd -q
+                        if ($LASTEXITCODE -ne 0) { throw "$edge $($adjustment.Button) failed." }
+                        winapp ui wait-for "Crop${edge}PixelsText" -w $mainWindowHwnd --value $adjustment.Pixels -t 3000 -q
+                        if ($LASTEXITCODE -ne 0) { throw "$edge crop inset should be $($adjustment.Pixels) pixels." }
+                    }
+                }
+            }
+
+            Test-UI "Crop enables Re-encode and remains applied after the editor closes" {
+                foreach ($edge in @("Right", "Bottom")) {
+                    foreach ($step in @(10, 1)) {
+                        winapp ui invoke "Crop${edge}Increase${step}Button" -w $mainWindowHwnd -q
+                        if ($LASTEXITCODE -ne 0) { throw "$edge increase failed." }
+                    }
+                }
+                winapp ui wait-for "Fast copy" -w $mainWindowHwnd -p IsEnabled --value "False" -t 3000 -q
+                if ($LASTEXITCODE -ne 0) { throw "Fast copy should be unavailable while cropping." }
+                winapp ui wait-for "CodecFamilyComboBox" -w $mainWindowHwnd -t 3000 -q
+                if ($LASTEXITCODE -ne 0) { throw "Re-encode settings should appear while cropping." }
+                winapp ui screenshot -a $AppPid -o (Join-Path $screenshots "03-crop-editor.png") 2>$null
+                winapp ui click "CropEditorButton" -w $mainWindowHwnd -q
+                if ($LASTEXITCODE -ne 0) { throw "Crop editor could not be closed." }
+                winapp ui wait-for "CropSizeText" -w $mainWindowHwnd --gone -t 3000 -q
             }
         }
 
@@ -655,8 +728,14 @@ if ($VerifyExportMode -eq "ReencodeHdrToSdr") {
 }
 
 Test-UI "Main window remains operable while INFO is open" {
-    winapp ui invoke "Fast copy" -w $mainWindowHwnd
-    winapp ui wait-for "CodecFamilyComboBox" -w $mainWindowHwnd --gone -t 3000 -q
+    if ($VerifyExportMode -eq "Crop") {
+        winapp ui invoke "NormalizeAudioCheckBox" -w $mainWindowHwnd -q
+        winapp ui wait-for "NormalizeAudioCheckBox" -w $mainWindowHwnd --value "On" -t 3000 -q
+    }
+    else {
+        winapp ui invoke "Fast copy" -w $mainWindowHwnd
+        winapp ui wait-for "CodecFamilyComboBox" -w $mainWindowHwnd --gone -t 3000 -q
+    }
 }
 
 Test-UI "INFO window can close and reopen" {

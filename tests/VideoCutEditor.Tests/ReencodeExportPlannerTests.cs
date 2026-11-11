@@ -6,6 +6,32 @@ namespace VideoCutEditor.Tests;
 public sealed class ReencodeExportPlannerTests
 {
     [Fact]
+    public void CreatePlan_crops_the_oriented_frame_exactly_before_fade_and_pads_odd_dimensions()
+    {
+        var capabilities = new FfmpegCapabilities(new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "libx264" });
+        var request = new ExportRequest(
+            @"C:\video\source.mp4",
+            Path.Combine(Path.GetTempPath(), "clip.mp4"),
+            new ClipRange(TimeSpan.Zero, TimeSpan.FromSeconds(4)),
+            new AppSettings
+            {
+                FfmpegPath = @"C:\tools\ffmpeg.exe",
+                Fade = new FadeSettings { VideoFadeIn = true, DurationSeconds = 1 },
+            },
+            new MediaInfo(@"C:\video\source.mp4", TimeSpan.FromSeconds(4), "mp4", null,
+                [new MediaStreamInfo(0, "video", "h264", null, Width: 320, Height: 180, RotationDegrees: -90)]),
+            new VideoCrop(Left: 11, Top: 1, Right: 0, Bottom: 0));
+
+        ExportPlan plan = new ReencodeExportPlanner(capabilities).CreatePlan(request);
+
+        Assert.Single(plan.Arguments, argument => argument == "-vf");
+        Assert.Contains("crop=169:319:11:1:exact=1,pad=170:320:0:0,fade=t=in:st=0:d=1", plan.Arguments);
+        Assert.Throws<InvalidOperationException>(() => new FastCopyExportPlanner().CreatePlan(request));
+        Assert.Throws<InvalidOperationException>(() => new ReencodeExportPlanner(capabilities)
+            .CreatePlan(request with { Crop = new VideoCrop(Left: 180, Top: 0, Right: 0, Bottom: 0) }));
+    }
+
+    [Fact]
     public void CreatePlan_builds_webm_with_av1_and_opus()
     {
         string outputDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString("N"));

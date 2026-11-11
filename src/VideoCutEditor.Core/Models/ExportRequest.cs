@@ -5,4 +5,5 @@ public sealed record ExportRequest(
     string OutputPath,
     ClipRange Range,
     AppSettings Settings,
-    MediaInfo? MediaInfo = null);
+    MediaInfo? MediaInfo = null,
+    VideoCrop Crop = default);
