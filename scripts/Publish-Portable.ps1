@@ -6,7 +6,7 @@ param(
     [string]$Configuration = "Release",
 
     [ValidatePattern("^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$")]
-    [string]$Version = "0.5.1"
+    [string]$Version = "0.6.0"
 )
 
 $ErrorActionPreference = "Stop"
@@ -22,18 +22,15 @@ if (!(Test-Path $projectPath)) {
 dotnet publish $projectPath `
     -c $Configuration `
     -p:Platform=$Platform `
+    -r $profileName `
     -p:PublishProfile=$profileName `
-    -p:WindowsPackageType=None `
-    -p:WindowsAppSDKSelfContained=true `
-    -p:PublishSingleFile=true `
-    -p:IncludeNativeLibrariesForSelfExtract=true `
     -p:Version=$Version
 
 if ($LASTEXITCODE -ne 0) {
     throw "dotnet publish failed with exit code $LASTEXITCODE"
 }
 
-$targetFramework = "net10.0-windows10.0.26100.0"
+$targetFramework = "net11.0-windows10.0.26100.0"
 $runtimeIdentifier = "win-$Platform"
 $publishDirectory = Join-Path $repoRoot "src\VideoCutEditor\bin\$Configuration\$targetFramework\$runtimeIdentifier\publish"
 $exePath = Join-Path $publishDirectory "VideoCutEditor.exe"

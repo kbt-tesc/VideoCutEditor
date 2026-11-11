@@ -85,7 +85,8 @@ public sealed class ReencodeExportPlanner : IExportPlanner
             request.Settings,
             request.MediaInfo,
             request.Range.Duration,
-            mediaHasAudioStream);
+            mediaHasAudioStream,
+            request.Crop);
 
         if (mediaHasAudioStream && reencodeAudio)
         {
@@ -126,28 +127,27 @@ public sealed class ReencodeExportPlanner : IExportPlanner
         arguments.Add($"{videoBitrateKbps}k");
     }
 
-    private static bool AddFilterArguments(
+    private static void AddFilterArguments(
         List<string> arguments,
         AppSettings settings,
         MediaInfo? mediaInfo,
         TimeSpan clipDuration,
-        bool mediaHasAudioStream)
+        bool mediaHasAudioStream,
+        VideoCrop crop)
     {
         FadeSettings fade = settings.Fade;
         bool hasFade = fade.HasAnyFade && clipDuration > TimeSpan.Zero;
         bool hasHdrToSdr = settings.ConvertHdrToSdr && HasHdrVideoStream(mediaInfo);
-        bool hasAudioProcessing = settings.NormalizeAudio || hasFade;
-
-        if (!hasAudioProcessing && !hasHdrToSdr)
-        {
-            return false;
-        }
-
         double durationSeconds = hasFade
             ? TruncateToTwoDecimals(Math.Clamp(fade.DurationSeconds, 0, clipDuration.TotalSeconds))
             : 0;
 
-        var videoFilters = new List<string>(capacity: 2);
+        var videoFilters = new List<string>();
+        if (!crop.IsEmpty)
+        {
+            AddCropFilters(videoFilters, crop, mediaInfo);
+        }
+
         if (hasHdrToSdr)
         {
             videoFilters.Add(HdrToSdrVideoFilter);
@@ -167,7 +167,7 @@ public sealed class ReencodeExportPlanner : IExportPlanner
 
         if (!mediaHasAudioStream)
         {
-            return false;
+            return;
         }
 
         var audioFilters = new List<string>(capacity: 2);
@@ -184,12 +184,29 @@ public sealed class ReencodeExportPlanner : IExportPlanner
 
         if (audioFilters.Count == 0)
         {
-            return false;
+            return;
         }
 
         arguments.Add("-af");
         arguments.Add(string.Join(",", audioFilters));
-        return true;
+    }
+
+    private static void AddCropFilters(List<string> filters, VideoCrop crop, MediaInfo? mediaInfo)
+    {
+        if (VideoCropFrame.FromMedia(mediaInfo) is not { } frame || !crop.Fits(frame))
+        {
+            throw new InvalidOperationException("トリミング範囲が動画のサイズに収まりません。");
+        }
+
+        int width = crop.GetWidth(frame);
+        int height = crop.GetHeight(frame);
+        filters.Add(FormattableString.Invariant($"crop={width}:{height}:{crop.Left}:{crop.Top}:exact=1"));
+        int outputWidth = VideoCrop.GetPaddedSize(width);
+        int outputHeight = VideoCrop.GetPaddedSize(height);
+        if (outputWidth != width || outputHeight != height)
+        {
+            filters.Add(FormattableString.Invariant($"pad={outputWidth}:{outputHeight}:0:0"));
+        }
     }
 
     private static bool IsNvencEncoder(string videoEncoder) =>

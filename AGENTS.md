@@ -12,8 +12,8 @@
 
 ## Product Constraints
 
-- Use WinUI 3, C#, and .NET 10 for the Windows desktop app.
-- Target a portable single-file EXE using unpackaged, self-contained Windows App SDK deployment unless a later design update changes this.
+- Use WinUI 3, C#, and .NET 11 for the Windows desktop app.
+- Distribute the unpackaged app as a folder with an app-local Windows App SDK and a dependency on an installed .NET 11 Runtime.
 - Support one source video with one or more selected keep ranges exported as independent files. Do not add clip merging, multi-source editing, track editing, or destructive timeline editing features without updating the spec first.
 - Default export must use ffmpeg stream copy with no re-encode. Re-encode only when the user chooses it or when requested features require it, such as fades.
 - Treat ffmpeg and ffprobe as external tools configured by path, with PATH discovery only as a fallback.

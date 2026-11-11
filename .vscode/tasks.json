@@ -8,8 +8,7 @@
             "args": [
                 "build",
                 "${workspaceFolder}\\src\\VideoCutEditor\\VideoCutEditor.csproj",
-                "-p:Platform=x64",
-                "-p:WindowsPackageType=None"
+                "-p:Platform=x64"
             ],
             "problemMatcher": "$msCompile",
             "group": {

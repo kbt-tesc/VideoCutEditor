@@ -2,9 +2,8 @@
 
 ## Platform
 
-- Build a WinUI 3 desktop app in C# on .NET 10.
-- Use Windows App SDK with unpackaged, self-contained, single-file deployment as the preferred packaging target.
-- Build the WinUI app as self-contained by default, including packaged debug launches, so app-local host files and `runtimeconfig.json` stay consistent.
+- Build a WinUI 3 desktop app in C# on .NET 11.
+- Use unpackaged deployment with an app-local Windows App SDK. Run the app against the installed .NET 11 Runtime.
 - Store settings under `%AppData%/VideoCutEditor/settings.json`.
 - Keep ffmpeg and ffprobe external. The user can configure explicit paths; PATH lookup is a fallback.
 
@@ -44,6 +43,7 @@ Use ffprobe to collect:
 - Container format
 - Stream list
 - Video codec, dimensions, frame rate, bitrate
+- Video sample aspect ratio and display rotation for mapping crop coordinates to the preview and export
 - Video color metadata (`color_space`, `color_transfer`, `color_primaries`) for HDR detection
 - Audio codec, channel layout, sample rate, bitrate
 - Existing metadata where practical
@@ -112,6 +112,12 @@ The initial re-encode planner builds command arguments for bitrate-based video r
 WebM Re-encode fixes the video family to AV1 and selects `av1_nvenc`, `libsvtav1`, or `libaom-av1` through the existing encoder preference. It maps optional video and audio streams only (`-map 0:v? -map 0:a?`) and omits incompatible subtitle/data/attachment streams. Compatible Opus/Vorbis audio is copied when no processing is requested; otherwise it is encoded with `libopus`. MP4 keeps the existing codec-family choices and stream-preservation policy. WebM selection is unavailable when no matching AV1 encoder exists or when required audio encoding cannot use `libopus`.
 
 The WinUI shell presents Fast copy and Re-encode as direct mode choices. Re-encode-only settings are hidden while Fast copy is selected. Hidden fade controls are not applied in Fast copy mode, so invisible settings cannot silently force a re-encode.
+
+### Spatial Cropping
+
+The editor keeps the crop as four insets in source pixels after display rotation. The preview uses uniform scaling and positions the overlay inside the displayed video bounds, accounting for letterboxing and the sample aspect ratio. The adjustment buttons and pointer drag use the same clamped inset math. The crop supports a single video stream with known dimensions and rotation in 90-degree increments.
+
+The view model holds the crop in memory for the current source and snapshots it with the export batch. A nonempty crop selects Re-encode in the UI and falls back to MP4 when WebM re-encode is unavailable. An automatic switch from Fast copy leaves HDR conversion off until the user enables it. The re-encode planner validates the insets and adds `crop=width:height:left:top:exact=1` to the start of the video filter chain, after FFmpeg's automatic input rotation. If needed, a following `pad` rounds the output dimensions up to even values for 4:2:0 encoder compatibility. HDR conversion and video fades follow the crop and padding. Audio uses the existing copy or re-encode settings.
 
 Expose a simple settings surface:
 
@@ -254,6 +260,8 @@ The timeline ruler accumulates fractional minor-tick intervals for positioning. 
 
 ## Test Architecture
 
+The `Crop` mode of `scripts/Test-ExportUi.ps1` opens generated media, drags and moves the crop frame, exercises all four sides' adjustment buttons, verifies the Re-encode transition, and checks the exported frame dimensions with ffprobe. The drag checks use the Windows desktop pointer and need an unobstructed test window.
+
 Deterministic Core tests run without external tools. Environment-dependent ffmpeg, ffprobe, encoder, and Windows PowerShell tests use `SkippableFact`; an unavailable prerequisite must be reported as an explicit skipped test with a reason, never as a passing test reached through an early `return`.
 
 End-to-end export UI verification uses `scripts/Test-ExportUi.ps1` with `-Mode FastCopy`, `-Mode Reencode`, `-Mode ReencodeHdrToSdr`, the NVEnc bitrate/quality modes, `-Mode NormalizeAudio`, or `-Mode NormalizeNoAudio`. The script generates temporary sample media, writes temporary settings and output directories, launches the unpackaged Debug x64 app, runs the picker and export UI workflow, and removes the process and temporary tree in `finally`. Re-encode verification fixes H.264 Software encoding at 1500 kbps so it does not depend on GPU availability. `ReencodeHdrToSdr` uses generated 10-bit BT.2020/PQ media, verifies the contextual conversion option is checked, completes the real `zscale`/`tonemap` export, and requires ffprobe to report BT.709 color space, transfer, and primaries on the output. NVEnc modes first require the matching `h264_nvenc`, `hevc_nvenc`, or `av1_nvenc` encoder in the selected ffmpeg build. Bitrate modes verify the matching codec with NVEnc at 1500 kbps; Quality modes use the isolated setting fixed at 23 and verify the visible mode, enabled quality control, completed export, and non-empty output. NormalizeAudio uses the quiet audio sample, keeps Fast copy selected, and verifies that the live export log records both loudness analysis and normalization application passes. NormalizeNoAudio uses video-only media and verifies the localized rejection plus absence of an output file. The app honors `VIDEOCUTEDITOR_TEST_SETTINGS_DIRECTORY` only in Debug builds; Release builds always use the normal AppData settings location.
@@ -262,22 +270,21 @@ End-to-end export UI verification uses `scripts/Test-ExportUi.ps1` with `-Mode F
 
 ## Packaging
 
-- Prefer unpackaged Windows App SDK deployment.
-- Publish as a self-contained single-file EXE for Windows.
+- Follow [Microsoft's unpackaged WinUI deployment guide](https://learn.microsoft.com/en-us/windows/apps/package-and-deploy/unpackage-winui-app?tabs=csharp) and publish a folder for each target architecture. WinUI single-file publishing requires a self-contained .NET runtime.
 - Build the public x64 installer with NSIS using `RequestExecutionLevel user` and `%LocalAppData%/Programs/VideoCutEditor` so installation and removal are scoped to the current user. NSIS is selected over Inno Setup because the NSIS zlib/libpng license explicitly permits commercial use and better matches the permissive MIT source distribution.
 - Do not bundle ffmpeg in the first implementation.
 - Document any runtime prerequisites discovered during WinUI 3 packaging work.
 
-Portable publish uses the `win-x64`, `win-x86`, and `win-arm64` publish profiles plus `scripts/Publish-Portable.ps1`. These profiles set `WindowsPackageType=None`, `WindowsAppSDKSelfContained=true`, `SelfContained=true`, `PublishSingleFile=true`, and `IncludeNativeLibrariesForSelfExtract=true`. The app defines its own `Program.Main` only for unpackaged portable builds so single-file output can set `MICROSOFT_WINDOWSAPPRUNTIME_BASE_DIRECTORY` before WinUI starts, as required by the Windows App SDK. Normal packaged debug launches keep the generated WinUI entry point.
+The app project sets `WindowsPackageType=None`, `WindowsAppSDKSelfContained=true`, `SelfContained=false`, and `PublishSingleFile=false` for development and publication. WinUI generates the entry point, and the Windows App SDK initializes from the app folder. The `win-x64`, `win-x86`, and `win-arm64` profiles set the architecture and publish path. Visual Studio launches with the Unpackaged profile.
 
-`scripts/Test-PortablePublish.ps1` validates portable publish output after publish. It requires `VideoCutEditor.exe`, rejects sidecar runtime/package files such as `.dll`, `.json`, `.xbf`, `.pri`, `.winmd`, `.appx`, and `.msix`, rejects unexpected extra executables, and rejects bundled `ffmpeg` or `ffprobe` so external-tool configuration remains explicit.
+`scripts/Test-PortablePublish.ps1` checks for the app executable, assembly, resource index, and runtime metadata, plus the app-local WinUI and Windows App SDK DLLs. It checks for a shared .NET 11 framework reference and rejects .NET runtime packs, .NET runtime binaries, MSIX packages, and bundled ffmpeg tools.
 
 `scripts/Publish-AllPortable.ps1` runs the validated portable publish flow across x64, x86, and arm64. It supports a `-WhatIf` dry run for CI/script checks and accepts either multiple platform arguments or comma-separated platform names.
 
-`scripts/New-PortableRelease.ps1` creates an installer-free distribution ZIP from a validated portable publish. Release names follow `VideoCutEditor-<version>-win-<platform>.zip`; each ZIP contains `VideoCutEditor.exe`, a user-only Japanese `README.md`, the app MIT license, and applicable official dependency licenses/notices, and is accompanied by a `.zip.sha256` file.
+`scripts/New-PortableRelease.ps1` creates an installer-free ZIP from the complete validated publish folder. Release names follow `VideoCutEditor-<version>-win-<platform>.zip`. The ZIP also contains a Japanese `README.md`, the app MIT license, and applicable dependency licenses and notices. A separate `.zip.sha256` file contains the checksum.
 
-`scripts/New-InstallerRelease.ps1` reuses the validated x64 portable publish and compiles `installer/VideoCutEditor.nsi` with NSIS 3. Release names follow `VideoCutEditor-<version>-win-x64-setup.exe` with a matching SHA-256 file. The installer uses stable per-user registry keys for upgrades, presents the official Windows App SDK terms, installs the EXE/readme/licenses under the current user's LocalAppData, registers a Start menu shortcut and uninstall entry, and does not bundle ffmpeg/ffprobe. The current release line is `0.5.1`. Public artifacts remain unsigned until a trusted production code-signing certificate is available.
+`scripts/New-InstallerRelease.ps1` reuses the validated x64 portable publish and compiles `installer/VideoCutEditor.nsi` with NSIS 3. Release names follow `VideoCutEditor-<version>-win-x64-setup.exe` with a matching SHA-256 file. The installer uses stable per-user registry keys, presents the official Windows App SDK terms, installs the publish files excluding PDBs along with the readme and licenses, and registers a Start menu shortcut and uninstall entry. The build generates the uninstall file list from that publish folder. The current release line is `0.6.0`. Public artifacts remain unsigned until a trusted production code-signing certificate is available.
 
-The repository root `LICENSE` uses the standard SPDX MIT text for VideoCutEditor-owned source. Unmodified official license and notice documents for the self-contained .NET runtime, Windows App SDK, CommunityToolkit.Mvvm, and vendored Microsoft WinUI development skills are retained under `third-party`. Runtime-related files are copied into application distributions; development-skill notices remain source-repository-only.
+The repository root `LICENSE` uses the standard SPDX MIT text for VideoCutEditor-owned source. Official license and notice documents for the Windows App SDK and CommunityToolkit.Mvvm ship with both distributions. The NSIS installer also ships its NSIS license. The historical .NET 10 notices and the vendored Microsoft WinUI development skill notices are kept under `third-party` for reference.
 
-The owner-supplied ChatGPT Image icon source is retained under `design`. `scripts/New-AppIconAssets.ps1` uses ImageMagick to remove the source's rendered checkerboard with a rounded alpha mask, restore transparent padding, create the multi-size ICO, and generate every PNG size referenced by the WinUI package manifest. The app project sets `ApplicationIcon` so the unpackaged single-file EXE also embeds the product icon.
+The owner-supplied ChatGPT Image icon source is retained under `design`. `scripts/New-AppIconAssets.ps1` uses ImageMagick to remove the source's rendered checkerboard with a rounded alpha mask, restore transparent padding, create the multi-size ICO, and generate every PNG size referenced by the WinUI package manifest. The app project sets `ApplicationIcon` to embed the product icon in the unpackaged EXE.

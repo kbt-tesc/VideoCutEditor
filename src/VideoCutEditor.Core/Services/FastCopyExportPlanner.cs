@@ -15,6 +15,11 @@ public sealed class FastCopyExportPlanner : IExportPlanner
     public ExportPlan CreatePlan(ExportRequest request)
     {
         ArgumentNullException.ThrowIfNull(request);
+        if (!request.Crop.IsEmpty)
+        {
+            throw new InvalidOperationException("トリミングには Re-encode が必要です。");
+        }
+
         request.Range.Validate();
         ArgumentException.ThrowIfNullOrWhiteSpace(request.Settings.FfmpegPath);
         ArgumentException.ThrowIfNullOrWhiteSpace(request.SourcePath);

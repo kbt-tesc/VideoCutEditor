@@ -13,7 +13,10 @@ public sealed record MediaStreamInfo(
     string? ChannelLayout = null,
     string? ColorSpace = null,
     string? ColorTransfer = null,
-    string? ColorPrimaries = null)
+    string? ColorPrimaries = null,
+    double SampleAspectRatio = 1,
+    double RotationDegrees = 0,
+    bool IsAttachedPicture = false)
 {
     public bool IsHighDynamicRange =>
         string.Equals(CodecType, "video", StringComparison.OrdinalIgnoreCase)

@@ -11,42 +11,54 @@ param(
 $ErrorActionPreference = "Stop"
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
-$targetFramework = "net10.0-windows10.0.26100.0"
+$targetFramework = "net11.0-windows10.0.26100.0"
 $runtimeIdentifier = "win-$Platform"
 
 if ([string]::IsNullOrWhiteSpace($PublishDirectory)) {
     $PublishDirectory = Join-Path $repoRoot "src\VideoCutEditor\bin\$Configuration\$targetFramework\$runtimeIdentifier\publish"
 }
 
-if (!(Test-Path $PublishDirectory)) {
+if (!(Test-Path -LiteralPath $PublishDirectory -PathType Container)) {
     throw "Publish directory was not found: $PublishDirectory"
 }
 
-$exePath = Join-Path $PublishDirectory "VideoCutEditor.exe"
-if (!(Test-Path $exePath)) {
-    throw "VideoCutEditor.exe was not found in $PublishDirectory"
+$requiredFiles = @(
+    "VideoCutEditor.exe"
+    "VideoCutEditor.dll"
+    "VideoCutEditor.deps.json"
+    "VideoCutEditor.runtimeconfig.json"
+    "Microsoft.UI.Xaml.dll"
+    "Microsoft.WindowsAppRuntime.dll"
+    "VideoCutEditor.pri"
+)
+foreach ($name in $requiredFiles) {
+    if (!(Test-Path -LiteralPath (Join-Path $PublishDirectory $name) -PathType Leaf)) {
+        throw "$name was not found in $PublishDirectory"
+    }
 }
 
-$files = @(Get-ChildItem -LiteralPath $PublishDirectory -File)
-$unexpectedExecutables = @($files | Where-Object { $_.Extension -ieq ".exe" -and $_.Name -ine "VideoCutEditor.exe" })
-if ($unexpectedExecutables.Count -gt 0) {
-    $names = ($unexpectedExecutables | ForEach-Object { $_.Name }) -join ", "
-    throw "Portable publish contains unexpected executable sidecars: $names"
+$runtimeConfig = Get-Content -LiteralPath (Join-Path $PublishDirectory "VideoCutEditor.runtimeconfig.json") -Raw | ConvertFrom-Json
+$options = $runtimeConfig.runtimeOptions
+$netRuntime = @($options.framework) + @($options.frameworks) | Where-Object {
+    $_.name -eq "Microsoft.NETCore.App" -and $_.version -match '^11\.0\.\d+$'
+}
+if (!$netRuntime -or $options.includedFrameworks) {
+    throw "VideoCutEditor.runtimeconfig.json must depend on a separately installed .NET 11 runtime."
 }
 
-$blockedExtensions = @(".dll", ".json", ".xbf", ".pri", ".winmd", ".appx", ".msix")
-$unexpectedSidecars = @($files | Where-Object { $blockedExtensions -icontains $_.Extension })
-if ($unexpectedSidecars.Count -gt 0) {
-    $names = ($unexpectedSidecars | ForEach-Object { $_.Name }) -join ", "
-    throw "Portable publish contains files that should be inside the single-file EXE: $names"
+$deps = Get-Content -LiteralPath (Join-Path $PublishDirectory "VideoCutEditor.deps.json") -Raw | ConvertFrom-Json
+if ($deps.libraries.PSObject.Properties.Name -match '^runtimepack\.Microsoft\.(NETCore|WindowsDesktop)\.App\.Runtime\.') {
+    throw "VideoCutEditor.deps.json lists a bundled .NET runtime pack."
 }
 
-$bundledTools = @($files | Where-Object { $_.Name -imatch "^ff(mpeg|probe)(\.exe)?$" })
-if ($bundledTools.Count -gt 0) {
-    $names = ($bundledTools | ForEach-Object { $_.Name }) -join ", "
-    throw "Portable publish must not bundle external ffmpeg tools: $names"
+$unexpectedFiles = @(Get-ChildItem -LiteralPath $PublishDirectory -Recurse -File | Where-Object {
+    $_.Name -match '^(coreclr|clrjit|hostfxr|hostpolicy|System\.Private\.CoreLib)\.dll$|^(dotnet\.exe|ff(mpeg|probe)(\.exe)?)$' -or
+    $_.Extension -in '.appx', '.appxbundle', '.msix', '.msixbundle'
+})
+if ($unexpectedFiles.Count -gt 0) {
+    $names = ($unexpectedFiles | ForEach-Object { $_.Name }) -join ", "
+    throw "Portable publish contains unexpected runtime, package, or tool files: $names"
 }
 
 Write-Host "Portable publish validation passed:"
 Write-Host $PublishDirectory
-Write-Host $exePath

@@ -22,7 +22,7 @@ The confirmed fix is the `DesignTimeBuild`-only `VideoCutEditor.Core` reference 
 ```xml
 <ItemGroup Condition="'$(DesignTimeBuild)' == 'true'">
   <Reference Include="VideoCutEditor.Core">
-    <HintPath>..\VideoCutEditor.Core\obj\$(Configuration)\net10.0\ref\VideoCutEditor.Core.dll</HintPath>
+    <HintPath>..\VideoCutEditor.Core\obj\$(Configuration)\net11.0\ref\VideoCutEditor.Core.dll</HintPath>
     <Private>false</Private>
   </Reference>
 </ItemGroup>
@@ -45,6 +45,6 @@ User feedback confirmed Problems remained after the global-usings experiment and
 2. Confirm `.vscode/settings.json` points to `VideoCutEditor.slnx`.
 3. Confirm the app project still contains the `DesignTimeBuild`-only `VideoCutEditor.Core` reference.
 4. Run `dotnet test VideoCutEditor.slnx --filter VsCodeDebugConfigurationTests`.
-5. Run `dotnet build src\VideoCutEditor\VideoCutEditor.csproj -p:Platform=x64 -p:WindowsPackageType=None`.
+5. Run `dotnet build src\VideoCutEditor\VideoCutEditor.csproj -p:Platform=x64`.
 6. Reload VS Code or restart the C# language server if diagnostics appear stale.
 

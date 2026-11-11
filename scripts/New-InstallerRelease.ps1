@@ -1,6 +1,6 @@
 param(
     [ValidatePattern("^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$")]
-    [string]$Version = "0.5.1",
+    [string]$Version = "0.6.0",
 
     [ValidateSet("x64")]
     [string]$Platform = "x64",
@@ -37,7 +37,7 @@ if ($LASTEXITCODE -ne 0) {
     throw "Portable publish failed with exit code $LASTEXITCODE"
 }
 
-$targetFramework = "net10.0-windows10.0.26100.0"
+$targetFramework = "net11.0-windows10.0.26100.0"
 $publishDirectory = Join-Path $repoRoot "src\VideoCutEditor\bin\$Configuration\$targetFramework\win-$Platform\publish"
 $makeNsisCommand = Get-Command makensis.exe -ErrorAction SilentlyContinue
 $makeNsisCandidates = @(
@@ -55,15 +55,36 @@ Remove-Item -LiteralPath $installerPath -Force -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath $checksumPath -Force -ErrorAction SilentlyContinue
 
 $installerDefinition = Join-Path $repoRoot "installer\VideoCutEditor.nsi"
-& $makeNsisPath `
-    "/WX" `
-    "/DAPP_VERSION=$Version" `
-    "/DSOURCE_DIR=$publishDirectory" `
-    "/DOUTPUT_DIR=$releaseDirectory" `
-    "/DOUTPUT_BASE_NAME=$baseName" `
-    $installerDefinition
-if ($LASTEXITCODE -ne 0) {
-    throw "NSIS compilation failed with exit code $LASTEXITCODE"
+$uninstallInclude = Join-Path $releaseDirectory (".uninstall-" + [Guid]::NewGuid().ToString("N") + ".nsh")
+# Match the NSIS payload and remove its files without deleting unrelated files in the install directory.
+$uninstallCommands = @(
+    Get-ChildItem -LiteralPath $publishDirectory -File -Recurse -Exclude "*.pdb" | ForEach-Object {
+        $relativePath = $_.FullName.Substring($publishDirectory.Length + 1).Replace('$', '$$')
+        'Delete "$INSTDIR\{0}"' -f $relativePath
+    }
+    Get-ChildItem -LiteralPath $publishDirectory -Directory -Recurse |
+        Sort-Object { $_.FullName.Length } -Descending | ForEach-Object {
+            $relativePath = $_.FullName.Substring($publishDirectory.Length + 1).Replace('$', '$$')
+            'RMDir "$INSTDIR\{0}"' -f $relativePath
+        }
+)
+
+try {
+    Set-Content -LiteralPath $uninstallInclude -Value $uninstallCommands -Encoding UTF8
+    & $makeNsisPath `
+        "/WX" `
+        "/DAPP_VERSION=$Version" `
+        "/DSOURCE_DIR=$publishDirectory" `
+        "/DUNINSTALL_INCLUDE=$uninstallInclude" `
+        "/DOUTPUT_DIR=$releaseDirectory" `
+        "/DOUTPUT_BASE_NAME=$baseName" `
+        $installerDefinition
+    if ($LASTEXITCODE -ne 0) {
+        throw "NSIS compilation failed with exit code $LASTEXITCODE"
+    }
+}
+finally {
+    Remove-Item -LiteralPath $uninstallInclude -Force -ErrorAction SilentlyContinue
 }
 if (-not (Test-Path -LiteralPath $installerPath -PathType Leaf)) {
     throw "Installer was not created at '$installerPath'."

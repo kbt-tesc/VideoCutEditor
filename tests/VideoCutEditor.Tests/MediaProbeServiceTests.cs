@@ -1,3 +1,4 @@
+using VideoCutEditor.Core.Models;
 using VideoCutEditor.Core.Services;
 
 namespace VideoCutEditor.Tests;
@@ -16,6 +17,8 @@ public sealed class MediaProbeServiceTests
                   "codec_type": "video",
                   "width": 1920,
                   "height": 1080,
+                  "sample_aspect_ratio": "4:3",
+                  "side_data_list": [{ "side_data_type": "Display Matrix", "rotation": -90 }],
                   "avg_frame_rate": "30000/1001",
                   "color_space": "bt2020nc",
                   "color_transfer": "smpte2084",
@@ -51,6 +54,7 @@ public sealed class MediaProbeServiceTests
         Assert.Equal("h264", video.CodecName);
         Assert.Equal(1920, video.Width);
         Assert.Equal(1080, video.Height);
+        Assert.Equal(new VideoCropFrame(1080, 1920, 27.0 / 64), VideoCropFrame.FromMedia(info));
         Assert.Equal(29.970, video.FrameRate!.Value, precision: 3);
         Assert.Equal("bt2020nc", video.ColorSpace);
         Assert.Equal("smpte2084", video.ColorTransfer);

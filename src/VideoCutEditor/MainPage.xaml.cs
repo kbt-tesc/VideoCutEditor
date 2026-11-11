@@ -500,6 +500,8 @@ public sealed partial class MainPage : Page
             AppLogger.Info($"Media duration: {duration}");
             ViewModel.SetMediaDuration(duration);
             sender.PlaybackSession.PlaybackRate = ViewModel.PlaybackRate;
+            cropPreviewReady = true;
+            UpdateCropOverlay();
             SyncPositionFromPlayer();
             UpdateTimelineVisuals();
         });
@@ -510,6 +512,8 @@ public sealed partial class MainPage : Page
         AppLogger.Info($"MediaPlayer MediaFailed: {args.Error} {args.ErrorMessage}");
         _ = DispatcherQueue.TryEnqueue(() =>
         {
+            cropPreviewReady = false;
+            UpdateCropOverlay();
             ViewModel.StatusMessage = "プレビューを利用できません";
         });
     }
@@ -601,6 +605,22 @@ public sealed partial class MainPage : Page
         {
             case nameof(MainPageViewModel.SelectedSourcePath):
                 await GenerateWaveformAsync(ViewModel.SelectedSourcePath);
+                break;
+            case nameof(MainPageViewModel.PreviewSource):
+                cropPreviewReady = false;
+                UpdateCropOverlay();
+                break;
+            case nameof(MainPageViewModel.IsCropEditorOpen):
+                if (ViewModel.IsCropEditorOpen)
+                {
+                    ExportSettingsScrollViewer.ChangeView(null, 0, null, disableAnimation: true);
+                }
+
+                UpdateCropOverlay();
+                break;
+            case nameof(MainPageViewModel.Crop):
+            case nameof(MainPageViewModel.CanEditCrop):
+                UpdateCropOverlay();
                 break;
             case nameof(MainPageViewModel.PositionSeconds):
             case nameof(MainPageViewModel.RangeStartSeconds):

@@ -8,6 +8,9 @@ SetCompressor /SOLID zlib
 !ifndef SOURCE_DIR
   !error "SOURCE_DIR must be provided by New-InstallerRelease.ps1."
 !endif
+!ifndef UNINSTALL_INCLUDE
+  !error "UNINSTALL_INCLUDE must be provided by New-InstallerRelease.ps1."
+!endif
 !ifndef OUTPUT_DIR
   !error "OUTPUT_DIR must be provided by New-InstallerRelease.ps1."
 !endif
@@ -46,7 +49,7 @@ VIAddVersionKey /LANG=1041 "LegalCopyright" "Copyright (c) 2026 VideoCutEditor c
 Section "VideoCutEditor" SecApplication
   SetShellVarContext current
   SetOutPath "$INSTDIR"
-  File /oname=VideoCutEditor.exe "${SOURCE_DIR}\VideoCutEditor.exe"
+  File /r /x *.pdb "${SOURCE_DIR}\*"
   File "..\distribution\README.md"
   File "..\LICENSE"
 
@@ -54,8 +57,8 @@ Section "VideoCutEditor" SecApplication
   File "..\third-party\Microsoft.WindowsAppSDK.txt"
   File "..\third-party\CommunityToolkit.Mvvm.txt"
   File "..\third-party\CommunityToolkit.Mvvm-ThirdPartyNotices.txt"
-  File "..\third-party\dotnet-Windows.txt"
-  File "..\third-party\dotnet-ThirdPartyNotices.txt"
+  Delete "$INSTDIR\licenses\dotnet-Windows.txt"
+  Delete "$INSTDIR\licenses\dotnet-ThirdPartyNotices.txt"
   File "..\third-party\NSIS.txt"
 
   CreateDirectory "$SMPROGRAMS\VideoCutEditor"
@@ -82,11 +85,9 @@ Section "Uninstall"
   Delete "$INSTDIR\licenses\Microsoft.WindowsAppSDK.txt"
   Delete "$INSTDIR\licenses\CommunityToolkit.Mvvm.txt"
   Delete "$INSTDIR\licenses\CommunityToolkit.Mvvm-ThirdPartyNotices.txt"
-  Delete "$INSTDIR\licenses\dotnet-Windows.txt"
-  Delete "$INSTDIR\licenses\dotnet-ThirdPartyNotices.txt"
   Delete "$INSTDIR\licenses\NSIS.txt"
   RMDir "$INSTDIR\licenses"
-  Delete "$INSTDIR\VideoCutEditor.exe"
+  !include "${UNINSTALL_INCLUDE}"
   Delete "$INSTDIR\README.md"
   Delete "$INSTDIR\LICENSE"
   Delete "$INSTDIR\Uninstall.exe"

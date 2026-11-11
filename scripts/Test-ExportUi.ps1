@@ -1,5 +1,5 @@
 param(
-    [ValidateSet("FastCopy", "FastCopyMultiClip", "Reencode", "ReencodeHdrToSdr", "ReencodeNvenc", "ReencodeNvencQuality", "ReencodeNvencHevc", "ReencodeNvencHevcQuality", "ReencodeNvencAv1", "ReencodeNvencAv1Quality", "NormalizeAudio", "NormalizeNoAudio")]
+    [ValidateSet("FastCopy", "FastCopyMultiClip", "Crop", "Reencode", "ReencodeHdrToSdr", "ReencodeNvenc", "ReencodeNvencQuality", "ReencodeNvencHevc", "ReencodeNvencHevcQuality", "ReencodeNvencAv1", "ReencodeNvencAv1Quality", "NormalizeAudio", "NormalizeNoAudio")]
     [string]$Mode = "FastCopy",
     [string]$FfmpegPath = "",
     [string]$FfprobePath = ""
@@ -38,7 +38,7 @@ try {
         }
     }
 
-    $encoderKind = if ($Mode -in @("Reencode", "ReencodeHdrToSdr")) { "Software" } elseif ($isNvenc) { "Nvenc" } else { "Auto" }
+    $encoderKind = if ($Mode -in @("Crop", "Reencode", "ReencodeHdrToSdr")) { "Software" } elseif ($isNvenc) { "Nvenc" } else { "Auto" }
     $videoBitrate = if ($isReencode) { 1500 } else { 2500 }
     $exportMode = if ($isReencode) { "Reencode" } else { "FastCopy" }
     $bitrateMode = if ($isQuality) { "Quality" } else { "Bitrate" }
@@ -65,11 +65,11 @@ try {
         convertHdrToSdr = $Mode -eq "ReencodeHdrToSdr"
     } | ConvertTo-Json | Set-Content -Encoding utf8 (Join-Path $settingsDirectory "settings.json")
 
-    & dotnet build (Join-Path $root "src\VideoCutEditor\VideoCutEditor.csproj") -p:Platform=x64 -p:WindowsPackageType=None
+    & dotnet build (Join-Path $root "src\VideoCutEditor\VideoCutEditor.csproj") -p:Platform=x64
     if ($LASTEXITCODE -ne 0) { throw "Debug x64 build failed." }
 
     $env:VIDEOCUTEDITOR_TEST_SETTINGS_DIRECTORY = $settingsDirectory
-    $exe = Join-Path $root "src\VideoCutEditor\bin\x64\Debug\net10.0-windows10.0.26100.0\win-x64\VideoCutEditor.exe"
+    $exe = Join-Path $root "src\VideoCutEditor\bin\x64\Debug\net11.0-windows10.0.26100.0\win-x64\VideoCutEditor.exe"
     $appProcess = Start-Process -FilePath $exe -PassThru
     Start-Sleep -Seconds 2
 
@@ -81,6 +81,16 @@ try {
     }
     & powershell -ExecutionPolicy Bypass -File (Join-Path $root "tests\ui-tests.ps1") -AppPid $appProcess.Id -SampleVideoPath (Join-Path $mediaDirectory $sampleName) -VerifyExportMode $Mode -ExpectedOutputDirectory $outputDirectory
     if ($LASTEXITCODE -ne 0) { throw "$Mode UI verification failed." }
+
+    if ($Mode -eq "Crop") {
+        $outputFile = Get-ChildItem -LiteralPath $outputDirectory -File -Filter "*.mp4" | Select-Object -First 1
+        if ($null -eq $outputFile) { throw "Crop verification output was not found." }
+        $size = & $ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=p=0:s=x $outputFile.FullName
+        if ($LASTEXITCODE -ne 0 -or $size -ne "1270x710") {
+            throw "Expected the cropped and padded output to be 1270x710. Actual: $size"
+        }
+        Write-Host "Crop output dimensions verified: $size"
+    }
 
     if ($Mode -eq "ReencodeHdrToSdr") {
         $outputFile = Get-ChildItem -LiteralPath $outputDirectory -File | Select-Object -First 1

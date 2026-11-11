@@ -64,7 +64,7 @@ Use `tests/ui-tests.ps1` with `winapp ui` for WinUI surface behavior:
 
 The UI scripts are invoked by Windows PowerShell 5 in release verification. Keep BOM-less `.ps1` test files ASCII-only; construct required Japanese test strings from character codes, as the existing tests do, so Windows PowerShell does not misdecode UTF-8 source as the legacy system code page.
 
-For VS Code breakpoint debugging, keep `.vscode/launch.json` and `.vscode/tasks.json` aligned so F5 uses the `VideoCutEditor: Debug x64` launch configuration and the `build VideoCutEditor x64` pre-launch task. The task must build with `-p:Platform=x64` and `-p:WindowsPackageType=None`, then launch the x64 Debug output directly. This uses the app's custom unpackaged entry point for breakpoint debugging and avoids C# Dev Kit generating mixed paths such as `bin\ARM64\...\win-x64` on machines where host architecture detection does not match the desired debug RID. Use `BuildAndRun.ps1` or `winapp run` when validating normal packaged WinUI launch behavior and debug-output logs.
+For VS Code breakpoint debugging, keep `.vscode/launch.json` and `.vscode/tasks.json` aligned so F5 uses the `VideoCutEditor: Debug x64` launch configuration and the `build VideoCutEditor x64` pre-launch task. The task builds with `-p:Platform=x64` and launches the unpackaged x64 Debug output directly. Use `winapp run src/VideoCutEditor/VideoCutEditor.csproj --arch x64` to run the project from the CLI or launch the published EXE from its publish folder to verify distribution startup.
 
 Use `VideoCutEditor.slnx` as the repo's standard solution file for .NET CLI and VS Code workflows. Keep `.vscode/settings.json` pinned to `VideoCutEditor.slnx` with `dotnet.defaultSolution`. The app project also carries a `DesignTimeBuild`-only `VideoCutEditor.Core` reference because the user's VS Code/Roslyn LSP diagnostics continued to miss `ProjectReference` symbols until that fallback was added. Do not add or restore a classic `.sln` for this unless a future tool regression proves it is necessary. If VS Code still reports stale warnings after these files change, reload the VS Code window or restart the C# language server before assuming the code is broken.
 
@@ -77,7 +77,7 @@ Use manual tests for environment-dependent behavior:
 - real export success
 - unavailable preview fallback
 - NVEnc encoder detection on compatible hardware
-- packaged EXE startup
+- unpackaged EXE startup from the extracted portable ZIP
 
 Use `scripts/New-SampleMedia.ps1` to create repeatable local sample inputs before manual preview/export checks when representative user media is not available. Its default output is `artifacts/verification-media`, which is intentionally ignored by git. It creates short `video-with-audio.mp4`, `video-only.mp4`, and `quiet-audio.mp4` files for waveform, no-audio, fade, and loudness-normalization checks. The script supports `-WhatIf` for dry-run verification and `-FfmpegPath` when PATH discovery is not enough.
 
