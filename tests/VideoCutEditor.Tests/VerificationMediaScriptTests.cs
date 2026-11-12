@@ -35,11 +35,11 @@ public sealed class VerificationMediaScriptTests
     public void Export_ui_verification_supports_success_and_no_audio_normalization_modes()
     {
         string root = FindRepositoryRoot();
-        string viewModel = File.ReadAllText(Path.Combine(root, "src", "VideoCutEditor", "ViewModels", "MainPageViewModel.cs"));
+        string app = File.ReadAllText(Path.Combine(root, "src", "VideoCutEditor", "App.xaml.cs"));
         string uiScript = File.ReadAllText(Path.Combine(root, "tests", "ui-tests.ps1"));
         string runnerPath = Path.Combine(root, "scripts", "Test-ExportUi.ps1");
 
-        Assert.Contains("VIDEOCUTEDITOR_TEST_SETTINGS_DIRECTORY", viewModel);
+        Assert.Contains("VIDEOCUTEDITOR_TEST_SETTINGS_DIRECTORY", app);
         Assert.Contains("VerifyExportMode", uiScript);
         Assert.Contains("Reencode", uiScript);
         Assert.Contains("ExpectedOutputDirectory", uiScript);

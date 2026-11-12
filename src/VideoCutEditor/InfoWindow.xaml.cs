@@ -34,7 +34,7 @@ public sealed partial class InfoWindow : Window
         InitializeComponent();
         SetOwner(ownerWindowHandle);
         AppWindow.SetIcon("Assets/AppIcon.ico");
-        ResizeToDefault();
+        InitializePlacement();
     }
 
     private void ExportLogTextBox_TextChanged(object sender, TextChangedEventArgs e)

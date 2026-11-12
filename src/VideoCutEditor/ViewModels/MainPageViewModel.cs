@@ -407,23 +407,13 @@ public partial class MainPageViewModel : ObservableObject
 
     public MainPageViewModel()
         : this(
-            CreateSettingsService(),
+            new JsonSettingsService(App.SettingsDirectory),
             new OutputPathService(),
             new FfmpegToolPathService(),
             new FfmpegRunner(),
             new MediaProbeService(),
             new FfmpegCapabilityService())
     {
-    }
-
-    private static JsonSettingsService CreateSettingsService()
-    {
-#if DEBUG
-        string? testSettingsDirectory = Environment.GetEnvironmentVariable("VIDEOCUTEDITOR_TEST_SETTINGS_DIRECTORY");
-        return new JsonSettingsService(testSettingsDirectory);
-#else
-        return new JsonSettingsService();
-#endif
     }
 
     public MainPageViewModel(
@@ -879,6 +869,7 @@ public partial class MainPageViewModel : ObservableObject
         AppSettings currentSettings = CreateCurrentSettings();
         MediaInfo? mediaInfo = CurrentMediaInfo;
         VideoCrop exportCrop = Crop;
+        double? cropDisplayAspectRatio = CropDisplayAspectRatio;
         ExportMode exportMode = GetEffectiveExportMode(currentSettings, exportCrop);
         int?[] exportVideoBitrates = workItems
             .Select(item => GetEffectiveVideoBitrateKbps(item.Range))
@@ -931,7 +922,8 @@ public partial class MainPageViewModel : ObservableObject
                     item.Range,
                     itemSettings,
                     mediaInfo,
-                    exportCrop);
+                    exportCrop,
+                    cropDisplayAspectRatio);
                 ExportPlan plan = planner.CreatePlan(request);
                 AppendExportLog($"[{itemNumber}/{workItems.Count}] {Path.GetFileName(item.OutputPath)}");
                 StatusMessage = $"書き出し中 ({itemNumber}/{workItems.Count}): {Path.GetFileName(item.OutputPath)}";
@@ -1100,6 +1092,7 @@ public partial class MainPageViewModel : ObservableObject
 
     partial void OnPreviewSourceChanged(MediaSource? value)
     {
+        SetCropPreviewSize(0, 0);
         IsPreviewPlaceholderVisible = value is null;
     }
 

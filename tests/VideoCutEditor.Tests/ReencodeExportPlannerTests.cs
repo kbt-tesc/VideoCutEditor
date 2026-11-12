@@ -31,6 +31,33 @@ public sealed class ReencodeExportPlannerTests
             .CreatePlan(request with { Crop = new VideoCrop(Left: 180, Top: 0, Right: 0, Bottom: 0) }));
     }
 
+    [Theory]
+    [InlineData(1154, 1080, "crop=680:630:200:200:exact=1,setsar=1:max=65535")]
+    [InlineData(1906, 1080, "crop=680:630:200:200:exact=1")]
+    [InlineData(0, 0, "crop=680:630:200:200:exact=1")]
+    public void CreatePlan_matches_crop_display_to_playback_when_the_source_metadata_disagrees(
+        uint previewWidth, uint previewHeight, string expectedFilters)
+    {
+        var capabilities = new FfmpegCapabilities(new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "libx264" });
+        var media = new MediaInfo(@"C:\video\source.mp4", TimeSpan.FromSeconds(4), "mp4", null,
+            [new MediaStreamInfo(0, "video", "av1", null, Width: 1154, Height: 1080, SampleAspectRatio: 16200.0 / 9809)]);
+        var frame = VideoCropFrame.FromMedia(media)!.Value;
+        var request = new ExportRequest(
+            media.SourcePath,
+            Path.Combine(Path.GetTempPath(), "clip.mp4"),
+            new ClipRange(TimeSpan.Zero, media.Duration),
+            new AppSettings { FfmpegPath = @"C:\tools\ffmpeg.exe" },
+            media,
+            new VideoCrop(Left: 200, Top: 200, Right: 274, Bottom: 250),
+            frame.ResolveDisplayAspectRatio(previewWidth, previewHeight));
+
+        ExportPlan plan = new ReencodeExportPlanner(capabilities).CreatePlan(request);
+
+        Assert.Contains(expectedFilters, plan.Arguments);
+        Assert.DoesNotContain("-vf", new ReencodeExportPlanner(capabilities)
+            .CreatePlan(request with { Crop = default }).Arguments);
+    }
+
     [Fact]
     public void CreatePlan_builds_webm_with_av1_and_opus()
     {

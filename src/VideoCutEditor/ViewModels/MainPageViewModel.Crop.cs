@@ -7,17 +7,26 @@ namespace VideoCutEditor.ViewModels;
 public partial class MainPageViewModel
 {
     private VideoCrop crop;
+    private (uint Width, uint Height) cropPreviewSize;
 
     [ObservableProperty]
     public partial bool IsCropEditorOpen { get; set; }
+
+    [ObservableProperty]
+    public partial bool ShowCroppedPreview { get; set; }
 
     public VideoCrop Crop => crop;
 
     public VideoCropFrame? CropFrame { get; private set; }
 
+    public double? CropDisplayAspectRatio => CropFrame?.ResolveDisplayAspectRatio(
+        cropPreviewSize.Width, cropPreviewSize.Height);
+
     public bool CanEditCrop => CropFrame is not null && !IsExporting;
 
     public bool CanFastCopy => Crop.IsEmpty;
+
+    public void SetCropPreviewSize(uint width, uint height) => cropPreviewSize = (width, height);
 
     public IReadOnlyList<CropAdjustment> CropAdjustments { get; }
 
@@ -84,6 +93,7 @@ public partial class MainPageViewModel
     {
         CropFrame = VideoCropFrame.FromMedia(mediaInfo);
         IsCropEditorOpen = false;
+        ShowCroppedPreview = false;
         SetCrop(default);
         OnPropertyChanged(nameof(CanEditCrop));
         OnPropertyChanged(nameof(CropSizeText));

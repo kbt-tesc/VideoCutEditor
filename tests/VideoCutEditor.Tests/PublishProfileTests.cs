@@ -69,7 +69,7 @@ public sealed class PublishProfileTests
         string projectPath = Path.Combine(FindRepositoryRoot(), "src", "VideoCutEditor", "VideoCutEditor.csproj");
         XDocument project = XDocument.Load(projectPath);
 
-        Assert.Equal("0.6.0", project.Descendants("Version").Single().Value);
+        Assert.Equal("0.6.1", project.Descendants("Version").Single().Value);
     }
 
     [Fact]
@@ -159,7 +159,7 @@ public sealed class PublishProfileTests
 
         Assert.Contains("Publish-Portable.ps1", script);
         Assert.Contains("-Version $Version", script);
-        Assert.Contains("[string]$Version = \"0.6.0\"", script);
+        Assert.Contains("[string]$Version = \"0.6.1\"", script);
         Assert.Contains("Compress-Archive", script);
         Assert.Contains("Get-FileHash", script);
         Assert.Contains("README.md", script);
@@ -231,7 +231,7 @@ public sealed class PublishProfileTests
         Assert.Contains("Publish-Portable.ps1", releaseScript);
         Assert.Contains("makensis", releaseScript, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("Get-FileHash", releaseScript);
-        Assert.Contains("[string]$Version = \"0.6.0\"", releaseScript);
+        Assert.Contains("[string]$Version = \"0.6.1\"", releaseScript);
     }
 
     public static TheoryData<string, int, int> AppIconPngAssets => new()
