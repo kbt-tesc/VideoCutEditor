@@ -2,6 +2,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation.Peers;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Xaml.Media;
 using VideoCutEditor.Core.Models;
 using Windows.Foundation;
 
@@ -15,41 +16,50 @@ public sealed partial class MainPage
     private Rect cropSelectionBounds;
     private CropDrag? cropDrag;
 
-    private void PreviewSurface_SizeChanged(object sender, SizeChangedEventArgs e) => UpdateCropOverlay();
+    private void PreviewSurface_SizeChanged(object sender, SizeChangedEventArgs e) => UpdateCropPreview();
 
-    private void UpdateCropOverlay()
+    private void UpdateCropPreview()
     {
         if (CropOverlay is null)
         {
             return;
         }
 
-        if (!ViewModel.IsCropEditorOpen || !cropPreviewReady || ViewModel.CropFrame is not { } frame
+        if ((!ViewModel.IsCropEditorOpen && !ViewModel.ShowCroppedPreview)
+            || !cropPreviewReady || ViewModel.CropFrame is not { } frame
             || PreviewSurface.ActualWidth <= 0 || PreviewSurface.ActualHeight <= 0)
         {
-            cropDrag = null;
-            CropOverlay.ReleasePointerCaptures();
-            CropOverlay.Visibility = Visibility.Collapsed;
+            RestoreFullPreview();
+            HideCropOverlay();
             return;
         }
 
-        double width = Math.Min(PreviewSurface.ActualWidth, PreviewSurface.ActualHeight * frame.DisplayAspectRatio);
-        double height = width / frame.DisplayAspectRatio;
-        cropPreviewBounds = new Rect(
-            (PreviewSurface.ActualWidth - width) / 2,
-            (PreviewSurface.ActualHeight - height) / 2,
-            width,
-            height);
-
         VideoCrop crop = ViewModel.Crop;
-        double scaleX = width / frame.Width;
-        double scaleY = height / frame.Height;
+        cropPreviewBounds = FitPreview(ViewModel.CropDisplayAspectRatio ?? frame.DisplayAspectRatio);
+        double scaleX = cropPreviewBounds.Width / frame.Width;
+        double scaleY = cropPreviewBounds.Height / frame.Height;
         cropSelectionBounds = new Rect(
             cropPreviewBounds.X + crop.Left * scaleX,
             cropPreviewBounds.Y + crop.Top * scaleY,
             crop.GetWidth(frame) * scaleX,
             crop.GetHeight(frame) * scaleY);
 
+        if (ViewModel.ShowCroppedPreview)
+        {
+            HideCropOverlay();
+            if (crop.IsEmpty)
+            {
+                RestoreFullPreview();
+            }
+            else
+            {
+                FitCroppedPreview(cropSelectionBounds);
+            }
+
+            return;
+        }
+
+        RestoreFullPreview();
         CropMaskFrame.Rect = cropPreviewBounds;
         CropMaskSelection.Rect = cropSelectionBounds;
         Canvas.SetLeft(CropGuide, cropSelectionBounds.X);
@@ -64,6 +74,49 @@ public sealed partial class MainPage
         }
 
         CropOverlay.Visibility = Visibility.Visible;
+    }
+
+    private Rect FitPreview(double aspectRatio)
+    {
+        double width = Math.Min(PreviewSurface.ActualWidth, PreviewSurface.ActualHeight * aspectRatio);
+        double height = width / aspectRatio;
+        return new Rect(
+            (PreviewSurface.ActualWidth - width) / 2,
+            (PreviewSurface.ActualHeight - height) / 2,
+            width,
+            height);
+    }
+
+    private void FitCroppedPreview(Rect selection)
+    {
+        Rect destination = FitPreview(selection.Width / selection.Height);
+        double scale = destination.Width / selection.Width;
+        PreviewViewport.Clip = new RectangleGeometry { Rect = destination };
+        PreviewPlayer.RenderTransform = new CompositeTransform
+        {
+            ScaleX = scale,
+            ScaleY = scale,
+            TranslateX = destination.X - selection.X * scale,
+            TranslateY = destination.Y - selection.Y * scale,
+        };
+    }
+
+    private void RestoreFullPreview()
+    {
+        if (PreviewViewport.Clip is null)
+        {
+            return;
+        }
+
+        PreviewViewport.Clip = null;
+        PreviewPlayer.RenderTransform = null;
+    }
+
+    private void HideCropOverlay()
+    {
+        cropDrag = null;
+        CropOverlay.ReleasePointerCaptures();
+        CropOverlay.Visibility = Visibility.Collapsed;
     }
 
     private void CropOverlay_PointerPressed(object sender, PointerRoutedEventArgs e)

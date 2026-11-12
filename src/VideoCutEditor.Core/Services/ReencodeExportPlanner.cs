@@ -82,11 +82,8 @@ public sealed class ReencodeExportPlanner : IExportPlanner
 
         AddFilterArguments(
             arguments,
-            request.Settings,
-            request.MediaInfo,
-            request.Range.Duration,
-            mediaHasAudioStream,
-            request.Crop);
+            request,
+            mediaHasAudioStream);
 
         if (mediaHasAudioStream && reencodeAudio)
         {
@@ -129,23 +126,22 @@ public sealed class ReencodeExportPlanner : IExportPlanner
 
     private static void AddFilterArguments(
         List<string> arguments,
-        AppSettings settings,
-        MediaInfo? mediaInfo,
-        TimeSpan clipDuration,
-        bool mediaHasAudioStream,
-        VideoCrop crop)
+        ExportRequest request,
+        bool mediaHasAudioStream)
     {
+        AppSettings settings = request.Settings;
+        TimeSpan clipDuration = request.Range.Duration;
         FadeSettings fade = settings.Fade;
         bool hasFade = fade.HasAnyFade && clipDuration > TimeSpan.Zero;
-        bool hasHdrToSdr = settings.ConvertHdrToSdr && HasHdrVideoStream(mediaInfo);
+        bool hasHdrToSdr = settings.ConvertHdrToSdr && HasHdrVideoStream(request.MediaInfo);
         double durationSeconds = hasFade
             ? TruncateToTwoDecimals(Math.Clamp(fade.DurationSeconds, 0, clipDuration.TotalSeconds))
             : 0;
 
         var videoFilters = new List<string>();
-        if (!crop.IsEmpty)
+        if (!request.Crop.IsEmpty)
         {
-            AddCropFilters(videoFilters, crop, mediaInfo);
+            AddCropFilters(videoFilters, request);
         }
 
         if (hasHdrToSdr)
@@ -191,9 +187,10 @@ public sealed class ReencodeExportPlanner : IExportPlanner
         arguments.Add(string.Join(",", audioFilters));
     }
 
-    private static void AddCropFilters(List<string> filters, VideoCrop crop, MediaInfo? mediaInfo)
+    private static void AddCropFilters(List<string> filters, ExportRequest request)
     {
-        if (VideoCropFrame.FromMedia(mediaInfo) is not { } frame || !crop.Fits(frame))
+        VideoCrop crop = request.Crop;
+        if (VideoCropFrame.FromMedia(request.MediaInfo) is not { } frame || !crop.Fits(frame))
         {
             throw new InvalidOperationException("トリミング範囲が動画のサイズに収まりません。");
         }
@@ -206,6 +203,13 @@ public sealed class ReencodeExportPlanner : IExportPlanner
         if (outputWidth != width || outputHeight != height)
         {
             filters.Add(FormattableString.Invariant($"pad={outputWidth}:{outputHeight}:0:0"));
+        }
+
+        if (request.CropDisplayAspectRatio is > 0 and double aspect
+            && double.IsFinite(aspect) && aspect != frame.DisplayAspectRatio)
+        {
+            double sampleAspectRatio = aspect / ((double)frame.Width / frame.Height);
+            filters.Add(FormattableString.Invariant($"setsar={sampleAspectRatio:R}:max=65535"));
         }
     }
 

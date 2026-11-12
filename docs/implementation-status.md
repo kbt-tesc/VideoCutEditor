@@ -12,6 +12,24 @@ The project is being developed in small TDD slices. Keep using behavior-focused 
 
 ## Completed Slices
 
+- Crop aspect ratio alignment and 0.6.1 preparation.
+  - The crop frame and crop-only preview use the Windows playback dimensions when they differ materially from the probed display ratio. Cropped re-encode exports apply the corresponding pixel ratio. The export planner keeps the probed ratio when playback dimensions are unavailable or agree within rounding.
+  - Verified the reported AV1 recording in WinUI. The 301 px-wide video and its full crop frame aligned within the border thickness. Dragging the right edge by 60 screen pixels selected a 231-source-pixel inset. After 10 px button adjustments on the right and bottom, H.264 export produced 914×1070 with square pixels, including one column of padding. The crop-only preview and reopened export measured 240 px and 241 px wide, respectively.
+  - Verified that the crop frame follows generated H.264 with a 4:3 pixel aspect ratio in both its original and 90°-rotated orientations. Real rotated sources and crop aspect corrections with HDR or hardware encoders still need verification.
+  - Passed 199 Core tests, 31 app-layer tests, and all 74 Crop UI assertions. The ordinary crop export was 1270×710. The focused packaging tests also passed after the 0.6.1 version update.
+  - Built the x64 Portable ZIP and NSIS installer. Extracted both and verified their checksums, app version, app-local Windows App SDK, and dependency on the installed .NET 11 Runtime. A clean installer install and uninstall remain unverified for 0.6.1.
+
+- INFO window placement.
+  - Saved the last normal INFO window position and size independently of export settings. Reopening restores the saved bounds within the available display's work area.
+  - Passed all 70 Fast copy UI assertions, including a move-and-resize followed by closing and reopening INFO. An isolated restart test also confirmed that closing the main window with INFO maximized preserves the last normal bounds, and that off-screen, oversized saved bounds are fitted to the available work area.
+  - Passed 196 Core and 31 app-layer Release tests. Updated the source check for the shared Debug settings-directory override. Physical monitor disconnect and mixed-DPI display changes remain unverified.
+
+- Crop-only preview.
+  - Added `トリミングされた部分だけ表示` to hide the draggable frame and display the fitted crop. The adjustment buttons update the paused or playing preview, and clearing the checkbox restores the full view and frame.
+  - A normalized MediaPlayer source rectangle combined with a resized player narrowed the visible image in the first visual check. The final implementation uses a uniformly transformed playback element and a clipped viewport based on the existing selection bounds.
+  - Passed 196 Core tests, 31 app-layer tests, and 74 crop UI assertions. Verified the cropped image's displayed width before and after a 10 px adjustment while paused and confirmed the H.264 output remained `1270x710`.
+  - Crop-only preview alignment on real rotated or anamorphic inputs remains unverified.
+
 - `0.6.0` release preparation.
   - Updated the app and release-script defaults, added the Japanese release notes, and documented the x64 .NET 11 Runtime prerequisite.
   - Passed all 196 Core and 31 app-layer Release tests. The crop workflow had already passed 73 UI assertions, including export and output dimensions.

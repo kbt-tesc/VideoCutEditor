@@ -38,6 +38,19 @@ public readonly record struct VideoCrop(int Left, int Top, int Right, int Bottom
 
 public readonly record struct VideoCropFrame(int Width, int Height, double DisplayAspectRatio)
 {
+    public double ResolveDisplayAspectRatio(uint previewWidth, uint previewHeight)
+    {
+        // Playback dimensions are integral. Keep the probed ratio when rounding explains the difference.
+        if (previewWidth == 0 || previewHeight == 0
+            || Math.Abs(previewWidth - previewHeight * DisplayAspectRatio) <= 1
+            || Math.Abs(previewHeight - previewWidth / DisplayAspectRatio) <= 1)
+        {
+            return DisplayAspectRatio;
+        }
+
+        return (double)previewWidth / previewHeight;
+    }
+
     public static VideoCropFrame? FromMedia(MediaInfo? mediaInfo)
     {
         MediaStreamInfo[]? videoStreams = mediaInfo?.Streams

@@ -80,6 +80,7 @@ public sealed partial class MainPage : Page
         PreviewPlayer.MediaPlayer.MediaOpened += PreviewPlayerMediaOpened;
         PreviewPlayer.MediaPlayer.MediaFailed += PreviewPlayerMediaFailed;
         PreviewPlayer.MediaPlayer.CurrentStateChanged += PreviewPlayerCurrentStateChanged;
+        PreviewPlayer.MediaPlayer.PlaybackSession.NaturalVideoSizeChanged += PreviewNaturalVideoSizeChanged;
         playbackTimer = DispatcherQueue.CreateTimer();
         playbackTimer.Interval = TimeSpan.FromMilliseconds(100);
         playbackTimer.Tick += PlaybackTimerTick;
@@ -122,12 +123,17 @@ public sealed partial class MainPage : Page
         ViewModel.ExportListRequested -= ViewModelExportListRequested;
         ViewModel.ClipOverwriteConfirmationRequested -= ViewModelClipOverwriteConfirmationRequested;
         ViewModel.InfoWindowRequested -= ViewModelInfoWindowRequested;
+        PreviewPlayer.MediaPlayer.MediaOpened -= PreviewPlayerMediaOpened;
+        PreviewPlayer.MediaPlayer.MediaFailed -= PreviewPlayerMediaFailed;
         PreviewPlayer.MediaPlayer.CurrentStateChanged -= PreviewPlayerCurrentStateChanged;
+        PreviewPlayer.MediaPlayer.PlaybackSession.NaturalVideoSizeChanged -= PreviewNaturalVideoSizeChanged;
         PreviewPlayer.MediaPlayer.Pause();
     }
 
     public static Microsoft.UI.Xaml.Visibility BoolToVisibility(bool value) =>
         value ? Microsoft.UI.Xaml.Visibility.Visible : Microsoft.UI.Xaml.Visibility.Collapsed;
+
+    public static Microsoft.UI.Xaml.Visibility InvertBoolToVisibility(bool value) => BoolToVisibility(!value);
 
     public static bool IsNotBusy(bool value) => !value;
 
@@ -494,26 +500,57 @@ public sealed partial class MainPage : Page
     private void PreviewPlayerMediaOpened(MediaPlayer sender, object args)
     {
         AppLogger.Info("MediaPlayer MediaOpened");
+        var source = sender.Source;
         _ = DispatcherQueue.TryEnqueue(() =>
         {
-            TimeSpan duration = sender.PlaybackSession.NaturalDuration;
+            if (source is null || source != sender.Source)
+            {
+                return;
+            }
+
+            MediaPlaybackSession session = sender.PlaybackSession;
+            TimeSpan duration = session.NaturalDuration;
             AppLogger.Info($"Media duration: {duration}");
             ViewModel.SetMediaDuration(duration);
-            sender.PlaybackSession.PlaybackRate = ViewModel.PlaybackRate;
+            session.PlaybackRate = ViewModel.PlaybackRate;
             cropPreviewReady = true;
-            UpdateCropOverlay();
+            UpdateCropPreviewSize(session);
             SyncPositionFromPlayer();
             UpdateTimelineVisuals();
         });
     }
 
+    private void PreviewNaturalVideoSizeChanged(MediaPlaybackSession sender, object args)
+    {
+        _ = DispatcherQueue.TryEnqueue(() =>
+        {
+            if (cropPreviewReady)
+            {
+                UpdateCropPreviewSize(sender);
+            }
+        });
+    }
+
+    private void UpdateCropPreviewSize(MediaPlaybackSession session)
+    {
+        ViewModel.SetCropPreviewSize(session.NaturalVideoWidth, session.NaturalVideoHeight);
+        UpdateCropPreview();
+    }
+
     private void PreviewPlayerMediaFailed(MediaPlayer sender, MediaPlayerFailedEventArgs args)
     {
         AppLogger.Info($"MediaPlayer MediaFailed: {args.Error} {args.ErrorMessage}");
+        var source = sender.Source;
         _ = DispatcherQueue.TryEnqueue(() =>
         {
+            if (source != sender.Source)
+            {
+                return;
+            }
+
             cropPreviewReady = false;
-            UpdateCropOverlay();
+            ViewModel.SetCropPreviewSize(0, 0);
+            UpdateCropPreview();
             ViewModel.StatusMessage = "プレビューを利用できません";
         });
     }
@@ -608,7 +645,7 @@ public sealed partial class MainPage : Page
                 break;
             case nameof(MainPageViewModel.PreviewSource):
                 cropPreviewReady = false;
-                UpdateCropOverlay();
+                UpdateCropPreview();
                 break;
             case nameof(MainPageViewModel.IsCropEditorOpen):
                 if (ViewModel.IsCropEditorOpen)
@@ -616,11 +653,12 @@ public sealed partial class MainPage : Page
                     ExportSettingsScrollViewer.ChangeView(null, 0, null, disableAnimation: true);
                 }
 
-                UpdateCropOverlay();
+                UpdateCropPreview();
                 break;
+            case nameof(MainPageViewModel.ShowCroppedPreview):
             case nameof(MainPageViewModel.Crop):
             case nameof(MainPageViewModel.CanEditCrop):
-                UpdateCropOverlay();
+                UpdateCropPreview();
                 break;
             case nameof(MainPageViewModel.PositionSeconds):
             case nameof(MainPageViewModel.RangeStartSeconds):

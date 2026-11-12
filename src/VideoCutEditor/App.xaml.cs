@@ -5,6 +5,7 @@ using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Navigation;
 using System.Threading.Tasks;
+using VideoCutEditor.Core.Services;
 
 // To learn more about WinUI, the WinUI project structure,
 // and more about our project templates, see: http://aka.ms/winui-project-info.
@@ -16,6 +17,20 @@ namespace VideoCutEditor;
 /// </summary>
 public partial class App : Application
 {
+    internal static string SettingsDirectory
+    {
+        get
+        {
+#if DEBUG
+            if (Environment.GetEnvironmentVariable("VIDEOCUTEDITOR_TEST_SETTINGS_DIRECTORY") is { Length: > 0 } directory)
+            {
+                return directory;
+            }
+#endif
+            return JsonSettingsService.DefaultSettingsDirectory;
+        }
+    }
+
     /// <summary>
     /// The main application window. Use <c>App.Window</c> from any class that needs
     /// the window reference (for dialogs, pickers, interop, etc.).

@@ -24,8 +24,23 @@ using System.Runtime.InteropServices;
 
 public static class NativeWindowTest
 {
+    [StructLayout(LayoutKind.Sequential)]
+    public struct WindowRect
+    {
+        public int Left;
+        public int Top;
+        public int Right;
+        public int Bottom;
+    }
+
     [DllImport("user32.dll")]
     public static extern IntPtr GetWindow(IntPtr hWnd, uint command);
+
+    [DllImport("user32.dll")]
+    public static extern bool GetWindowRect(IntPtr hWnd, out WindowRect bounds);
+
+    [DllImport("user32.dll")]
+    public static extern bool SetWindowPos(IntPtr hWnd, IntPtr insertAfter, int x, int y, int width, int height, uint flags);
 
     [DllImport("user32.dll")]
     public static extern bool PostMessage(IntPtr hWnd, uint message, IntPtr wParam, IntPtr lParam);
@@ -508,6 +523,29 @@ if (-not [string]::IsNullOrWhiteSpace($SampleVideoPath)) {
                 winapp ui screenshot -a $AppPid -o (Join-Path $screenshots "03-crop-dragged.png") 2>$null
             }
 
+            Test-UI "Cropped preview hides the frame and keeps the adjustment buttons active" {
+                winapp ui wait-for "ShowCroppedPreviewCheckBox" -w $mainWindowHwnd --value "Off" -t 3000 -q
+                if ($LASTEXITCODE -ne 0) { throw "Cropped preview should start off." }
+                winapp ui invoke "ShowCroppedPreviewCheckBox" -w $mainWindowHwnd -q
+                if ($LASTEXITCODE -ne 0) { throw "Could not turn cropped preview on." }
+                winapp ui wait-for "CropOverlay" -w $mainWindowHwnd --gone -t 3000 -q
+                if ($LASTEXITCODE -ne 0) { throw "The crop frame should be hidden." }
+                winapp ui screenshot -w $mainWindowHwnd -o (Join-Path $screenshots "03-crop-preview-only.png")
+                if ($LASTEXITCODE -ne 0) { throw "Could not capture the cropped preview." }
+
+                $right = (winapp ui get-value "CropRightPixelsText" -w $mainWindowHwnd --json 2>$null | ConvertFrom-Json).text
+                winapp ui invoke "CropRightIncrease10Button" -w $mainWindowHwnd -q
+                if ($LASTEXITCODE -ne 0) { throw "Crop adjustment could not be invoked." }
+                winapp ui wait-for "CropRightPixelsText" -w $mainWindowHwnd --value ([string]([int]$right + 10)) -t 3000 -q
+                if ($LASTEXITCODE -ne 0) { throw "Cropped preview did not accept the button adjustment." }
+                winapp ui screenshot -w $mainWindowHwnd -o (Join-Path $screenshots "03-crop-preview-adjusted.png")
+                if ($LASTEXITCODE -ne 0) { throw "Could not capture the adjusted cropped preview." }
+
+                winapp ui invoke "ShowCroppedPreviewCheckBox" -w $mainWindowHwnd -q
+                if ($LASTEXITCODE -ne 0) { throw "Could not turn cropped preview off." }
+                winapp ui wait-for "CropOverlay" -w $mainWindowHwnd -t 3000 -q
+            }
+
             Test-UI "Crop panel adjusts all four edges by exactly 1 and 10 pixels" {
                 winapp ui invoke "ResetCropButton" -w $mainWindowHwnd -q
                 if ($LASTEXITCODE -ne 0) { throw "Crop reset failed." }
@@ -739,6 +777,23 @@ Test-UI "Main window remains operable while INFO is open" {
 }
 
 Test-UI "INFO window can close and reopen" {
+    $expectedBounds = $null
+    if ($VerifyExportMode -eq "FastCopy") {
+        Add-Type -AssemblyName System.Windows.Forms
+        $infoHwnd = ConvertTo-Hwnd $infoWindowHwnd
+        $workArea = [Windows.Forms.Screen]::FromHandle($infoHwnd).WorkingArea
+        $width = [Math]::Min(640, $workArea.Width - 100)
+        $height = [Math]::Min(580, $workArea.Height - 100)
+        $beforeBounds = New-Object NativeWindowTest+WindowRect
+        $expectedBounds = New-Object NativeWindowTest+WindowRect
+        if (![NativeWindowTest]::GetWindowRect($infoHwnd, [ref]$beforeBounds) -or
+            ![NativeWindowTest]::SetWindowPos($infoHwnd, [IntPtr]::Zero, ($workArea.Left + 48), ($workArea.Top + 48), $width, $height, 0x0014) -or
+            ![NativeWindowTest]::GetWindowRect($infoHwnd, [ref]$expectedBounds) -or
+            $expectedBounds.Equals($beforeBounds)) {
+            throw "Could not move and resize the INFO window for placement verification."
+        }
+    }
+
     $closed = [NativeWindowTest]::PostMessage((ConvertTo-Hwnd $infoWindowHwnd), 0x0010, [IntPtr]::Zero, [IntPtr]::Zero)
     if (!$closed) { throw "Failed to request INFO window close." }
 
@@ -754,6 +809,13 @@ Test-UI "INFO window can close and reopen" {
     $reopened = @(Get-InfoWindows)
     if ($reopened.Count -ne 1) { throw "INFO window did not reopen exactly once." }
     $script:infoWindowHwnd = $reopened[0].hwnd
+    if ($null -ne $expectedBounds) {
+        $restoredBounds = New-Object NativeWindowTest+WindowRect
+        if (![NativeWindowTest]::GetWindowRect((ConvertTo-Hwnd $infoWindowHwnd), [ref]$restoredBounds) -or
+            !$restoredBounds.Equals($expectedBounds)) {
+            throw "The reopened INFO window did not restore the saved position and size."
+        }
+    }
     winapp ui wait-for "EncoderAndMediaSummaryTextBox" -w $infoWindowHwnd -t 3000 -q
 }
 

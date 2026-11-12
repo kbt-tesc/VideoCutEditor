@@ -16,12 +16,14 @@ public sealed class JsonSettingsService : ISettingsService
 
     public JsonSettingsService(string? settingsDirectory = null)
     {
-        this.settingsDirectory = settingsDirectory
-            ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "VideoCutEditor");
+        this.settingsDirectory = settingsDirectory ?? DefaultSettingsDirectory;
         SettingsFilePath = Path.Combine(this.settingsDirectory, "settings.json");
     }
 
     public string SettingsFilePath { get; }
+
+    public static string DefaultSettingsDirectory =>
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "VideoCutEditor");
 
     public async ValueTask<AppSettings> LoadAsync(CancellationToken cancellationToken = default)
     {

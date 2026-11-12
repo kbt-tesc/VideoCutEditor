@@ -113,11 +113,13 @@
                     BorderThickness="1"
                     CornerRadius="6">
                     <Grid x:Name="PreviewSurface" SizeChanged="PreviewSurface_SizeChanged">
-                        <MediaPlayerElement
-                            x:Name="PreviewPlayer"
-                            AreTransportControlsEnabled="False"
-                            Source="{x:Bind ViewModel.PreviewSource, Mode=OneWay}"
-                            Stretch="Uniform" />
+                        <Grid x:Name="PreviewViewport">
+                            <MediaPlayerElement
+                                x:Name="PreviewPlayer"
+                                AreTransportControlsEnabled="False"
+                                Source="{x:Bind ViewModel.PreviewSource, Mode=OneWay}"
+                                Stretch="Uniform" />
+                        </Grid>
                         <TextBlock
                             HorizontalAlignment="Center"
                             VerticalAlignment="Center"
@@ -457,10 +459,16 @@
                             Spacing="8"
                             Visibility="{x:Bind local:MainPage.BoolToVisibility(ViewModel.IsCropEditorOpen), Mode=OneWay}">
                             <TextBlock Text="トリミング" Style="{StaticResource SubtitleTextBlockStyle}" />
+                            <CheckBox
+                                AutomationProperties.AutomationId="ShowCroppedPreviewCheckBox"
+                                Content="トリミングされた部分だけ表示"
+                                IsChecked="{x:Bind ViewModel.ShowCroppedPreview, Mode=TwoWay}"
+                                IsEnabled="{x:Bind ViewModel.CanEditCrop, Mode=OneWay}" />
                             <TextBlock
                                 Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                 Text="枠の辺や角をドラッグして調整できます。枠の内側をドラッグすると移動します。"
-                                TextWrapping="Wrap" />
+                                TextWrapping="Wrap"
+                                Visibility="{x:Bind local:MainPage.InvertBoolToVisibility(ViewModel.ShowCroppedPreview), Mode=OneWay}" />
                             <ItemsControl
                                 IsEnabled="{x:Bind ViewModel.CanEditCrop, Mode=OneWay}"
                                 ItemsSource="{x:Bind ViewModel.CropAdjustments}">

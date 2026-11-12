@@ -6,4 +6,5 @@ public sealed record ExportRequest(
     ClipRange Range,
     AppSettings Settings,
     MediaInfo? MediaInfo = null,
-    VideoCrop Crop = default);
+    VideoCrop Crop = default,
+    double? CropDisplayAspectRatio = null);

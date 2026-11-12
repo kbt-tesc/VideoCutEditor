@@ -36,6 +36,8 @@ ffmpegとffprobeは本アプリに同梱されていません。未導入の場�
 
 動画を開いて「トリミング」を押します。プレビュー上の枠の辺や角をドラッグすると範囲を調整でき、枠の内側をドラッグすると枠全体が移動します。右側の操作パネルでは、各辺の切り取り量を `−10`、`−1`、`+1`、`+10` px で調整できます。「範囲をリセット」で元の範囲に戻ります。
 
+「トリミングされた部分だけ表示」をオンにすると、プレビューに切り抜いた映像だけが表示されます。この間は枠が消え、各辺は操作パネルのボタンで調整します。オフにすると映像全体と枠が戻ります。
+
 指定した範囲はパネルを閉じても保持され、同じ動画から書き出す全クリップに適用されます。トリミングを指定すると Re-encode に切り替わります。切り抜き後の幅や高さが奇数の場合は、出力の右端または下端に1pxの黒い余白が付きます。
 
 ## 複数クリップをまとめて書き出す
@@ -114,8 +116,8 @@ If VS Code still shows stale `VideoCutEditor.Core` or generated MVVM warnings af
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\Publish-Portable.ps1 -Platform x64 -Configuration Release
 powershell -ExecutionPolicy Bypass -File scripts\Publish-AllPortable.ps1 -Configuration Release
-powershell -ExecutionPolicy Bypass -File scripts\New-PortableRelease.ps1 -Version 0.6.0 -Platform x64
-powershell -ExecutionPolicy Bypass -File scripts\New-InstallerRelease.ps1 -Version 0.6.0 -Platform x64
+powershell -ExecutionPolicy Bypass -File scripts\New-PortableRelease.ps1 -Version 0.6.1 -Platform x64
+powershell -ExecutionPolicy Bypass -File scripts\New-InstallerRelease.ps1 -Version 0.6.1 -Platform x64
 ```
 
 Build and publish with the .NET 11 SDK. To launch the unpackaged project with WinApp CLI 0.8.0, run `winapp run src/VideoCutEditor/VideoCutEditor.csproj --arch x64`.
